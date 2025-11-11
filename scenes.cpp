@@ -3,22 +3,39 @@
 #include "tile_level_loader/level_system.hpp"
 #include "game_parameters.hpp"
 #include "game_systems.hpp"
-
+#include "unordered_map"
 #include <iostream>
 
 using ls = LevelSystem;
 
 using param = Parameters;
 
-std::shared_ptr<Scene> Scenes::maze = nullptr;
-std::shared_ptr<Scene> Scenes::end = nullptr;
+std::shared_ptr<Scene>      Scenes::maze = nullptr;
+std::shared_ptr<Scene>      Scenes::safehouse = nullptr;
+std::shared_ptr<Scene>      Scenes::tower_defence = nullptr;
+std::shared_ptr<Scene>      Scenes::end = nullptr;
+std::shared_ptr<RunContext> Scenes::runContext = nullptr;
+
 
 void MazeScene::set_file_path(const std::string& file_path) {
     _file_path = file_path;
 }
 
+// Utility to detect a single key press so we can easily swap between tdf/action scenes (edge trigger)
+bool keyPressedOnce(sf::Keyboard::Key key) {
+    static std::unordered_map<sf::Keyboard::Key, bool> keyStates;
+
+    bool isPressed = sf::Keyboard::isKeyPressed(key);
+    bool wasPressed = keyStates[key];
+
+    keyStates[key] = isPressed; // update stored state
+
+    return (isPressed && !wasPressed); // true only on first press
+}
+
+
 void MazeScene::load() {
-    // Colors (optional tweak)
+    // Colors 
     ls::set_color(ls::EMPTY, sf::Color(30, 30, 30));
     ls::set_color(ls::WALL, sf::Color(180, 180, 180));
     ls::set_color(ls::START, sf::Color(80, 255, 80));
@@ -70,7 +87,125 @@ void MazeScene::update(const float& dt) {
 void MazeScene::render(sf::RenderWindow& window) {
     ls::render(window);       // draw the tiles first
     Scene::render(window);    // then draw entities (player)
+
+
 }
+
+// -------------------------
+// SafehouseScene
+// -------------------------
+
+void SafehouseScene::load() {
+    _background.setSize({
+        static_cast<float>(param::game_width),
+        static_cast<float>(param::game_height)
+        });
+
+	// colour to distinguish from tower defence
+    _background.setFillColor(sf::Color(30, 15, 15));
+
+	// Load font and set up a lavel (so we can see we are in safehouse)
+    if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
+        std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
+    }
+
+    _label.setFont(_font);
+    _label.setString("SAFEHOUSE");
+    _label.setCharacterSize(32);
+    _label.setFillColor(sf::Color::White);
+    _label.setPosition(20.f, 20.f);
+
+    // Later on we will put other info like:
+    // - Spawn player entity
+    // - Place vendor / doors
+    // - Setup walls / collision
+	// - etc.
+}
+
+void SafehouseScene::update(const float& dt) {
+    // Update any entities managed by the base Scene
+    Scene::update(dt);
+
+    // Press Shift once to swap to tower defence view
+    if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
+        GameSystem::set_active_scene(Scenes::tower_defence);
+        return;
+    }
+
+    // Later:
+    // - Handle player movement / attacks
+    // - Handle shop interaction
+    // - Check for run end and set Scenes::runContext->runOver
+	// - etc.
+}
+
+void SafehouseScene::render(sf::RenderWindow& window) {
+    window.draw(_background);
+    window.draw(_label);
+    // Later: draw player, UI, vendor, etc.
+}
+
+
+// -------------------------
+// TowerDefenceScene
+// -------------------------
+
+void TowerDefenceScene::load() {
+    _background.setSize({
+        static_cast<float>(param::game_width),
+        static_cast<float>(param::game_height)
+        });
+    _background.setFillColor(sf::Color(10, 10, 30)); // darker exterior
+
+    // Simple mock enemy path strip (just for testing/viusulation) 
+    _enemy_path.setSize({
+        static_cast<float>(param::game_width - 200),
+        60.f
+        });
+    _enemy_path.setFillColor(sf::Color(80, 80, 80));
+    _enemy_path.setPosition(100.f, param::game_height * 0.5f - 30.f);
+
+	// Load font and set up a label (so we can see we are in tower defence)
+    if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
+        std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
+    }
+
+    _label.setFont(_font);
+    _label.setString("TOWER DEFENCE");
+    _label.setCharacterSize(32);
+    _label.setFillColor(sf::Color::White);
+    _label.setPosition(20.f, 20.f);
+
+    // Later:
+    // - Sample actual path from LevelSystem
+    // - Define turret slots
+    // - Spawn enemies for waves
+}
+
+void TowerDefenceScene::update(const float& dt) {
+    Scene::update(dt);
+
+    // Press Shift once to go back to safehouse view
+    if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
+        GameSystem::set_active_scene(Scenes::safehouse);
+        return;
+    }
+
+
+    // Later:
+    // - Update enemies following the path
+    // - Towers targeting and firing
+    // - Wave completion and rewards
+}
+
+void TowerDefenceScene::render(sf::RenderWindow& window) {
+    window.draw(_background);
+    window.draw(_enemy_path);
+    window.draw(_label);
+    // Later: draw turrets, enemies, bullets, wave UI, etc.
+}
+
+
 
 void EndScene::load() {
     // NOTE: put a font at res/fonts/arial.ttf (or change the path)
