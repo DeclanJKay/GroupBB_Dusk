@@ -115,6 +115,18 @@ void SafehouseScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
+    //create a player for this scene
+    _entities.clear();
+
+    auto player = std::make_shared<Player>();
+    // start roughly in the centre of the screen
+    player->set_position({
+        param::game_width * 0.5f,
+        param::game_height * 0.5f
+        });
+
+    _entities.push_back(player);
+
     // Later on we will put other info like:
     // - Spawn player entity
     // - Place vendor / doors
@@ -141,6 +153,7 @@ void SafehouseScene::update(const float& dt) {
 
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
+	Scene::render(window); // draw player
     window.draw(_label);
     // Later: draw player, UI, vendor, etc.
 }
@@ -176,6 +189,18 @@ void TowerDefenceScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
+    // create a player for this scene ---
+    _entities.clear();
+
+    auto player = std::make_shared<Player>();
+    // start just above the path on the left
+    player->set_position({
+        140.f,
+        param::game_height * 0.5f - 100.f
+        });
+
+    _entities.push_back(player);
+
     // Later:
     // - Sample actual path from LevelSystem
     // - Define turret slots
@@ -201,6 +226,7 @@ void TowerDefenceScene::update(const float& dt) {
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_background);
     window.draw(_enemy_path);
+	Scene::render(window); // draw player
     window.draw(_label);
     // Later: draw turrets, enemies, bullets, wave UI, etc.
 }

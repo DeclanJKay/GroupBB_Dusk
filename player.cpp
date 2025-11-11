@@ -39,6 +39,7 @@ void Player::update(const float& dt) {
         }
         catch (...) {
             // out of bounds—ignore movement
+			set_position(target);
         }
     }
 
