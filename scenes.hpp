@@ -3,6 +3,8 @@
 #include <string>
 #include "game_systems.hpp"
 #include <SFML/Graphics.hpp>
+#include "run_context.hpp"
+#include "scenes.hpp"
 
 class Player;
 
@@ -34,7 +36,49 @@ private:
 	sf::Font _font;
 };
 
-struct Scenes {
-	static std::shared_ptr<Scene> maze;
-	static std::shared_ptr<Scene> end;
+// Safehouse scene (roguelite action side)
+class SafehouseScene : public Scene {
+public:
+	SafehouseScene() = default;
+
+	void load() override;
+	void update(const float& dt) override;
+	void render(sf::RenderWindow& window) override;
+
+private:
+	sf::RectangleShape _background;
+
+	sf::Font _font;
+	sf::Text _label;
+	// later: player entity, vendor, doors, etc.
 };
+
+// Tower defence scene (turret placement / waves)
+class TowerDefenceScene : public Scene {
+public:
+	TowerDefenceScene() = default;
+
+	void load() override;
+	void update(const float& dt) override;
+	void render(sf::RenderWindow& window) override;
+
+private:
+	sf::RectangleShape _background;
+	sf::RectangleShape _enemy_path;
+
+	sf::Font _font;
+	sf::Text _label;
+	// later: turret slots, enemies, bullets, UI, etc.
+};
+
+
+struct Scenes {
+
+	static std::shared_ptr<Scene> maze;
+	static std::shared_ptr<Scene> safehouse;
+	static std::shared_ptr<Scene> tower_defence;
+	static std::shared_ptr<Scene> end;
+
+	static std::shared_ptr<RunContext> runContext;
+};
+
