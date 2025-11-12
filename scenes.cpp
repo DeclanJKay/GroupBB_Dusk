@@ -179,6 +179,7 @@ void TowerDefenceScene::load() {
     ls::set_color(ls::END, sf::Color(255, 80, 80));     // if you add 'e' later
 
     // Load TD map (uses w / space / +)
+    const float tileSize = 50.f;
     ls::load_level(param::td_1, 50.f);  // 50.f tile size like the maze
 
     // Label
@@ -195,13 +196,160 @@ void TowerDefenceScene::load() {
     // Player for this scene
     _entities.clear();
     _turrets.clear();
+    _enemies.clear();
+    _enemyPath.clear();
+    _spawnTimer = 0.f;
 
     _player = std::make_shared<Player>();
-    // Place player somewhere off the lane – e.g. top-left area
+    // Place player somewhere off the lane
     _player->set_position({ 150.f, 100.f });
 
     _entities.push_back(_player);
+
+    // Build the ordered enemy path from the + tiles
+    build_enemy_path();
 }
+
+void TowerDefenceScene::build_enemy_path() {
+    _enemyPath.clear();
+
+    const int w = ls::get_width();
+    const int h = ls::get_height();
+    const float tileSize = 50.f; // must match load_level
+
+    // Collect all WAYPOINT tiles
+    std::vector<sf::Vector2i> waypoints;
+    waypoints.reserve(w * h);
+
+    for (int y = 0; y < h; ++y) {
+        for (int x = 0; x < w; ++x) {
+            sf::Vector2i grid(x, y);
+            if (ls::get_tile(grid) == ls::WAYPOINT) {
+                waypoints.push_back(grid);
+            }
+        }
+    }
+
+    if (waypoints.empty()) {
+        std::cerr << "No WAYPOINT tiles found for enemy path.\n";
+        return;
+    }
+
+    // Find a start tile: choose the leftmost (+ top-most) waypoint
+    sf::Vector2i start = waypoints[0];
+    for (const auto& p : waypoints) {
+        if (p.x < start.x || (p.x == start.x && p.y < start.y)) {
+            start = p;
+        }
+    }
+
+    // Simple snake follow: walk from start, always going to an adjacent
+    // unvisited WAYPOINT tile (assumes a single, non-branching path)
+    auto index = [w](sf::Vector2i p) {
+        return p.y * w + p.x;
+        };
+
+    std::vector<bool> visited(static_cast<size_t>(w * h), false);
+    std::vector<sf::Vector2i> ordered;
+    ordered.reserve(waypoints.size());
+
+    sf::Vector2i current = start;
+    ordered.push_back(current);
+    visited[static_cast<size_t>(index(current))] = true;
+
+    const sf::Vector2i dirs[4] = {
+        { 1,  0 },
+        { -1, 0 },
+        { 0,  1 },
+        { 0, -1 }
+    };
+
+    bool extended = true;
+    while (extended) {
+        extended = false;
+
+        for (const auto& d : dirs) {
+            sf::Vector2i next = current + d;
+            if (next.x < 0 || next.y < 0 || next.x >= w || next.y >= h) {
+                continue;
+            }
+
+            if (ls::get_tile(next) == ls::WAYPOINT &&
+                !visited[static_cast<size_t>(index(next))]) {
+
+                ordered.push_back(next);
+                visited[static_cast<size_t>(index(next))] = true;
+                current = next;
+                extended = true;
+                break;
+            }
+        }
+    }
+
+    // Convert grid positions to world positions (centre of each tile)
+    _enemyPath.reserve(ordered.size());
+    for (const auto& grid : ordered) {
+        sf::Vector2f tilePos = ls::get_tile_position(grid);
+        _enemyPath.push_back(tilePos + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f));
+    }
+
+    std::cout << "Enemy path built with " << _enemyPath.size() << " nodes.\n";
+}
+
+void TowerDefenceScene::spawn_enemy() {
+    if (_enemyPath.size() < 2) return;
+
+    Enemy e;
+    e.t = 0.f; // start at beginning of path
+
+    e.shape.setRadius(15.f);
+    e.shape.setOrigin(15.f, 15.f);
+    e.shape.setFillColor(sf::Color::Red);
+    e.shape.setPosition(_enemyPath.front());
+
+    _enemies.push_back(e);
+}
+
+void TowerDefenceScene::update_enemies(float dt) {
+    if (_enemyPath.size() < 2) return;
+
+    const float tileSize = 50.f;
+    const float speed = 60.f; // units per second along the path
+
+    // Move enemies along the path
+    for (auto& e : _enemies) {
+        // Convert speed to progress along path nodes
+        float deltaT = (speed * dt) / tileSize;
+        e.t += deltaT;
+
+        int segment = static_cast<int>(e.t);
+        float local = e.t - segment;
+
+        if (segment >= static_cast<int>(_enemyPath.size()) - 1) {
+            // Enemy reached end of path; for now just park it at the last node
+            e.shape.setPosition(_enemyPath.back());
+        }
+        else {
+            const sf::Vector2f& a = _enemyPath[static_cast<size_t>(segment)];
+            const sf::Vector2f& b = _enemyPath[static_cast<size_t>(segment + 1)];
+            e.shape.setPosition(a + (b - a) * local);
+        }
+    }
+
+    // Remove enemies that reached the end (segment beyond path)
+    std::vector<Enemy> alive;
+    alive.reserve(_enemies.size());
+    for (const auto& e : _enemies) {
+        int segment = static_cast<int>(e.t);
+        if (segment < static_cast<int>(_enemyPath.size()) - 1) {
+            alive.push_back(e);
+        }
+        // else: enemy finished path; later we'll damage base etc.
+    }
+    _enemies.swap(alive);
+}
+
+
 
 void TowerDefenceScene::place_turret() {
     if (!_player) return;
@@ -263,6 +411,20 @@ void TowerDefenceScene::update(const float& dt) {
         place_turret();
     }
 
+    // Enemy spawning
+    if (!_enemyPath.empty()) {
+        _spawnTimer += dt;
+        const float spawnInterval = 2.0f; // one enemy every 2 seconds
+
+        if (_spawnTimer >= spawnInterval) {
+            _spawnTimer -= spawnInterval;
+            spawn_enemy();
+        }
+    }
+
+    // Enemy movement along the path
+    update_enemies(dt);
+
     // Later:
     // - Update enemies following the path
     // - Towers targeting and firing
@@ -278,6 +440,12 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     for (const auto& turret : _turrets) {
         window.draw(turret.shape);
     }
+
+    // Enemies
+    for (const auto& enemy : _enemies) {
+        window.draw(enemy.shape);
+    }
+
     window.draw(_label);
     // Later: draw turrets, enemies, bullets, wave UI, etc.
 }

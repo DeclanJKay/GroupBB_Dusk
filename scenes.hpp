@@ -1,6 +1,7 @@
 #pragma once
 #include <memory>
 #include <string>
+#include <vector>
 #include "game_systems.hpp"
 #include <SFML/Graphics.hpp>
 #include "run_context.hpp"
@@ -79,7 +80,22 @@ private:
 	};
 	std::vector<Turret> _turrets;
 
+	// Enemy path in world space (centres of the + tiles)
+	std::vector<sf::Vector2f> _enemyPath;
+
+	// Simple enemy representation
+	struct Enemy {
+		float t = 0.f;              // position along the path (0 .. path_length-1)
+		sf::CircleShape shape;      // visual
+	};
+	std::vector<Enemy> _enemies;
+
+	float _spawnTimer = 0.f;        // time since last spawn
+
 	void place_turret();            // helper function
+	void build_enemy_path();        // generate ordered path from + tiles
+	void spawn_enemy();             // create a new enemy at start of path
+	void update_enemies(float dt);  // move enemies along the path
 };
 
 
