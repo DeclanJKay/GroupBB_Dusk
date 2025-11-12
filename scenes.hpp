@@ -64,11 +64,22 @@ public:
 
 private:
 	sf::RectangleShape _background;
-	sf::RectangleShape _enemy_path;
+	//sf::RectangleShape _enemy_path; (ignore this think i dont need it but commenting it out for the now) 
 
 	sf::Font _font;
 	sf::Text _label;
 	// later: turret slots, enemies, bullets, UI, etc.
+
+	std::shared_ptr<Player> _player;
+
+	// simple turret representation
+	struct Turret {
+		sf::Vector2i grid;          // tile coordinates
+		sf::RectangleShape shape;   // visual
+	};
+	std::vector<Turret> _turrets;
+
+	void place_turret();            // helper function
 };
 
 

@@ -194,13 +194,59 @@ void TowerDefenceScene::load() {
 
     // Player for this scene
     _entities.clear();
+    _turrets.clear();
 
-    auto player = std::make_shared<Player>();
+    _player = std::make_shared<Player>();
     // Place player somewhere off the lane – e.g. top-left area
-    player->set_position({ 150.f, 100.f });
+    _player->set_position({ 150.f, 100.f });
 
-    _entities.push_back(player);
+    _entities.push_back(_player);
 }
+
+void TowerDefenceScene::place_turret() {
+    if (!_player) return;
+
+    // Must match the tile size used in ls::load_level above
+    const float tileSize = 50.f;
+
+    sf::Vector2f pos = _player->get_position();
+    sf::Vector2i grid(
+        static_cast<int>(pos.x / tileSize),
+        static_cast<int>(pos.y / tileSize)
+    );
+
+    // Check tile type – only allow EMPTY
+    LevelSystem::Tile tile;
+    try {
+        tile = ls::get_tile(grid);
+    }
+    catch (...) {
+        // out of bounds, do nothing
+        return;
+    }
+
+    if (tile != ls::EMPTY) {
+        // can't place on walls, lane, enemy, etc.
+        return;
+    }
+
+    // Prevent placing multiple turrets on the same tile
+    for (const auto& t : _turrets) {
+        if (t.grid == grid) {
+            return; // turret already here
+        }
+    }
+
+    // Create visual turret square
+    Turret turret;
+    turret.grid = grid;
+    turret.shape.setSize({ tileSize, tileSize });
+    turret.shape.setPosition(ls::get_tile_position(grid));
+    turret.shape.setFillColor(sf::Color(0, 200, 255)); // cyan-ish
+
+    _turrets.push_back(turret);
+}
+
 
 
 void TowerDefenceScene::update(const float& dt) {
@@ -212,6 +258,10 @@ void TowerDefenceScene::update(const float& dt) {
         return;
     }
 
+    // F  place turret on current tile (if valid)
+    if (keyPressedOnce(sf::Keyboard::F)) {
+        place_turret();
+    }
 
     // Later:
     // - Update enemies following the path
@@ -223,6 +273,11 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_background);
     ls::render(window); //draw the tile map
 	Scene::render(window); // draw player
+
+    // Turrets on top of tiles
+    for (const auto& turret : _turrets) {
+        window.draw(turret.shape);
+    }
     window.draw(_label);
     // Later: draw turrets, enemies, bullets, wave UI, etc.
 }
