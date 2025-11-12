@@ -31,20 +31,26 @@ void Player::update(const float& dt) {
         dir /= len;
         const sf::Vector2f target = get_position() + dir * kSpeed * dt;
 
-        // Block walls
         try {
-            if (ls::get_tile_at(target) != ls::WALL) {
+            // If a level is loaded: block walls *and* lane tiles
+            const auto tile = ls::get_tile_at(target);
+
+            if (tile != ls::WALL &&
+                tile != ls::WAYPOINT &&   // <- enemy lane is blocked
+                tile != ls::ENEMY) {      // <- reserve for future
                 set_position(target);
             }
         }
         catch (...) {
-            // out of bounds—ignore movement
-			set_position(target);
+            // No level / out of range -> allow free movement
+            // (used in Safehouse where we don't rely on tiles yet)
+            set_position(target);
         }
     }
 
     Entity::update(dt);
 }
+
 
 void Player::render(sf::RenderWindow& window) const {
     window.draw(*_shape);

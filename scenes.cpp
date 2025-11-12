@@ -164,21 +164,24 @@ void SafehouseScene::render(sf::RenderWindow& window) {
 // -------------------------
 
 void TowerDefenceScene::load() {
+    // Optional: background tint (can be very dark so tiles still show)
     _background.setSize({
         static_cast<float>(param::game_width),
         static_cast<float>(param::game_height)
         });
-    _background.setFillColor(sf::Color(10, 10, 30)); // darker exterior
+    _background.setFillColor(sf::Color(5, 5, 20));
 
-    // Simple mock enemy path strip (just for testing/viusulation) 
-    _enemy_path.setSize({
-        static_cast<float>(param::game_width - 200),
-        60.f
-        });
-    _enemy_path.setFillColor(sf::Color(80, 80, 80));
-    _enemy_path.setPosition(100.f, param::game_height * 0.5f - 30.f);
+    // Set tile colours for this scene
+    ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));      // dark floor
+    ls::set_color(ls::WALL, sf::Color(60, 60, 80));      // walls/border
+    ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));   // enemy lane
+    ls::set_color(ls::START, sf::Color(80, 255, 80));     // if you add 's' later
+    ls::set_color(ls::END, sf::Color(255, 80, 80));     // if you add 'e' later
 
-	// Load font and set up a label (so we can see we are in tower defence)
+    // Load TD map (uses w / space / +)
+    ls::load_level(param::td_1, 50.f);  // 50.f tile size like the maze
+
+    // Label
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
     }
@@ -189,23 +192,16 @@ void TowerDefenceScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
-    // create a player for this scene ---
+    // Player for this scene
     _entities.clear();
 
     auto player = std::make_shared<Player>();
-    // start just above the path on the left
-    player->set_position({
-        140.f,
-        param::game_height * 0.5f - 100.f
-        });
+    // Place player somewhere off the lane – e.g. top-left area
+    player->set_position({ 150.f, 100.f });
 
     _entities.push_back(player);
-
-    // Later:
-    // - Sample actual path from LevelSystem
-    // - Define turret slots
-    // - Spawn enemies for waves
 }
+
 
 void TowerDefenceScene::update(const float& dt) {
     Scene::update(dt);
@@ -225,7 +221,7 @@ void TowerDefenceScene::update(const float& dt) {
 
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_background);
-    window.draw(_enemy_path);
+    ls::render(window); //draw the tile map
 	Scene::render(window); // draw player
     window.draw(_label);
     // Later: draw turrets, enemies, bullets, wave UI, etc.

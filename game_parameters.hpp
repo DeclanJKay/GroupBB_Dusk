@@ -1,5 +1,5 @@
 //game_parameters.hpp
-#pragma once //insure that this header file is included only once and there will no multiple definition of the same thing
+#pragma once 
 
 struct Parameters {
     static constexpr unsigned int game_width = 800;
@@ -8,5 +8,8 @@ struct Parameters {
     // inside Parameters (struct or namespace)
     static constexpr const char* maze_1 = "res/levels/maze_1.txt";
     static constexpr const char* maze_2 = "res/levels/maze_2.txt";
+
+    // This is the tower defence gird level 
+    static constexpr const char* td_1 = "res/levels/td_1.txt";
 
 };
