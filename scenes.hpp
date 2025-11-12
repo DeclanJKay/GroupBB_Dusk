@@ -77,6 +77,7 @@ private:
 	struct Turret {
 		sf::Vector2i grid;          // tile coordinates
 		sf::RectangleShape shape;   // visual
+		float cooldown = 0.f;		//time until fire again 
 	};
 	std::vector<Turret> _turrets;
 
@@ -87,6 +88,7 @@ private:
 	struct Enemy {
 		float t = 0.f;              // position along the path (0 .. path_length-1)
 		sf::CircleShape shape;      // visual
+		int hp = 3;					//inital health of basic enemy 
 	};
 	std::vector<Enemy> _enemies;
 
@@ -96,6 +98,7 @@ private:
 	void build_enemy_path();        // generate ordered path from + tiles
 	void spawn_enemy();             // create a new enemy at start of path
 	void update_enemies(float dt);  // move enemies along the path
+	void update_turrets(float dt);  //turrets fire 
 };
 
 

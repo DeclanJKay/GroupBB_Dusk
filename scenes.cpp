@@ -301,6 +301,7 @@ void TowerDefenceScene::spawn_enemy() {
 
     Enemy e;
     e.t = 0.f; // start at beginning of path
+    e.hp = 3;  //takes 3 hits to kill enemy (will change later)
 
     e.shape.setRadius(15.f);
     e.shape.setOrigin(15.f, 15.f);
@@ -388,11 +389,75 @@ void TowerDefenceScene::place_turret() {
     // Create visual turret square
     Turret turret;
     turret.grid = grid;
+    turret.cooldown = 0.f;
     turret.shape.setSize({ tileSize, tileSize });
     turret.shape.setPosition(ls::get_tile_position(grid));
-    turret.shape.setFillColor(sf::Color(0, 200, 255)); // cyan-ish
+    turret.shape.setFillColor(sf::Color(0, 200, 255)); // cyan-ish colour 
 
     _turrets.push_back(turret);
+
+}
+
+
+void TowerDefenceScene::update_turrets(float dt) {
+    if (_enemies.empty() || _turrets.empty()) return;
+
+    const float tileSize = 50.f;          // must match load_level
+    const float rangePixels = tileSize * 3;  // 3-tile range
+    const float rangeSq = rangePixels * rangePixels;
+    const float fireInterval = 0.5f;          // seconds between shots
+    const int   damagePerHit = 1;
+
+    // For each turret, try to shoot one enemy
+    for (auto& t : _turrets) {
+        // tick down cooldown
+        if (t.cooldown > 0.f) {
+            t.cooldown -= dt;
+            continue;
+        }
+
+        // world position of turret centre
+        sf::Vector2f turretPos =
+            t.shape.getPosition() + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+        Enemy* bestEnemy = nullptr;
+        float bestDistSq = rangeSq;
+
+        for (auto& e : _enemies) {
+            if (e.hp <= 0) continue; // already dead
+
+            sf::Vector2f diff = e.shape.getPosition() - turretPos;
+            float d2 = diff.x * diff.x + diff.y * diff.y;
+
+            if (d2 < bestDistSq) {
+                bestDistSq = d2;
+                bestEnemy = &e;
+            }
+        }
+
+        if (bestEnemy) {
+            // Hit the enemy
+            bestEnemy->hp -= damagePerHit;
+            t.cooldown = fireInterval;
+
+            // Optional: flash turret colour slightly when firing
+            t.shape.setFillColor(sf::Color(0, 230, 255));
+        }
+        else {
+            // No enemy in range: slowly fade back toward base colour
+            t.shape.setFillColor(sf::Color(0, 200, 255));
+        }
+    }
+
+    // Remove dead enemies (hp <= 0), but keep those still walking
+    std::vector<Enemy> alive;
+    alive.reserve(_enemies.size());
+    for (const auto& e : _enemies) {
+        if (e.hp > 0) {
+            alive.push_back(e);
+        }
+    }
+    _enemies.swap(alive);
 }
 
 
@@ -424,9 +489,10 @@ void TowerDefenceScene::update(const float& dt) {
 
     // Enemy movement along the path
     update_enemies(dt);
+    //turrets fire 
+    update_turrets(dt);
 
     // Later:
-    // - Update enemies following the path
     // - Towers targeting and firing
     // - Wave completion and rewards
 }
