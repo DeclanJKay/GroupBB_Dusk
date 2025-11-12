@@ -5,6 +5,7 @@
 #include "game_systems.hpp"
 #include "unordered_map"
 #include <iostream>
+#include <cmath>
 
 using ls = LevelSystem;
 
@@ -365,7 +366,7 @@ void TowerDefenceScene::place_turret() {
         static_cast<int>(pos.y / tileSize)
     );
 
-    // Check tile type – only allow EMPTY
+    // Check tile type ï¿½ only allow EMPTY
     LevelSystem::Tile tile;
     try {
         tile = ls::get_tile(grid);
