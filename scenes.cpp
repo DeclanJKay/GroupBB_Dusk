@@ -197,6 +197,7 @@ void TowerDefenceScene::load() {
     _entities.clear();
     _turrets.clear();
     _enemies.clear();
+    _bullets.clear();
     _enemyPath.clear();
     _spawnTimer = 0.f;
 
@@ -436,12 +437,30 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
 
         if (bestEnemy) {
-            // Hit the enemy
-            bestEnemy->hp -= damagePerHit;
-            t.cooldown = fireInterval;
+            // Fire a projectile toward the chosen enemy
+            sf::Vector2f turretPos =
+                t.shape.getPosition() + sf::Vector2f(25.f, 25.f); // tileSize*0.5
 
-            // Optional: flash turret colour slightly when firing
+            Bullet b;
+            b.pos = turretPos;
+            sf::Vector2f toEnemy = bestEnemy->shape.getPosition() - turretPos;
+            float len = std::sqrt(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
+            b.vel = (len > 0.f) ? (toEnemy / len) : sf::Vector2f(0.f, 0.f);
+            b.speed = 300.f;     // tweak as you like
+            b.damage = 1;
+            b.ttl = 2.0f;
+
+            b.shape.setRadius(4.f);
+            b.shape.setOrigin(4.f, 4.f);
+            b.shape.setFillColor(sf::Color::White);
+            b.shape.setPosition(b.pos);
+
+            _bullets.push_back(b);
+
+            // fire rate + cosmetic flash
+            t.cooldown = fireInterval;
             t.shape.setFillColor(sf::Color(0, 230, 255));
+
         }
         else {
             // No enemy in range: slowly fade back toward base colour
@@ -459,6 +478,50 @@ void TowerDefenceScene::update_turrets(float dt) {
     }
     _enemies.swap(alive);
 }
+
+void TowerDefenceScene::update_bullets(float dt) {
+    if (_bullets.empty()) return;
+
+    // Move bullets, check collisions, cull
+    std::vector<Bullet> aliveBullets;
+    aliveBullets.reserve(_bullets.size());
+
+    for (auto& b : _bullets) {
+        b.ttl -= dt;
+        if (b.ttl <= 0.f) continue;
+
+        b.pos += b.vel * b.speed * dt;
+        b.shape.setPosition(b.pos);
+
+        bool hit = false;
+
+        // collision check vs enemies (circle-circle)
+        for (auto& e : _enemies) {
+            if (e.hp <= 0) continue;
+            sf::Vector2f d = e.shape.getPosition() - b.pos;
+            float r = e.shape.getRadius() + b.shape.getRadius();
+            if ((d.x * d.x + d.y * d.y) <= r * r) {
+                e.hp -= b.damage;
+                hit = true;
+                break;
+            }
+        }
+
+        if (!hit) {
+            aliveBullets.push_back(b);
+        }
+    }
+    _bullets.swap(aliveBullets);
+
+    // remove dead enemies
+    std::vector<Enemy> alive;
+    alive.reserve(_enemies.size());
+    for (const auto& e : _enemies) {
+        if (e.hp > 0) alive.push_back(e);
+    }
+    _enemies.swap(alive);
+}
+
 
 
 
@@ -491,6 +554,7 @@ void TowerDefenceScene::update(const float& dt) {
     update_enemies(dt);
     //turrets fire 
     update_turrets(dt);
+    update_bullets(dt);
 
     // Later:
     // - Towers targeting and firing
@@ -506,6 +570,9 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     for (const auto& turret : _turrets) {
         window.draw(turret.shape);
     }
+
+    // Bullets
+    for (const auto& b : _bullets) window.draw(b.shape);
 
     // Enemies
     for (const auto& enemy : _enemies) {

@@ -92,6 +92,17 @@ private:
 	};
 	std::vector<Enemy> _enemies;
 
+	// Bullets that the turrets fire
+	struct Bullet {
+		sf::Vector2f pos;
+		sf::Vector2f vel;       // normalized direction
+		float speed = 300.f;    // px/sec
+		int   damage = 1;
+		float ttl = 2.0f;       // seconds to live
+		sf::CircleShape shape;  // visual
+	};
+	std::vector<Bullet> _bullets;
+
 	float _spawnTimer = 0.f;        // time since last spawn
 
 	void place_turret();            // helper function
@@ -99,6 +110,7 @@ private:
 	void spawn_enemy();             // create a new enemy at start of path
 	void update_enemies(float dt);  // move enemies along the path
 	void update_turrets(float dt);  //turrets fire 
+	void update_bullets(float dt);  //bullet update for them moving 
 };
 
 
