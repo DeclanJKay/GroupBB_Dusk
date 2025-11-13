@@ -44,6 +44,7 @@ void MazeScene::load() {
 
     // Player entity
     auto player = std::make_shared<Player>();
+    player->set_use_tile_collision(true);   // Maze uses walls/end tiles
     _entities.push_back(player);
 
     reset(); // loads the level + positions player
@@ -120,6 +121,8 @@ void SafehouseScene::load() {
     _entities.clear();
 
     auto player = std::make_shared<Player>();
+    player->set_use_tile_collision(false);  // Safehouse ignores tiles completely
+
     // start roughly in the centre of the screen
     player->set_position({
         param::game_width * 0.5f,
@@ -136,21 +139,24 @@ void SafehouseScene::load() {
 }
 
 void SafehouseScene::update(const float& dt) {
-    // Update any entities managed by the base Scene
+    // Safehouse player / entities
     Scene::update(dt);
+
+    // Keep TD simulation running in the background
+    if (Scenes::tower_defence) {
+        // shared_ptr<Scene> -> shared_ptr<TowerDefenceScene>
+        if (auto td = std::dynamic_pointer_cast<TowerDefenceScene>(Scenes::tower_defence)) {
+            td->tick_simulation(dt);
+        }
+    }
 
     // Press Shift once to swap to tower defence view
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
         GameSystem::set_active_scene(Scenes::tower_defence);
         return;
     }
-
-    // Later:
-    // - Handle player movement / attacks
-    // - Handle shop interaction
-    // - Check for run end and set Scenes::runContext->runOver
-	// - etc.
 }
+
 
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
@@ -165,25 +171,14 @@ void SafehouseScene::render(sf::RenderWindow& window) {
 // -------------------------
 
 void TowerDefenceScene::load() {
-    // Optional: background tint (can be very dark so tiles still show)
+    // Background (can do this every time)
     _background.setSize({
         static_cast<float>(param::game_width),
         static_cast<float>(param::game_height)
         });
     _background.setFillColor(sf::Color(5, 5, 20));
 
-    // Set tile colours for this scene
-    ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));      // dark floor
-    ls::set_color(ls::WALL, sf::Color(60, 60, 80));      // walls/border
-    ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));   // enemy lane
-    ls::set_color(ls::START, sf::Color(80, 255, 80));     // if you add 's' later
-    ls::set_color(ls::END, sf::Color(255, 80, 80));     // if you add 'e' later
-
-    // Load TD map (uses w / space / +)
-    const float tileSize = 50.f;
-    ls::load_level(param::td_1, 50.f);  // 50.f tile size like the maze
-
-    // Label
+    // Label (also fine to re-do)
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
     }
@@ -194,23 +189,66 @@ void TowerDefenceScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
-    // Player for this scene
-    _entities.clear();
-    _turrets.clear();
-    _enemies.clear();
-    _bullets.clear();
-    _enemyPath.clear();
-    _spawnTimer = 0.f;
+    const float tileSize = 50.f;
 
-    _player = std::make_shared<Player>();
-    // Place player somewhere off the lane
-    _player->set_position({ 150.f, 100.f });
+    if (!_initialised) {
+        // First time only: set tile colours & load level
+        ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));     // dark floor
+        ls::set_color(ls::WALL, sf::Color(60, 60, 80));     // walls/border
+        ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));  // enemy lane
+        ls::set_color(ls::START, sf::Color(80, 255, 80));
+        ls::set_color(ls::END, sf::Color(255, 80, 80));
 
-    _entities.push_back(_player);
+        ls::load_level(param::td_1, tileSize);
 
-    // Build the ordered enemy path from the + tiles
-    build_enemy_path();
+        _turrets.clear();
+        _enemies.clear();
+        _bullets.clear();
+        _enemyPath.clear();
+        _spawnTimer = 0.f;
+
+        // Build the ordered enemy path from the + tiles
+        build_enemy_path();
+
+        // Create player just for this scene
+        _entities.clear();
+        _player = std::make_shared<Player>();
+        _player->set_use_tile_collision(true);  // TD uses tile collisions too
+        _player->set_position({ 150.f, 100.f });
+        _entities.push_back(_player);
+
+        _initialised = true;
+        std::cout << "[TD] Initialised once.\n";
+    }
+    else {
+        // Already initialised: DO NOT reset turrets/enemies/bullets/path
+        // Just make sure the player entity is hooked back into this scene
+        _entities.clear();
+        if (_player) {
+            _entities.push_back(_player);
+        }
+        std::cout << "[TD] Resumed with existing state.\n";
+    }
 }
+
+void TowerDefenceScene::tick_simulation(float dt) {
+    // spawn timer / waves
+    if (!_enemyPath.empty()) {
+        _spawnTimer += dt;
+        const float spawnInterval = 2.0f; // enemy every 2 seconds
+        while (_spawnTimer >= spawnInterval) {
+            _spawnTimer -= spawnInterval;
+            spawn_enemy();
+        }
+    }
+
+    // core TD sim
+    update_enemies(dt);
+    update_turrets(dt);
+    update_bullets(dt);
+}
+
+
 
 void TowerDefenceScene::build_enemy_path() {
     _enemyPath.clear();
@@ -541,40 +579,24 @@ void TowerDefenceScene::update_bullets(float dt) {
 
 
 void TowerDefenceScene::update(const float& dt) {
+    // Player input / local entities
     Scene::update(dt);
 
-    // Press Shift once to go back to safehouse view
+    // Swap back to safehouse
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
         GameSystem::set_active_scene(Scenes::safehouse);
         return;
     }
 
-    // F  place turret on current tile (if valid)
+    // Place turret
     if (keyPressedOnce(sf::Keyboard::F)) {
         place_turret();
     }
 
-    // Enemy spawning
-    if (!_enemyPath.empty()) {
-        _spawnTimer += dt;
-        const float spawnInterval = 2.0f; // one enemy every 2 seconds
-
-        if (_spawnTimer >= spawnInterval) {
-            _spawnTimer -= spawnInterval;
-            spawn_enemy();
-        }
-    }
-
-    // Enemy movement along the path
-    update_enemies(dt);
-    //turrets fire 
-    update_turrets(dt);
-    update_bullets(dt);
-
-    // Later:
-    // - Towers targeting and firing
-    // - Wave completion and rewards
+    // Run TD simulation while this scene is active
+    tick_simulation(dt);
 }
+
 
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_background);

@@ -62,6 +62,7 @@ public:
 	void load() override;
 	void update(const float& dt) override;
 	void render(sf::RenderWindow& window) override;
+	void tick_simulation(float dt); //run the TDF sim while in the sfaehouse 
 
 private:
 	sf::RectangleShape _background;
@@ -105,6 +106,8 @@ private:
 	std::vector<Bullet> _bullets;
 
 	float _spawnTimer = 0.f;        // time since last spawn
+
+	bool _initialised = false;		//only initialise TDF once
 
 	void place_turret();            // helper function
 	void build_enemy_path();        // generate ordered path from + tiles

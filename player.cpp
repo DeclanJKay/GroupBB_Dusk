@@ -6,7 +6,6 @@
 
 using ls = LevelSystem;
 
-
 Player::Player()
     : Entity(std::make_unique<sf::CircleShape>(kRadius)) {
     _shape->setFillColor(sf::Color::Magenta);
@@ -28,29 +27,35 @@ void Player::update(const float& dt) {
 
     if (dir.x != 0.f || dir.y != 0.f) {
         const float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-        dir /= len;
-        const sf::Vector2f target = get_position() + dir * kSpeed * dt;
+        sf::Vector2f normDir = dir / len;
 
-        try {
-            // If a level is loaded: block walls *and* lane tiles
-            const auto tile = ls::get_tile_at(target);
+        const sf::Vector2f target = get_position() + normDir * kSpeed * dt;
 
-            if (tile != ls::WALL &&
-                tile != ls::WAYPOINT &&   // <- enemy lane is blocked
-                tile != ls::ENEMY) {      // <- reserve for future
+        // Safehouse: free movement (no tile collision)
+        if (!_use_tile_collision) {
+            set_position(target);
+        }
+        else {
+            try {
+                // If a level is loaded: block walls *and* lane tiles
+                const auto tile = ls::get_tile_at(target);
+
+                if (tile != ls::WALL &&
+                    tile != ls::WAYPOINT &&   // enemy lane is blocked
+                    tile != ls::ENEMY) {      // reserved for future
+                    set_position(target);
+                }
+            }
+            catch (...) {
+                // No level / out of range -> allow free movement
+                // (used in scenes that don't rely on tiles safely)
                 set_position(target);
             }
-        }
-        catch (...) {
-            // No level / out of range -> allow free movement
-            // (used in Safehouse where we don't rely on tiles yet)
-            set_position(target);
         }
     }
 
     Entity::update(dt);
 }
-
 
 void Player::render(sf::RenderWindow& window) const {
     window.draw(*_shape);
