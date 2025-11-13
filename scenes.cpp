@@ -337,6 +337,19 @@ void TowerDefenceScene::update_enemies(float dt) {
             const sf::Vector2f& b = _enemyPath[static_cast<size_t>(segment + 1)];
             e.shape.setPosition(a + (b - a) * local);
         }
+
+        if (e.flashTimer > 0.f) {
+            e.flashTimer -= dt;
+            float t = std::max(e.flashTimer / 0.2f, 0.f);
+            sf::Color c;
+            c.r = static_cast<sf::Uint8>(255);
+            c.g = static_cast<sf::Uint8>(180 + 75 * t);
+            c.b = static_cast<sf::Uint8>(180 + 75 * t);
+            e.shape.setFillColor(c);
+        }
+        else {
+            e.shape.setFillColor(sf::Color::Red);
+        }
     }
 
     // Remove enemies that reached the end (segment beyond path)
@@ -503,6 +516,7 @@ void TowerDefenceScene::update_bullets(float dt) {
             float r = e.shape.getRadius() + b.shape.getRadius();
             if ((d.x * d.x + d.y * d.y) <= r * r) {
                 e.hp -= b.damage;
+                e.flashTimer = 0.2f; //flash for 0.2 seconds
                 hit = true;
                 break;
             }

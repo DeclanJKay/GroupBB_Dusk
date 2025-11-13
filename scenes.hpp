@@ -89,6 +89,7 @@ private:
 		float t = 0.f;              // position along the path (0 .. path_length-1)
 		sf::CircleShape shape;      // visual
 		int hp = 3;					//inital health of basic enemy 
+		float flashTimer = 0.f;		//flash effect when enemy gets hit
 	};
 	std::vector<Enemy> _enemies;
 
