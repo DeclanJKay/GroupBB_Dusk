@@ -103,10 +103,10 @@ void SafehouseScene::load() {
         static_cast<float>(param::game_height)
         });
 
-	// colour to distinguish from tower defence
+    // colour to distinguish from tower defence
     _background.setFillColor(sf::Color(30, 15, 15));
 
-	// Load font and set up a lavel (so we can see we are in safehouse)
+    // Load font and set up a label (so we can see we are in safehouse)
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
     }
@@ -117,26 +117,27 @@ void SafehouseScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
-    //create a player for this scene
+    // First time only: create the player
+    if (!_initialised) {
+        _player = std::make_shared<Player>();
+        _player->set_use_tile_collision(false);  // Safehouse ignores tiles completely
+
+        // start roughly in the centre of the screen
+        _player->set_position({
+            param::game_width * 0.5f,
+            param::game_height * 0.5f
+            });
+
+        _initialised = true;
+    }
+
+    // Each time we enter the scene, just hook the existing player back in
     _entities.clear();
-    _invaders.clear(); // make sure no invaders at start of run
+    if (_player) {
+        _entities.push_back(_player);
+    }
 
-    auto player = std::make_shared<Player>();
-    player->set_use_tile_collision(false);  // Safehouse ignores tiles completely
-
-    // start roughly in the centre of the screen
-    player->set_position({
-        param::game_width * 0.5f,
-        param::game_height * 0.5f
-        });
-
-    _entities.push_back(player);
-
-    // Later on we will put other info like:
-    // - Spawn player entity
-    // - Place vendor / doors
-    // - Setup walls / collision
-	// - etc.
+    // IMPORTANT: do NOT clear _invaders here – they persist between visits
 }
 
 void SafehouseScene::spawn_invaders(int count) {

@@ -52,6 +52,9 @@ private:
 	sf::Font _font;
 	sf::Text _label;
 
+	std::shared_ptr<Player> _player = nullptr;		// Persistent player for this scene
+	bool _initialised = false;
+
 	// enemies that made it out of the tower defence
 	struct Invader {
 		sf::CircleShape shape;
