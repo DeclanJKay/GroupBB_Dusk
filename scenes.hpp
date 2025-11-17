@@ -55,6 +55,8 @@ private:
 	std::shared_ptr<Player> _player = nullptr;		// Persistent player for this scene
 	bool _initialised = false;
 
+	float _attackCooldown = 0.f; //attack cooldown timer (seconds)
+
 	// enemies that made it out of the tower defence
 	struct Invader {
 		sf::CircleShape shape;

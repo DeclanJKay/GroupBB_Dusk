@@ -199,20 +199,52 @@ void SafehouseScene::update_invaders(float dt) {
 
 
 void SafehouseScene::update(const float& dt) {
-    // Safehouse player / entities / enemies etc
+    // Safehouse player / entities
     Scene::update(dt);
 
-    // Keep TD simulation running in the background
+    // --- TD sim continues in the background ---
     if (Scenes::tower_defence) {
         if (auto td = std::dynamic_pointer_cast<TowerDefenceScene>(Scenes::tower_defence)) {
             td->tick_simulation(dt);
 
-            // pull escaped enemies and spawn them as invaders
             int escaped = td->consume_escaped_enemies();
             if (escaped > 0) {
                 spawn_invaders(escaped);
             }
         }
+    }
+
+    // --- Handle player attack input ---
+    if (_attackCooldown > 0.f) {
+        _attackCooldown -= dt;
+    }
+
+    bool doAttack = false;
+    if (_attackCooldown <= 0.f && keyPressedOnce(sf::Keyboard::Space)) {
+        doAttack = true;
+        _attackCooldown = 0.5f; // half-second cooldown between swings
+    }
+
+    if (doAttack && _player) {
+        const sf::Vector2f center = _player->get_position();
+        const float attackRadius = 80.f; // px
+        const float attackRadiusSq = attackRadius * attackRadius;
+
+        std::vector<Invader> survivors;
+        survivors.reserve(_invaders.size());
+
+        for (auto& inv : _invaders) {
+            sf::Vector2f d = inv.shape.getPosition() - center;
+            float dsq = d.x * d.x + d.y * d.y;
+
+            if (dsq <= attackRadiusSq) {
+                // This invader is hit and killed skip adding to survivors
+                continue;
+            }
+            survivors.push_back(inv);
+        }
+
+        _invaders.swap(survivors);
     }
 
     // Update local invaders behaviour
