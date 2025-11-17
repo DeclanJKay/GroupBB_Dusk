@@ -119,6 +119,7 @@ void SafehouseScene::load() {
 
     //create a player for this scene
     _entities.clear();
+    _invaders.clear(); // make sure no invaders at start of run
 
     auto player = std::make_shared<Player>();
     player->set_use_tile_collision(false);  // Safehouse ignores tiles completely
@@ -138,17 +139,83 @@ void SafehouseScene::load() {
 	// - etc.
 }
 
+void SafehouseScene::spawn_invaders(int count) {
+    for (int i = 0; i < count; ++i) {
+        Invader inv;
+
+        inv.shape.setRadius(20.f);
+        inv.shape.setOrigin(20.f, 20.f);
+        inv.shape.setFillColor(sf::Color(200, 50, 50)); // make the colour reddish
+
+        // Spawn them near the right side of the screen, staggered vertically (again can change location) 
+        float x = static_cast<float>(param::game_width) - 100.f;
+        float y = 150.f + static_cast<float>(_invaders.size() * 50);
+
+        // Wrap a bit if too many if they have spawned in at same time
+        if (y > param::game_height - 100.f) {
+            y = 150.f;
+        }
+
+        inv.shape.setPosition(x, y);
+
+        _invaders.push_back(inv);
+    }
+}
+
+void SafehouseScene::update_invaders(float dt) {
+    if (_invaders.empty()) return;
+
+    // Find the Safehouse player
+    sf::Vector2f playerPos;
+    bool hasPlayer = false;
+
+    for (auto& e : _entities) {
+        if (auto p = std::dynamic_pointer_cast<Player>(e)) {
+            playerPos = p->get_position();
+            hasPlayer = true;
+            break;
+        }
+    }
+
+    if (!hasPlayer) return;
+
+    for (auto& inv : _invaders) {
+        sf::Vector2f pos = inv.shape.getPosition();
+        sf::Vector2f dir = playerPos - pos;
+
+        float lenSq = dir.x * dir.x + dir.y * dir.y;
+        if (lenSq > 1.0f) { // avoid division by zero when very close
+            float len = std::sqrt(lenSq);
+            sf::Vector2f norm = dir / len;
+
+            pos += norm * inv.speed * dt;
+            inv.shape.setPosition(pos);
+        }
+    }
+
+    // need to do collsoin etc 
+}
+
+
 void SafehouseScene::update(const float& dt) {
-    // Safehouse player / entities
+    // Safehouse player / entities / enemies etc
     Scene::update(dt);
 
     // Keep TD simulation running in the background
     if (Scenes::tower_defence) {
-        // shared_ptr<Scene> -> shared_ptr<TowerDefenceScene>
         if (auto td = std::dynamic_pointer_cast<TowerDefenceScene>(Scenes::tower_defence)) {
             td->tick_simulation(dt);
+
+            // pull escaped enemies and spawn them as invaders
+            int escaped = td->consume_escaped_enemies();
+            if (escaped > 0) {
+                spawn_invaders(escaped);
+            }
         }
     }
+
+    // Update local invaders behaviour
+    update_invaders(dt);
 
     // Press Shift once to swap to tower defence view
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
@@ -158,12 +225,19 @@ void SafehouseScene::update(const float& dt) {
 }
 
 
+
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
-	Scene::render(window); // draw player
+    Scene::render(window); // draw player
+
+    for (const auto& inv : _invaders) {    // Draw invaders
+        window.draw(inv.shape);
+    }
+
     window.draw(_label);
     // Later: draw player, UI, vendor, etc.
 }
+
 
 
 // -------------------------
@@ -398,7 +472,10 @@ void TowerDefenceScene::update_enemies(float dt) {
         if (segment < static_cast<int>(_enemyPath.size()) - 1) {
             alive.push_back(e);
         }
-        // else: enemy finished path; later we'll damage base etc.
+        else {
+            // Enemy finished the path: mark as escaped so Safehouse can spawn it
+            _escapedEnemies++;
+        }
     }
     _enemies.swap(alive);
 }
@@ -574,6 +651,15 @@ void TowerDefenceScene::update_bullets(float dt) {
     }
     _enemies.swap(alive);
 }
+
+
+//This is an accessor 
+int TowerDefenceScene::consume_escaped_enemies() {
+    int n = _escapedEnemies;
+    _escapedEnemies = 0;
+    return n;
+}
+
 
 
 

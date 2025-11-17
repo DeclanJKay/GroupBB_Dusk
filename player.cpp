@@ -10,7 +10,7 @@ Player::Player()
     : Entity(std::make_unique<sf::CircleShape>(kRadius)) {
     _shape->setFillColor(sf::Color::Magenta);
     _shape->setOrigin({ kRadius, kRadius });
-    set_position({ 100.f, 100.f }); // MazeScene::reset will overwrite to START
+    set_position({ 100.f, 100.f }); // MazeScene::reset will overwrite to START 
 }
 
 void Player::update(const float& dt) {

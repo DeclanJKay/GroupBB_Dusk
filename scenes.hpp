@@ -51,7 +51,16 @@ private:
 
 	sf::Font _font;
 	sf::Text _label;
-	// later: player entity, vendor, doors, etc.
+
+	// enemies that made it out of the tower defence
+	struct Invader {
+		sf::CircleShape shape;
+		float speed = 60.f;   // movement speed in px/sec	
+	};
+	std::vector<Invader> _invaders;
+
+	void spawn_invaders(int count);
+	void update_invaders(float dt);
 };
 
 // Tower defence scene (turret placement / waves)
@@ -63,6 +72,7 @@ public:
 	void update(const float& dt) override;
 	void render(sf::RenderWindow& window) override;
 	void tick_simulation(float dt); //run the TDF sim while in the sfaehouse 
+	int consume_escaped_enemies();
 
 private:
 	sf::RectangleShape _background;
@@ -108,6 +118,8 @@ private:
 	float _spawnTimer = 0.f;        // time since last spawn
 
 	bool _initialised = false;		//only initialise TDF once
+	
+	int _escapedEnemies = 0;		//How many enemies reach the end of the maze 
 
 	void place_turret();            // helper function
 	void build_enemy_path();        // generate ordered path from + tiles
