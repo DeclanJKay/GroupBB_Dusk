@@ -9,6 +9,7 @@
 // Static storage
 // -------------------------
 std::shared_ptr<Scene> GameSystem::_active_scene = nullptr;
+std::unique_ptr<sf::RenderWindow> GameSystem::_window = nullptr; 
 
 // -------------------------
 // Scene impl
@@ -40,7 +41,12 @@ void GameSystem::start(unsigned int width,
     const std::string& name,
     const float& time_step)
 {
-    sf::RenderWindow window(sf::VideoMode({ width, height }), name);
+    // Create the window once and store it
+    _window = std::make_unique<sf::RenderWindow>(
+        sf::VideoMode({ width, height }),
+        name
+    );
+    sf::RenderWindow& window = *_window;
     window.setFramerateLimit(0); // we control pacing (sleep) ourselves
 
     _init();
@@ -80,6 +86,12 @@ void GameSystem::start(unsigned int width,
     window.close();
     clean();
 }
+
+sf::RenderWindow& GameSystem::get_window() {
+    // Assumes start() has been called and _window is valid
+    return *_window;
+}
+
 
 void GameSystem::clean() {
     if (_active_scene) {

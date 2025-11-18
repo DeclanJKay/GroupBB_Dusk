@@ -2,41 +2,48 @@
 #include "player.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "game_parameters.hpp"
-#include "game_systems.hpp"
-#include "unordered_map"
+
+#include <SFML/Window/Keyboard.hpp>
+#include <SFML/Window/Mouse.hpp>
+
+#include <unordered_map>
 #include <iostream>
 #include <cmath>
+#include <algorithm>
 
 using ls = LevelSystem;
-
 using param = Parameters;
 
+// Static scene handles
 std::shared_ptr<Scene>      Scenes::maze = nullptr;
 std::shared_ptr<Scene>      Scenes::safehouse = nullptr;
 std::shared_ptr<Scene>      Scenes::tower_defence = nullptr;
 std::shared_ptr<Scene>      Scenes::end = nullptr;
 std::shared_ptr<RunContext> Scenes::runContext = nullptr;
 
-
-void MazeScene::set_file_path(const std::string& file_path) {
-    _file_path = file_path;
-}
-
-// Utility to detect a single key press so we can easily swap between tdf/action scenes (edge trigger)
+// ---------------------------------
+// Key edge-trigger helper
+// ---------------------------------
 bool keyPressedOnce(sf::Keyboard::Key key) {
     static std::unordered_map<sf::Keyboard::Key, bool> keyStates;
 
     bool isPressed = sf::Keyboard::isKeyPressed(key);
     bool wasPressed = keyStates[key];
 
-    keyStates[key] = isPressed; // update stored state
+    keyStates[key] = isPressed;
 
-    return (isPressed && !wasPressed); // true only on first press
+    return (isPressed && !wasPressed);
 }
 
+// ============================================================================
+// MazeScene
+// ============================================================================
+void MazeScene::set_file_path(const std::string& file_path) {
+    _file_path = file_path;
+}
 
 void MazeScene::load() {
-    // Colors 
+    // Colours
     ls::set_color(ls::EMPTY, sf::Color(30, 30, 30));
     ls::set_color(ls::WALL, sf::Color(180, 180, 180));
     ls::set_color(ls::START, sf::Color(80, 255, 80));
@@ -44,69 +51,58 @@ void MazeScene::load() {
 
     // Player entity
     auto player = std::make_shared<Player>();
-    player->set_use_tile_collision(true);   // Maze uses walls/end tiles
+    player->set_use_tile_collision(true); // Maze uses walls / ends
     _entities.push_back(player);
 
-    reset(); // loads the level + positions player
+    reset();
 }
 
 void MazeScene::reset() {
-    // Load the level and place player on START tile
-    ls::load_level(_file_path, 50.f); // choose your tile_size (e.g. 50)
+    ls::load_level(_file_path, 50.f);
     if (!_entities.empty()) {
         _entities.front()->set_position(ls::get_start_position());
     }
 }
 
 void MazeScene::update(const float& dt) {
-    // Update entities (includes Player movement)
     Scene::update(dt);
 
-    // If player reached END -> switch scene or next maze
     if (_entities.empty()) return;
     const sf::Vector2f p = _entities.front()->get_position();
 
     try {
         if (ls::get_tile_at(p) == ls::END) {
-            // Switch to second maze if on first, otherwise go to end scene
             if (_file_path == std::string(param::maze_1)) {
                 _file_path = param::maze_2;
                 reset();
                 return;
             }
-            // finished second maze -> go to end screen
-            unload();                                  // unload the maze scene
-            GameSystem::set_active_scene(Scenes::end); // switch to end scene
-            return;
 
+            unload();
+            GameSystem::set_active_scene(Scenes::end);
+            return;
         }
     }
     catch (...) {
-        // ignore OOB
+        // ignore out of bounds
     }
 }
 
 void MazeScene::render(sf::RenderWindow& window) {
-    ls::render(window);       // draw the tiles first
-    Scene::render(window);    // then draw entities (player)
-
-
+    ls::render(window);
+    Scene::render(window);
 }
 
-// -------------------------
+// ============================================================================
 // SafehouseScene
-// -------------------------
-
+// ============================================================================
 void SafehouseScene::load() {
     _background.setSize({
         static_cast<float>(param::game_width),
         static_cast<float>(param::game_height)
         });
-
-    // colour to distinguish from tower defence
     _background.setFillColor(sf::Color(30, 15, 15));
 
-    // Load font and set up a label (so we can see we are in safehouse)
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
     }
@@ -117,12 +113,15 @@ void SafehouseScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
+	// Make the attack arc shape
+    _attackArcShape.setPointCount(3);
+    _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
+
     // First time only: create the player
     if (!_initialised) {
         _player = std::make_shared<Player>();
-        _player->set_use_tile_collision(false);  // Safehouse ignores tiles completely
+        _player->set_use_tile_collision(false); // Safehouse ignores tiles
 
-        // start roughly in the centre of the screen
         _player->set_position({
             param::game_width * 0.5f,
             param::game_height * 0.5f
@@ -131,13 +130,11 @@ void SafehouseScene::load() {
         _initialised = true;
     }
 
-    // Each time we enter the scene, just hook the existing player back in
+    // Hook existing player into entity list
     _entities.clear();
     if (_player) {
         _entities.push_back(_player);
     }
-
-    // IMPORTANT: do NOT clear _invaders here – they persist between visits
 }
 
 void SafehouseScene::spawn_invaders(int count) {
@@ -146,13 +143,11 @@ void SafehouseScene::spawn_invaders(int count) {
 
         inv.shape.setRadius(20.f);
         inv.shape.setOrigin(20.f, 20.f);
-        inv.shape.setFillColor(sf::Color(200, 50, 50)); // make the colour reddish
+        inv.shape.setFillColor(sf::Color(200, 50, 50));
 
-        // Spawn them near the right side of the screen, staggered vertically (again can change location) 
         float x = static_cast<float>(param::game_width) - 100.f;
         float y = 150.f + static_cast<float>(_invaders.size() * 50);
 
-        // Wrap a bit if too many if they have spawned in at same time
         if (y > param::game_height - 100.f) {
             y = 150.f;
         }
@@ -185,7 +180,7 @@ void SafehouseScene::update_invaders(float dt) {
         sf::Vector2f dir = playerPos - pos;
 
         float lenSq = dir.x * dir.x + dir.y * dir.y;
-        if (lenSq > 1.0f) { // avoid division by zero when very close
+        if (lenSq > 1.0f) {
             float len = std::sqrt(lenSq);
             sf::Vector2f norm = dir / len;
 
@@ -193,99 +188,150 @@ void SafehouseScene::update_invaders(float dt) {
             inv.shape.setPosition(pos);
         }
     }
-
-    // need to do collsoin etc 
 }
-
 
 void SafehouseScene::update(const float& dt) {
     // Safehouse player / entities
     Scene::update(dt);
 
-    // --- TD sim continues in the background ---
+    // TD simulation continues in the background
     if (Scenes::tower_defence) {
-        if (auto td = std::dynamic_pointer_cast<TowerDefenceScene>(Scenes::tower_defence)) {
-            td->tick_simulation(dt);
+        // We know this really is a TowerDefenceScene
+        auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
+        td->tick_simulation(dt);
 
-            int escaped = td->consume_escaped_enemies();
-            if (escaped > 0) {
-                spawn_invaders(escaped);
-            }
+        int escaped = td->consume_escaped_enemies();
+        if (escaped > 0) {
+            spawn_invaders(escaped);
         }
     }
 
-    // --- Handle player attack input ---
+    // Attack timers
     if (_attackCooldown > 0.f) {
         _attackCooldown -= dt;
     }
+    if (_attackEffectTimer > 0.f) {
+        _attackEffectTimer -= dt;
+    }
 
+    // Melee attack in a 90-degree arc towards the mouse
     bool doAttack = false;
     if (_attackCooldown <= 0.f && keyPressedOnce(sf::Keyboard::Space)) {
         doAttack = true;
-        _attackCooldown = 0.5f; // half-second cooldown between swings
+        _attackCooldown = 0.5f;
     }
 
     if (doAttack && _player) {
-        const sf::Vector2f center = _player->get_position();
-        const float attackRadius = 80.f; // px
+        const float attackRadius = 80.f;
         const float attackRadiusSq = attackRadius * attackRadius;
+        const float cosHalfAngle = 0.70710678f; // cos(45°) -> 90° cone
 
+        sf::Vector2f center = _player->get_position();
+
+        // Get mouse position *relative to the game window* and convert
+        // to world coordinates (so it matches the player's coord space)
+        sf::RenderWindow& window = GameSystem::get_window();   // see note below
+        sf::Vector2i mousePix = sf::Mouse::getPosition(window);
+        sf::Vector2f mousePos = window.mapPixelToCoords(mousePix);
+
+        // Direction from player to mouse in the same coord space
+        sf::Vector2f toMouse = mousePos - center;
+        float lenSqMouse = toMouse.x * toMouse.x + toMouse.y * toMouse.y;
+        sf::Vector2f forward(1.f, 0.f);
+
+        if (lenSqMouse > 1.f) {
+            float lenMouse = std::sqrt(lenSqMouse);
+            forward = toMouse / lenMouse;
+        }
+
+        // Kill invaders inside the cone
         std::vector<Invader> survivors;
         survivors.reserve(_invaders.size());
 
         for (auto& inv : _invaders) {
             sf::Vector2f d = inv.shape.getPosition() - center;
-            float dsq = d.x * d.x + d.y * d.y;
+            float lenSq = d.x * d.x + d.y * d.y;
 
-            if (dsq <= attackRadiusSq) {
-                // This invader is hit and killed skip adding to survivors
+            if (lenSq > attackRadiusSq) {
+                survivors.push_back(inv);
                 continue;
             }
+
+            if (lenSq < 1.f) {
+                // Very close = hit
+                continue;
+            }
+
+            float len = std::sqrt(lenSq);
+            sf::Vector2f nd = d / len;
+
+            float dot = nd.x * forward.x + nd.y * forward.y;
+
+            if (dot >= cosHalfAngle) {
+                // Inside 90° arc -> hit
+                continue;
+            }
+
             survivors.push_back(inv);
         }
 
         _invaders.swap(survivors);
+
+        // Visual arc setup
+        const float cosA = 0.70710678f;
+        const float sinA = 0.70710678f;
+
+        sf::Vector2f left(
+            forward.x * cosA - forward.y * sinA,
+            forward.x * sinA + forward.y * cosA
+        );
+        sf::Vector2f right(
+            forward.x * cosA + forward.y * sinA,
+            -forward.x * sinA + forward.y * cosA
+        );
+
+        _attackArcShape.setPoint(0, center);
+        _attackArcShape.setPoint(1, center + left * attackRadius);
+        _attackArcShape.setPoint(2, center + right * attackRadius);
+
+        _attackEffectTimer = 0.12f;
     }
 
-    // Update local invaders behaviour
+    // Update invaders chasing the player
     update_invaders(dt);
 
-    // Press Shift once to swap to tower defence view
+    // Swap scenes on Shift
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
         GameSystem::set_active_scene(Scenes::tower_defence);
         return;
     }
 }
 
-
-
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
-    Scene::render(window); // draw player
+    Scene::render(window); // player
 
-    for (const auto& inv : _invaders) {    // Draw invaders
+    for (const auto& inv : _invaders) {
         window.draw(inv.shape);
     }
 
+    if (_attackEffectTimer > 0.f) {
+        window.draw(_attackArcShape);
+    }
+
     window.draw(_label);
-    // Later: draw player, UI, vendor, etc.
 }
 
-
-
-// -------------------------
+// ============================================================================
 // TowerDefenceScene
-// -------------------------
-
+// ============================================================================
 void TowerDefenceScene::load() {
-    // Background (can do this every time)
     _background.setSize({
         static_cast<float>(param::game_width),
         static_cast<float>(param::game_height)
         });
     _background.setFillColor(sf::Color(5, 5, 20));
 
-    // Label (also fine to re-do)
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
     }
@@ -299,10 +345,9 @@ void TowerDefenceScene::load() {
     const float tileSize = 50.f;
 
     if (!_initialised) {
-        // First time only: set tile colours & load level
-        ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));     // dark floor
-        ls::set_color(ls::WALL, sf::Color(60, 60, 80));     // walls/border
-        ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));  // enemy lane
+        ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));
+        ls::set_color(ls::WALL, sf::Color(60, 60, 80));
+        ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));
         ls::set_color(ls::START, sf::Color(80, 255, 80));
         ls::set_color(ls::END, sf::Color(255, 80, 80));
 
@@ -313,14 +358,13 @@ void TowerDefenceScene::load() {
         _bullets.clear();
         _enemyPath.clear();
         _spawnTimer = 0.f;
+        _escapedEnemies = 0;
 
-        // Build the ordered enemy path from the + tiles
         build_enemy_path();
 
-        // Create player just for this scene
         _entities.clear();
         _player = std::make_shared<Player>();
-        _player->set_use_tile_collision(true);  // TD uses tile collisions too
+        _player->set_use_tile_collision(true);
         _player->set_position({ 150.f, 100.f });
         _entities.push_back(_player);
 
@@ -328,8 +372,6 @@ void TowerDefenceScene::load() {
         std::cout << "[TD] Initialised once.\n";
     }
     else {
-        // Already initialised: DO NOT reset turrets/enemies/bullets/path
-        // Just make sure the player entity is hooked back into this scene
         _entities.clear();
         if (_player) {
             _entities.push_back(_player);
@@ -339,32 +381,27 @@ void TowerDefenceScene::load() {
 }
 
 void TowerDefenceScene::tick_simulation(float dt) {
-    // spawn timer / waves
     if (!_enemyPath.empty()) {
         _spawnTimer += dt;
-        const float spawnInterval = 2.0f; // enemy every 2 seconds
+        const float spawnInterval = 2.0f;
         while (_spawnTimer >= spawnInterval) {
             _spawnTimer -= spawnInterval;
             spawn_enemy();
         }
     }
 
-    // core TD sim
     update_enemies(dt);
     update_turrets(dt);
     update_bullets(dt);
 }
-
-
 
 void TowerDefenceScene::build_enemy_path() {
     _enemyPath.clear();
 
     const int w = ls::get_width();
     const int h = ls::get_height();
-    const float tileSize = 50.f; // must match load_level
+    const float tileSize = 50.f;
 
-    // Collect all WAYPOINT tiles
     std::vector<sf::Vector2i> waypoints;
     waypoints.reserve(w * h);
 
@@ -382,7 +419,6 @@ void TowerDefenceScene::build_enemy_path() {
         return;
     }
 
-    // Find a start tile: choose the leftmost (+ top-most) waypoint
     sf::Vector2i start = waypoints[0];
     for (const auto& p : waypoints) {
         if (p.x < start.x || (p.x == start.x && p.y < start.y)) {
@@ -390,8 +426,6 @@ void TowerDefenceScene::build_enemy_path() {
         }
     }
 
-    // Simple snake follow: walk from start, always going to an adjacent
-    // unvisited WAYPOINT tile (assumes a single, non-branching path)
     auto index = [w](sf::Vector2i p) {
         return p.y * w + p.x;
         };
@@ -433,7 +467,6 @@ void TowerDefenceScene::build_enemy_path() {
         }
     }
 
-    // Convert grid positions to world positions (centre of each tile)
     _enemyPath.reserve(ordered.size());
     for (const auto& grid : ordered) {
         sf::Vector2f tilePos = ls::get_tile_position(grid);
@@ -447,8 +480,8 @@ void TowerDefenceScene::spawn_enemy() {
     if (_enemyPath.size() < 2) return;
 
     Enemy e;
-    e.t = 0.f; // start at beginning of path
-    e.hp = 3;  //takes 3 hits to kill enemy (will change later)
+    e.t = 0.f;
+    e.hp = 3;
 
     e.shape.setRadius(15.f);
     e.shape.setOrigin(15.f, 15.f);
@@ -462,19 +495,16 @@ void TowerDefenceScene::update_enemies(float dt) {
     if (_enemyPath.size() < 2) return;
 
     const float tileSize = 50.f;
-    const float speed = 60.f; // units per second along the path
+    const float speed = 60.f;
 
-    // Move enemies along the path
     for (auto& e : _enemies) {
-        // Convert speed to progress along path nodes
         float deltaT = (speed * dt) / tileSize;
         e.t += deltaT;
 
-        int segment = static_cast<int>(e.t);
+        int   segment = static_cast<int>(e.t);
         float local = e.t - segment;
 
         if (segment >= static_cast<int>(_enemyPath.size()) - 1) {
-            // Enemy reached end of path; for now just park it at the last node
             e.shape.setPosition(_enemyPath.back());
         }
         else {
@@ -497,7 +527,6 @@ void TowerDefenceScene::update_enemies(float dt) {
         }
     }
 
-    // Remove enemies that reached the end (segment beyond path)
     std::vector<Enemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
@@ -506,19 +535,15 @@ void TowerDefenceScene::update_enemies(float dt) {
             alive.push_back(e);
         }
         else {
-            // Enemy finished the path: mark as escaped so Safehouse can spawn it
             _escapedEnemies++;
         }
     }
     _enemies.swap(alive);
 }
 
-
-
 void TowerDefenceScene::place_turret() {
     if (!_player) return;
 
-    // Must match the tile size used in ls::load_level above
     const float tileSize = 50.f;
 
     sf::Vector2f pos = _player->get_position();
@@ -527,67 +552,56 @@ void TowerDefenceScene::place_turret() {
         static_cast<int>(pos.y / tileSize)
     );
 
-    // Check tile type � only allow EMPTY
     LevelSystem::Tile tile;
     try {
         tile = ls::get_tile(grid);
     }
     catch (...) {
-        // out of bounds, do nothing
         return;
     }
 
     if (tile != ls::EMPTY) {
-        // can't place on walls, lane, enemy, etc.
         return;
     }
 
-    // Prevent placing multiple turrets on the same tile
     for (const auto& t : _turrets) {
         if (t.grid == grid) {
-            return; // turret already here
+            return;
         }
     }
 
-    // Create visual turret square
     Turret turret;
     turret.grid = grid;
     turret.cooldown = 0.f;
     turret.shape.setSize({ tileSize, tileSize });
     turret.shape.setPosition(ls::get_tile_position(grid));
-    turret.shape.setFillColor(sf::Color(0, 200, 255)); // cyan-ish colour 
+    turret.shape.setFillColor(sf::Color(0, 200, 255));
 
     _turrets.push_back(turret);
-
 }
-
 
 void TowerDefenceScene::update_turrets(float dt) {
     if (_enemies.empty() || _turrets.empty()) return;
 
-    const float tileSize = 50.f;          // must match load_level
-    const float rangePixels = tileSize * 3;  // 3-tile range
+    const float tileSize = 50.f;
+    const float rangePixels = tileSize * 3;
     const float rangeSq = rangePixels * rangePixels;
-    const float fireInterval = 0.5f;          // seconds between shots
-    const int   damagePerHit = 1;
+    const float fireInterval = 0.5f;
 
-    // For each turret, try to shoot one enemy
     for (auto& t : _turrets) {
-        // tick down cooldown
         if (t.cooldown > 0.f) {
             t.cooldown -= dt;
             continue;
         }
 
-        // world position of turret centre
         sf::Vector2f turretPos =
             t.shape.getPosition() + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
         Enemy* bestEnemy = nullptr;
-        float bestDistSq = rangeSq;
+        float  bestDistSq = rangeSq;
 
         for (auto& e : _enemies) {
-            if (e.hp <= 0) continue; // already dead
+            if (e.hp <= 0) continue;
 
             sf::Vector2f diff = e.shape.getPosition() - turretPos;
             float d2 = diff.x * diff.x + diff.y * diff.y;
@@ -599,16 +613,13 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
 
         if (bestEnemy) {
-            // Fire a projectile toward the chosen enemy
-            sf::Vector2f turretPos =
-                t.shape.getPosition() + sf::Vector2f(25.f, 25.f); // tileSize*0.5
-
             Bullet b;
             b.pos = turretPos;
+
             sf::Vector2f toEnemy = bestEnemy->shape.getPosition() - turretPos;
             float len = std::sqrt(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
             b.vel = (len > 0.f) ? (toEnemy / len) : sf::Vector2f(0.f, 0.f);
-            b.speed = 300.f;     // tweak as you like
+            b.speed = 300.f;
             b.damage = 1;
             b.ttl = 2.0f;
 
@@ -619,18 +630,14 @@ void TowerDefenceScene::update_turrets(float dt) {
 
             _bullets.push_back(b);
 
-            // fire rate + cosmetic flash
             t.cooldown = fireInterval;
             t.shape.setFillColor(sf::Color(0, 230, 255));
-
         }
         else {
-            // No enemy in range: slowly fade back toward base colour
             t.shape.setFillColor(sf::Color(0, 200, 255));
         }
     }
 
-    // Remove dead enemies (hp <= 0), but keep those still walking
     std::vector<Enemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
@@ -644,7 +651,6 @@ void TowerDefenceScene::update_turrets(float dt) {
 void TowerDefenceScene::update_bullets(float dt) {
     if (_bullets.empty()) return;
 
-    // Move bullets, check collisions, cull
     std::vector<Bullet> aliveBullets;
     aliveBullets.reserve(_bullets.size());
 
@@ -657,14 +663,14 @@ void TowerDefenceScene::update_bullets(float dt) {
 
         bool hit = false;
 
-        // collision check vs enemies (circle-circle)
         for (auto& e : _enemies) {
             if (e.hp <= 0) continue;
+
             sf::Vector2f d = e.shape.getPosition() - b.pos;
             float r = e.shape.getRadius() + b.shape.getRadius();
             if ((d.x * d.x + d.y * d.y) <= r * r) {
                 e.hp -= b.damage;
-                e.flashTimer = 0.2f; //flash for 0.2 seconds
+                e.flashTimer = 0.2f;
                 hit = true;
                 break;
             }
@@ -676,7 +682,6 @@ void TowerDefenceScene::update_bullets(float dt) {
     }
     _bullets.swap(aliveBullets);
 
-    // remove dead enemies
     std::vector<Enemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
@@ -685,71 +690,48 @@ void TowerDefenceScene::update_bullets(float dt) {
     _enemies.swap(alive);
 }
 
-
-//This is an accessor 
 int TowerDefenceScene::consume_escaped_enemies() {
     int n = _escapedEnemies;
     _escapedEnemies = 0;
     return n;
 }
 
-
-
-
-
 void TowerDefenceScene::update(const float& dt) {
-    // Player input / local entities
     Scene::update(dt);
 
-    // Swap back to safehouse
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
         GameSystem::set_active_scene(Scenes::safehouse);
         return;
     }
 
-    // Place turret
     if (keyPressedOnce(sf::Keyboard::F)) {
         place_turret();
     }
 
-    // Run TD simulation while this scene is active
     tick_simulation(dt);
 }
 
-
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_background);
-    ls::render(window); //draw the tile map
-	Scene::render(window); // draw player
+    ls::render(window);
+    Scene::render(window);
 
-    // Turrets on top of tiles
-    for (const auto& turret : _turrets) {
-        window.draw(turret.shape);
-    }
-
-    // Bullets
-    for (const auto& b : _bullets) window.draw(b.shape);
-
-    // Enemies
-    for (const auto& enemy : _enemies) {
-        window.draw(enemy.shape);
-    }
+    for (const auto& turret : _turrets) window.draw(turret.shape);
+    for (const auto& b : _bullets)      window.draw(b.shape);
+    for (const auto& enemy : _enemies)  window.draw(enemy.shape);
 
     window.draw(_label);
-    // Later: draw turrets, enemies, bullets, wave UI, etc.
 }
 
-
-
+// ============================================================================
+// EndScene
+// ============================================================================
 void EndScene::load() {
-    // NOTE: put a font at res/fonts/arial.ttf (or change the path)
     if (_font.loadFromFile("res/fonts/arial.ttf")) {
         _win_text.setFont(_font);
         _win_text.setString("You Win!\nPress ESC to exit.");
         _win_text.setCharacterSize(36);
         _win_text.setFillColor(sf::Color::White);
-
-        // center it roughly
         _win_text.setPosition(200.f, 200.f);
     }
 }

@@ -43,6 +43,7 @@ public:
         const std::string& name,
         const float& time_step = 0.0f);
 
+    static sf::RenderWindow& get_window();
     static void clean();
     static void reset();
     static void set_active_scene(const std::shared_ptr<Scene>& act_sc);
@@ -53,4 +54,6 @@ private:
     static void _render(sf::RenderWindow& window);
 
     static std::shared_ptr<Scene> _active_scene;
+
+    static std::unique_ptr<sf::RenderWindow> _window;
 };
