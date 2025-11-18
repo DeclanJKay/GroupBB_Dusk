@@ -1,21 +1,22 @@
 #pragma once
 #include <memory>
-//Again doing this here to avoid circular dependencies with Player, Turret, Enemy, etc.
 
+// Shared data for a single run of the game (used across scenes)
 
-// declare anything you want later (Player, Turret, etc.)
+// Basic player stats that can be tweaked during the run
 struct PlayerStats {
     int maxHealth = 3;
     int currentHealth = 3;
     // later: movementSpeed, damage, reloadSpeed, etc.
 };
 
+// Global-ish context for the current run (wave, currency, player stats, etc.)
 struct RunContext {
-    int waveNumber = 1;
-    int currency = 0;
+    int  waveNumber = 1;   // current wave in the tower defence
+    int  currency = 0;   // money earned this run
     bool runOver = false;
 
-    PlayerStats playerStats;
+    PlayerStats playerStats;  // health values for the player
 
     // later:
     // std::vector<std::shared_ptr<Turret>> turrets;

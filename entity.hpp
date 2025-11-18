@@ -11,16 +11,18 @@ public:
     Entity() = delete;
     virtual ~Entity() = default;
 
-    // Per-frame
+    // Called once per frame – override in derived classes
     virtual void update(const float& dt);
+
+    // Draw this entity – subclasses must implement
     virtual void render(sf::RenderWindow& window) const = 0;
 
-    // Transform helpers
+    // Position helpers
     sf::Vector2f get_position() const { return _position; }
     void set_position(const sf::Vector2f& pos);
     void move(const sf::Vector2f& delta);
 
 protected:
-    std::unique_ptr<sf::Shape> _shape;
-    sf::Vector2f _position{ 0.f, 0.f };
+    std::unique_ptr<sf::Shape> _shape;  // SFML shape we draw
+    sf::Vector2f _position{ 0.f, 0.f }; // cached world position
 };

@@ -8,13 +8,13 @@ class Player : public Entity {
 public:
     Player();
 
-    // Movement update
+    // Per–frame logic (input, movement, flash, clamping)
     void update(const float& dt) override;
 
-    // Draw the shape
+    // Draw the player to the window
     void render(sf::RenderWindow& window) const override;
 
-    // Enable / disable tile-based collision
+    // Turn tile-based collision on/off
     // (true in Maze / Tower Defence, false in Safehouse)
     void set_use_tile_collision(bool enabled) { _use_tile_collision = enabled; }
 
@@ -23,24 +23,22 @@ public:
     int  get_max_health() const { return _maxHealth; }
     bool is_dead() const { return _health <= 0; }
 
-    // Apply damage (clamped to >= 0)
+    // Apply damage and trigger hit flash
     void take_damage(int amount);
 
-    // Radius helper for collision with invaders
+    // Radius used for simple circle collision checks
     float get_radius() const { return kRadius; }
 
-
-
 private:
-    static constexpr float kRadius = 25.f;
-    static constexpr float kSpeed = 200.f; // units per second
+    static constexpr float kRadius = 25.f;       // visual + collision radius
+    static constexpr float kSpeed = 200.f;      // movement speed (units/sec)
 
-    bool _use_tile_collision = false; // default: free movement
+    bool _use_tile_collision = false;            // if true, respect level tiles
 
-    // --- Health values ---
+    // Health
     int _maxHealth = 5;
     int _health = _maxHealth;
 
-    float     _flashTimer = 0.f;   // how long to stay in "hit" colour
-    sf::Color _baseColor;          // normal colour for the player
+    float     _flashTimer = 0.f;                // seconds left of hit flash
+    sf::Color _baseColor;                       // normal player colour
 };

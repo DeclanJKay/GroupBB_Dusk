@@ -202,8 +202,6 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
     }
 }
 
-
-
 void SafehouseScene::update_invaders(float dt) {
     if (_invaders.empty() || !_player) return;
 

@@ -17,7 +17,7 @@ Player::Player()
     _baseColor = sf::Color::Magenta;
     _shape->setFillColor(_baseColor);
 
-    // Center the circle on its position
+    // Centre the circle on its position
     _shape->setOrigin({ kRadius, kRadius });
 
     // Default start position (overwritten by scenes)
@@ -27,7 +27,7 @@ Player::Player()
 void Player::update(const float& dt) {
     sf::Vector2f dir{ 0.f, 0.f };
 
-    // Basic WASD / Arrow movement
+    // Basic WASD / Arrow movement input
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
         sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  dir.x -= 1.f;
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
@@ -38,18 +38,18 @@ void Player::update(const float& dt) {
         sf::Keyboard::isKeyPressed(sf::Keyboard::Down))  dir.y += 1.f;
 
     if (dir.x != 0.f || dir.y != 0.f) {
-        // Normalise direction
+        // Normalise direction so diagonal speed isn’t faster
         const float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
         sf::Vector2f norm = dir / len;
 
         const sf::Vector2f target = get_position() + norm * kSpeed * dt;
 
         if (!_use_tile_collision) {
-            // Safehouse: no tile collisions, move freely
+            // Safehouse: free movement
             set_position(target);
         }
         else {
-            // Maze / Tower Defence: collide with walls / path tiles
+            // Maze / Tower Defence: respect level collision
             try {
                 const auto tile = ls::get_tile_at(target);
 
@@ -60,14 +60,13 @@ void Player::update(const float& dt) {
                 }
             }
             catch (...) {
-                // If level system throws (no level / out of range),
-                // just allow movement.
+                // If level system fails (out of bounds etc.), just allow movement
                 set_position(target);
             }
         }
     }
 
-    // --- Hit flash handling (runs every frame) ---
+    // Hit flash (runs every frame, not only while moving)
     if (_flashTimer > 0.f) {
         _flashTimer -= dt;
         if (_flashTimer < 0.f) _flashTimer = 0.f;
@@ -80,7 +79,7 @@ void Player::update(const float& dt) {
         _shape->setFillColor(_baseColor);
     }
 
-    // --- Clamp to screen bounds ---
+    // Clamp player inside the game window
     sf::Vector2f pos = get_position();
 
     const float minX = kRadius;
@@ -93,7 +92,7 @@ void Player::update(const float& dt) {
 
     set_position(pos);
 
-    // Let base Entity do any extra per-frame work
+    // Base Entity hook (currently does nothing, but kept for consistency)
     Entity::update(dt);
 }
 
@@ -107,6 +106,6 @@ void Player::take_damage(int amount) {
     _health -= amount;
     if (_health < 0) _health = 0;
 
-    // Start a short flash
-    _flashTimer = 0.2f;        // 0.2 seconds of flash
+    // Start short hit flash
+    _flashTimer = 0.2f;
 }
