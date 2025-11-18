@@ -1,5 +1,6 @@
 #include "player.hpp"
 #include "tile_level_loader/level_system.hpp"
+#include "game_parameters.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Graphics/CircleShape.hpp>
@@ -7,6 +8,7 @@
 #include <cmath>
 
 using ls = LevelSystem;
+using param = Parameters;
 
 Player::Player()
     : Entity(std::make_unique<sf::CircleShape>(kRadius)) {
@@ -77,6 +79,19 @@ void Player::update(const float& dt) {
         // Back to normal colour
         _shape->setFillColor(_baseColor);
     }
+
+    // --- Clamp to screen bounds ---
+    sf::Vector2f pos = get_position();
+
+    const float minX = kRadius;
+    const float maxX = static_cast<float>(param::game_width) - kRadius;
+    const float minY = kRadius;
+    const float maxY = static_cast<float>(param::game_height) - kRadius;
+
+    pos.x = std::clamp(pos.x, minX, maxX);
+    pos.y = std::clamp(pos.y, minY, maxY);
+
+    set_position(pos);
 
     // Let base Entity do any extra per-frame work
     Entity::update(dt);
