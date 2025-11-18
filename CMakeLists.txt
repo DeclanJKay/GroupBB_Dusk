@@ -17,7 +17,7 @@ add_subdirectory("lib/SFML")
 # ==== Level system library (build FIRST) ====
 add_library(tile_level STATIC
   tile_level_loader/level_system.cpp
-)
+ "EnemyStats.cpp")
 target_include_directories(tile_level INTERFACE tile_level_loader)
 target_link_libraries(tile_level PUBLIC sfml-graphics)
 
@@ -36,6 +36,7 @@ add_executable(tile_engine
   scenes.hpp
   game_parameters.hpp
   tile_level_loader/level_system.hpp
+  EnemyStats.cpp
 )
 
 # Link SFML + our library

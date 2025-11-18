@@ -2,6 +2,7 @@
 #include "player.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "game_parameters.hpp"
+#include "EnemyStats.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -149,51 +150,24 @@ void SafehouseScene::load() {
     }
 }
 
-// Spawn invaders in the safehouse based on escaped TD enemy types
 void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
     for (int typeId : enemyTypes) {
         Invader inv;
 
-        // Defaults
-        float radius = 20.f;
-        inv.speed = 60.f;
-        int   hp = 3;
-        sf::Color color(200, 50, 50); // basic red
+        // Convert int -> EnemyType
+        EnemyType type = static_cast<EnemyType>(typeId);
 
-        // Map from TD enemy type to safehouse stats
-        TowerDefenceScene::EnemyType type =
-            static_cast<TowerDefenceScene::EnemyType>(typeId);
+        // Look up shared stats
+        EnemyStats stats = get_enemy_stats(type);
 
-        switch (type) {
-        case TowerDefenceScene::EnemyType::Basic:
-            radius   = 20.f;
-            inv.speed = 60.f;
-            hp       = 3;                         // same as TD
-            color    = sf::Color(200, 50, 50);    // red-ish
-            break;
+        inv.speed = stats.speed;
+        inv.hp = stats.hp;
+        inv.maxHp = stats.hp;
+        inv.baseColor = stats.color;
 
-        case TowerDefenceScene::EnemyType::Fast:
-            radius   = 16.f;
-            inv.speed = 110.f;
-            hp       = 2;                         // same as TD
-            color    = sf::Color(255, 200, 0);    // yellow/orange
-            break;
-
-        case TowerDefenceScene::EnemyType::Tank:
-            radius   = 24.f;
-            inv.speed = 40.f;
-            hp       = 6;                         // same as TD
-            color    = sf::Color(150, 0, 200);    // purple-ish
-            break;
-        }
-
-        inv.hp       = hp;
-        inv.maxHp    = hp;
-        inv.baseColor = color;
-
-        inv.shape.setRadius(radius);
-        inv.shape.setOrigin(radius, radius);
-        inv.shape.setFillColor(color);
+        inv.shape.setRadius(stats.radius);
+        inv.shape.setOrigin(stats.radius, stats.radius);
+        inv.shape.setFillColor(stats.color);
 
         // Stack them roughly in a column on the right
         float x = static_cast<float>(param::game_width) - 100.f;
@@ -207,6 +181,7 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
         _invaders.push_back(inv);
     }
 }
+
 
 // Move invaders towards the player, handle contact damage and hit flash
 void SafehouseScene::update_invaders(float dt) {
@@ -639,50 +614,22 @@ TowerDefenceScene::Enemy TowerDefenceScene::make_enemy(EnemyType type) {
     e.t = 0.f;
     e.flashTimer = 0.f;
 
-    // Defaults
-    float radius = 15.f;
-    int   hp = 3;
-    float speed = 60.f;
-    sf::Color color = sf::Color::Red;
+    // Shared stats for this type
+    EnemyStats stats = get_enemy_stats(type);
 
-    switch (type) {
-    case EnemyType::Basic:
-        // Default basic enemy
-        radius = 15.f;
-        hp = 3;
-        speed = 60.f;
-        color = sf::Color::Red;
-        break;
+    e.hp = stats.hp;
+    e.maxHp = stats.hp;
+    e.speed = stats.speed;
+    e.baseColor = stats.color;
 
-    case EnemyType::Fast:
-        // Weaker but very quick
-        radius = 12.f;
-        hp = 2;
-        speed = 110.f;
-        color = sf::Color(255, 200, 0); // yellow/orange
-        break;
-
-    case EnemyType::Tank:
-        // Slow but chunky
-        radius = 18.f;
-        hp = 6;
-        speed = 40.f;
-        color = sf::Color(150, 0, 200); // purple-ish
-        break;
-    }
-
-    e.shape.setRadius(radius);
-    e.shape.setOrigin(radius, radius);
-    e.baseColor = color;
-    e.shape.setFillColor(color);
+    e.shape.setRadius(stats.radius);
+    e.shape.setOrigin(stats.radius, stats.radius);
+    e.shape.setFillColor(stats.color);
     e.shape.setPosition(_enemyPath.front());
-
-    e.hp = hp;
-    e.maxHp = hp;
-    e.speed = speed;
 
     return e;
 }
+
 
 
 void TowerDefenceScene::spawn_enemy(EnemyType type) {

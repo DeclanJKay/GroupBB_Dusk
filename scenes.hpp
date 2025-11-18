@@ -7,6 +7,7 @@
 
 #include "game_systems.hpp"
 #include "run_context.hpp"
+#include "EnemyType.hpp"
 
 class Player;
 
@@ -109,13 +110,6 @@ public:
 
     // Safehouse pulls escaped enemy types from here
     std::vector<int> consume_escaped_enemies();
-
-    // All the different enemy types used in both modes
-    enum class EnemyType {
-        Basic,
-        Fast,
-        Tank
-    };
 
 private:
     sf::RectangleShape _background;
