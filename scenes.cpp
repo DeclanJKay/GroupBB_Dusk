@@ -113,6 +113,13 @@ void SafehouseScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
+	//Player HP text
+    _hpText.setFont(_font);
+    _hpText.setCharacterSize(24);
+    _hpText.setFillColor(sf::Color::White);
+    _hpText.setPosition(20.f, 60.f);   // a bit below the title
+    _hpText.setString("HP: 0/0");
+
 	// Make the attack arc shape
     _attackArcShape.setPointCount(3);
     _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
@@ -159,36 +166,40 @@ void SafehouseScene::spawn_invaders(int count) {
 }
 
 void SafehouseScene::update_invaders(float dt) {
-    if (_invaders.empty()) return;
+    if (_invaders.empty() || !_player) return;
 
-    // Find the Safehouse player
-    sf::Vector2f playerPos;
-    bool hasPlayer = false;
-
-    for (auto& e : _entities) {
-        if (auto p = std::dynamic_pointer_cast<Player>(e)) {
-            playerPos = p->get_position();
-            hasPlayer = true;
-            break;
-        }
-    }
-
-    if (!hasPlayer) return;
+    // Player data
+    sf::Vector2f playerPos = _player->get_position();
+    float        playerR = _player->get_radius();
 
     for (auto& inv : _invaders) {
         sf::Vector2f pos = inv.shape.getPosition();
         sf::Vector2f dir = playerPos - pos;
 
         float lenSq = dir.x * dir.x + dir.y * dir.y;
-        if (lenSq > 1.0f) {
+        if (lenSq > 1.0f) { // avoid division by zero when very close
             float len = std::sqrt(lenSq);
             sf::Vector2f norm = dir / len;
 
             pos += norm * inv.speed * dt;
             inv.shape.setPosition(pos);
         }
+
+        // --- Contact damage ---
+        sf::Vector2f diff = playerPos - pos;
+        float distSq = diff.x * diff.x + diff.y * diff.y;
+        float combinedR = playerR + inv.shape.getRadius();
+
+        if (distSq <= combinedR * combinedR && _damageCooldown <= 0.f) {
+            _player->take_damage(1);    // 1 damage per contact
+            _damageCooldown = 1.0f;     // 1 second of invulnerability
+            // Later: add hit flash / knockback / UI update etc.
+        }
     }
+
+    // delete invaders, handle death, etc.
 }
+
 
 void SafehouseScene::update(const float& dt) {
     // Safehouse player / entities
@@ -206,14 +217,26 @@ void SafehouseScene::update(const float& dt) {
         }
     }
 
-    // Attack timers
+    // --- Update HP text from player health ---
+    if (_player) {
+        int hp = _player->get_health();
+        int maxHp = _player->get_max_health();
+
+        _hpText.setString(
+            "HP: " + std::to_string(hp) + "/" + std::to_string(maxHp)
+        );
+    }
+
+    // --- Attack + damage timers ---
     if (_attackCooldown > 0.f) {
         _attackCooldown -= dt;
     }
     if (_attackEffectTimer > 0.f) {
         _attackEffectTimer -= dt;
     }
-
+    if (_damageCooldown > 0.f) {
+        _damageCooldown -= dt;
+    }
     // Melee attack in a 90-degree arc towards the mouse
     bool doAttack = false;
     if (_attackCooldown <= 0.f && keyPressedOnce(sf::Keyboard::Space)) {
@@ -297,8 +320,23 @@ void SafehouseScene::update(const float& dt) {
         _attackEffectTimer = 0.12f;
     }
 
-    // Update invaders chasing the player
+    // --- Update invaders chasing the player ---
     update_invaders(dt);
+
+    // --- Death check ---
+    if (_player && _player->is_dead()) {
+        // Clear any remaining invaders (optional, just to be tidy)
+        _invaders.clear();
+
+        // Make sure the EndScene exists
+        if (!Scenes::end) {
+            Scenes::end = std::make_shared<EndScene>();
+        }
+
+        // Switch to Game Over screen
+        GameSystem::set_active_scene(Scenes::end);
+        return;
+    }
 
     // Swap scenes on Shift
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
@@ -306,6 +344,7 @@ void SafehouseScene::update(const float& dt) {
         return;
     }
 }
+
 
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
@@ -320,6 +359,7 @@ void SafehouseScene::render(sf::RenderWindow& window) {
     }
 
     window.draw(_label);
+    window.draw(_hpText);   // show HP of player 
 }
 
 // ============================================================================
@@ -727,12 +767,30 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
 // EndScene
 // ============================================================================
 void EndScene::load() {
+    // Game over  screen 
     if (_font.loadFromFile("res/fonts/arial.ttf")) {
         _win_text.setFont(_font);
-        _win_text.setString("You Win!\nPress ESC to exit.");
+        _win_text.setString("GAME OVER\nPress R to restart");
         _win_text.setCharacterSize(36);
         _win_text.setFillColor(sf::Color::White);
+
+        // Roughly centred
         _win_text.setPosition(200.f, 200.f);
+    }
+}
+
+void EndScene::update(const float& dt) {
+    // No entities to update, so just handle input
+    (void)dt; // silence unused warning if any
+
+    // Press R to restart a fresh run
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
+        // Recreate the core scenes from scratch
+        Scenes::safehouse = std::make_shared<SafehouseScene>();
+        Scenes::tower_defence = std::make_shared<TowerDefenceScene>();
+
+        // Jump back to the start of the run (Safehouse)
+        GameSystem::set_active_scene(Scenes::safehouse);
     }
 }
 
@@ -740,3 +798,4 @@ void EndScene::render(sf::RenderWindow& window) {
     if (_win_text.getString().isEmpty()) return;
     window.draw(_win_text);
 }
+

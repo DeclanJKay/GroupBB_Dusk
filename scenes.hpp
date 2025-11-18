@@ -35,12 +35,14 @@ class EndScene : public Scene {
 public:
     EndScene() = default;
     void load() override;
+    void update(const float& dt) override;          
     void render(sf::RenderWindow& window) override;
 
 private:
     sf::Text _win_text;
     sf::Font _font;
 };
+
 
 // ---------------------------------
 // Safehouse scene (roguelite side)
@@ -58,6 +60,7 @@ private:
 
     sf::Font _font;
     sf::Text _label;
+    sf::Text _hpText;
 
     // Persistent player for this scene
     std::shared_ptr<Player> _player = nullptr;
@@ -67,6 +70,7 @@ private:
     float _attackCooldown = 0.f;   // seconds until next swing
     float _attackEffectTimer = 0.f;   // time left to show visual arc
     sf::ConvexShape _attackArcShape;  // 90-degree attack wedge
+    float _damageCooldown = 0.f; // time until next contact damage
 
     // Enemies that made it out of the tower defence
     struct Invader {
