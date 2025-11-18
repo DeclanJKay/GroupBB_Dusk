@@ -1032,7 +1032,6 @@ void EndScene::update(const float& dt) {
     // Press R to restart a fresh run
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         // Recreate the core scenes from scratch.
-        // Note: MazeScene is currently unused in this restart logic –
         // we go straight back to Safehouse + TowerDefence.
         Scenes::safehouse = std::make_shared<SafehouseScene>();
         Scenes::tower_defence = std::make_shared<TowerDefenceScene>();
