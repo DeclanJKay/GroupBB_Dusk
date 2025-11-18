@@ -79,7 +79,7 @@ private:
     };
     std::vector<Invader> _invaders;
 
-    void spawn_invaders(int count);
+    void spawn_invaders(const std::vector<int>& enemyTypes);
     void update_invaders(float dt);
 };
 
@@ -98,7 +98,14 @@ public:
     void tick_simulation(float dt);
 
     // Safehouse pulls escaped enemies via this
-    int consume_escaped_enemies();
+    std::vector<int> consume_escaped_enemies();
+
+    //All the different enemy types 
+    enum class EnemyType {
+        Basic,
+        Fast,
+        Tank
+    };
 
 private:
     sf::RectangleShape _background;
@@ -121,11 +128,16 @@ private:
 
     // Simple enemy representation
     struct Enemy {
-        float t = 0.f;               // position along the path
-        sf::CircleShape shape;       // visual
-        int   hp = 3;                // basic health
-        float flashTimer = 0.f;      // hit-flash timer
+        EnemyType type = EnemyType::Basic; // which type
+        float t = 0.f;                     // position along the path
+        sf::CircleShape shape;             // visual
+        int   hp = 3;                      // current health
+        int   maxHp = 3;                   // max health (for later UI if needed)
+        float speed = 60.f;                // movement speed px/sec
+        float flashTimer = 0.f;            // hit-flash timer
+        sf::Color baseColor = sf::Color::Red; // enemy’s natural colour
     };
+
     std::vector<Enemy> _enemies;
 
     // Bullets that the turrets fire
@@ -141,11 +153,13 @@ private:
 
     float _spawnTimer = 0.f;     // time since last spawn
     bool  _initialised = false;   // only initialise TD once
-    int   _escapedEnemies = 0;      // how many enemies finished the path
+    std::vector<int> _escapedEnemyTypes; // types of enemies that finished the path
+    int   _totalSpawned = 0;      // total enemies spawned so far
 
     void place_turret();
     void build_enemy_path();
-    void spawn_enemy();
+    void spawn_enemy(EnemyType type = EnemyType::Basic);  
+    Enemy make_enemy(EnemyType type);                     
     void update_enemies(float dt);
     void update_turrets(float dt);
     void update_bullets(float dt);

@@ -144,17 +144,46 @@ void SafehouseScene::load() {
     }
 }
 
-void SafehouseScene::spawn_invaders(int count) {
-    for (int i = 0; i < count; ++i) {
+void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
+    for (int typeId : enemyTypes) {
         Invader inv;
 
-        inv.shape.setRadius(20.f);
-        inv.shape.setOrigin(20.f, 20.f);
-        inv.shape.setFillColor(sf::Color(200, 50, 50));
+        // Defaults
+        float radius = 20.f;
+        inv.speed = 60.f;
+        sf::Color color(200, 50, 50); // basic red
 
+        // Map from TD enemy type -> safehouse look / speed
+        TowerDefenceScene::EnemyType type =
+            static_cast<TowerDefenceScene::EnemyType>(typeId);
+
+        switch (type) {
+        case TowerDefenceScene::EnemyType::Basic:
+            radius = 20.f;
+            inv.speed = 60.f;
+            color = sf::Color(200, 50, 50);   // red-ish
+            break;
+
+        case TowerDefenceScene::EnemyType::Fast:
+            radius = 16.f;
+            inv.speed = 110.f;
+            color = sf::Color(255, 200, 0);   // yellow/orange
+            break;
+
+        case TowerDefenceScene::EnemyType::Tank:
+            radius = 24.f;
+            inv.speed = 40.f;
+            color = sf::Color(150, 0, 200);   // purple-ish
+            break;
+        }
+
+        inv.shape.setRadius(radius);
+        inv.shape.setOrigin(radius, radius);
+        inv.shape.setFillColor(color);
+
+        // 
         float x = static_cast<float>(param::game_width) - 100.f;
-        float y = 150.f + static_cast<float>(_invaders.size() * 50);
-
+        float y = 150.f + static_cast<float>(_invaders.size()) * 50.f;
         if (y > param::game_height - 100.f) {
             y = 150.f;
         }
@@ -164,6 +193,7 @@ void SafehouseScene::spawn_invaders(int count) {
         _invaders.push_back(inv);
     }
 }
+
 
 void SafehouseScene::update_invaders(float dt) {
     if (_invaders.empty() || !_player) return;
@@ -211,9 +241,9 @@ void SafehouseScene::update(const float& dt) {
         auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
         td->tick_simulation(dt);
 
-        int escaped = td->consume_escaped_enemies();
-        if (escaped > 0) {
-            spawn_invaders(escaped);
+        auto escapedTypes = td->consume_escaped_enemies();
+        if (!escapedTypes.empty()) {
+            spawn_invaders(escapedTypes);
         }
     }
 
@@ -398,7 +428,7 @@ void TowerDefenceScene::load() {
         _bullets.clear();
         _enemyPath.clear();
         _spawnTimer = 0.f;
-        _escapedEnemies = 0;
+        _escapedEnemyTypes.clear();
 
         build_enemy_path();
 
@@ -426,7 +456,34 @@ void TowerDefenceScene::tick_simulation(float dt) {
         const float spawnInterval = 2.0f;
         while (_spawnTimer >= spawnInterval) {
             _spawnTimer -= spawnInterval;
-            spawn_enemy();
+
+            // --- Simple progression / proto-wave logic ---
+            EnemyType type = EnemyType::Basic;
+
+            if (_totalSpawned >= 15) {
+                // After 15 spawns: occasionally tanks + fasts
+                if (_totalSpawned % 5 == 0) {
+                    type = EnemyType::Tank;
+                }
+                else {
+                    type = EnemyType::Fast;
+                }
+            }
+            else if (_totalSpawned >= 5) {
+                // After 5 spawns: mix basic + fast
+                if (_totalSpawned % 3 == 0) {
+                    type = EnemyType::Fast;
+                }
+                else {
+                    type = EnemyType::Basic;
+                }
+            }
+            else {
+                // First few: only basic enemies
+                type = EnemyType::Basic;
+            }
+
+            spawn_enemy(type);
         }
     }
 
@@ -434,6 +491,7 @@ void TowerDefenceScene::tick_simulation(float dt) {
     update_turrets(dt);
     update_bullets(dt);
 }
+
 
 void TowerDefenceScene::build_enemy_path() {
     _enemyPath.clear();
@@ -516,29 +574,76 @@ void TowerDefenceScene::build_enemy_path() {
     std::cout << "Enemy path built with " << _enemyPath.size() << " nodes.\n";
 }
 
-void TowerDefenceScene::spawn_enemy() {
+TowerDefenceScene::Enemy TowerDefenceScene::make_enemy(EnemyType type) {
+    Enemy e;
+    e.type = type;
+    e.t = 0.f;
+    e.flashTimer = 0.f;
+
+    // Defaults
+    float radius = 15.f;
+    int   hp = 3;
+    float speed = 60.f;
+    sf::Color color = sf::Color::Red;
+
+    switch (type) {
+    case EnemyType::Basic:
+        // Default basic enemy
+        radius = 15.f;
+        hp = 3;
+        speed = 60.f;
+        color = sf::Color::Red;
+        break;
+
+    case EnemyType::Fast:
+        // Weaker but very quick
+        radius = 12.f;
+        hp = 2;
+        speed = 110.f;
+        color = sf::Color(255, 200, 0); // yellow/orange
+        break;
+
+    case EnemyType::Tank:
+        // Slow but chunky
+        radius = 18.f;
+        hp = 6;
+        speed = 40.f;
+        color = sf::Color(150, 0, 200); // purple-ish
+        break;
+    }
+
+    e.shape.setRadius(radius);
+    e.shape.setOrigin(radius, radius);
+    e.baseColor = color;
+    e.shape.setFillColor(color);
+    e.shape.setPosition(_enemyPath.front());
+
+    e.hp = hp;
+    e.maxHp = hp;
+    e.speed = speed;
+
+    return e;
+}
+
+
+void TowerDefenceScene::spawn_enemy(EnemyType type) {
     if (_enemyPath.size() < 2) return;
 
-    Enemy e;
-    e.t = 0.f;
-    e.hp = 3;
-
-    e.shape.setRadius(15.f);
-    e.shape.setOrigin(15.f, 15.f);
-    e.shape.setFillColor(sf::Color::Red);
+    Enemy e = make_enemy(type);
     e.shape.setPosition(_enemyPath.front());
 
     _enemies.push_back(e);
+    _totalSpawned++;
 }
+
 
 void TowerDefenceScene::update_enemies(float dt) {
     if (_enemyPath.size() < 2) return;
 
     const float tileSize = 50.f;
-    const float speed = 60.f;
 
     for (auto& e : _enemies) {
-        float deltaT = (speed * dt) / tileSize;
+        float deltaT = (e.speed * dt) / tileSize;
         e.t += deltaT;
 
         int   segment = static_cast<int>(e.t);
@@ -563,7 +668,7 @@ void TowerDefenceScene::update_enemies(float dt) {
             e.shape.setFillColor(c);
         }
         else {
-            e.shape.setFillColor(sf::Color::Red);
+            e.shape.setFillColor(e.baseColor);
         }
     }
 
@@ -575,7 +680,8 @@ void TowerDefenceScene::update_enemies(float dt) {
             alive.push_back(e);
         }
         else {
-            _escapedEnemies++;
+            // Record which type escaped so the Safehouse can spawn the same kind
+            _escapedEnemyTypes.push_back(static_cast<int>(e.type));
         }
     }
     _enemies.swap(alive);
@@ -730,10 +836,10 @@ void TowerDefenceScene::update_bullets(float dt) {
     _enemies.swap(alive);
 }
 
-int TowerDefenceScene::consume_escaped_enemies() {
-    int n = _escapedEnemies;
-    _escapedEnemies = 0;
-    return n;
+std::vector<int> TowerDefenceScene::consume_escaped_enemies() {
+    auto result = _escapedEnemyTypes;
+    _escapedEnemyTypes.clear();
+    return result;
 }
 
 void TowerDefenceScene::update(const float& dt) {
