@@ -151,37 +151,45 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
         // Defaults
         float radius = 20.f;
         inv.speed = 60.f;
+        int   hp = 3;
         sf::Color color(200, 50, 50); // basic red
 
-        // Map from TD enemy type -> safehouse look / speed
+        // Map from TD enemy type -> safehouse stats
         TowerDefenceScene::EnemyType type =
             static_cast<TowerDefenceScene::EnemyType>(typeId);
 
         switch (type) {
         case TowerDefenceScene::EnemyType::Basic:
-            radius = 20.f;
+            radius   = 20.f;
             inv.speed = 60.f;
-            color = sf::Color(200, 50, 50);   // red-ish
+            hp       = 3;                         // same as TD
+            color    = sf::Color(200, 50, 50);    // red-ish
             break;
 
         case TowerDefenceScene::EnemyType::Fast:
-            radius = 16.f;
+            radius   = 16.f;
             inv.speed = 110.f;
-            color = sf::Color(255, 200, 0);   // yellow/orange
+            hp       = 2;                         // same as TD
+            color    = sf::Color(255, 200, 0);    // yellow/orange
             break;
 
         case TowerDefenceScene::EnemyType::Tank:
-            radius = 24.f;
+            radius   = 24.f;
             inv.speed = 40.f;
-            color = sf::Color(150, 0, 200);   // purple-ish
+            hp       = 6;                         // same as TD
+            color    = sf::Color(150, 0, 200);    // purple-ish
             break;
         }
+
+        inv.hp       = hp;
+        inv.maxHp    = hp;
+        inv.baseColor = color;
 
         inv.shape.setRadius(radius);
         inv.shape.setOrigin(radius, radius);
         inv.shape.setFillColor(color);
 
-        // 
+        // Stack them roughly in a column on the right
         float x = static_cast<float>(param::game_width) - 100.f;
         float y = 150.f + static_cast<float>(_invaders.size()) * 50.f;
         if (y > param::game_height - 100.f) {
@@ -193,6 +201,7 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
         _invaders.push_back(inv);
     }
 }
+
 
 
 void SafehouseScene::update_invaders(float dt) {
@@ -215,20 +224,43 @@ void SafehouseScene::update_invaders(float dt) {
             inv.shape.setPosition(pos);
         }
 
-        // --- Contact damage ---
+        // --- Contact damage to player ---
         sf::Vector2f diff = playerPos - pos;
         float distSq = diff.x * diff.x + diff.y * diff.y;
         float combinedR = playerR + inv.shape.getRadius();
 
         if (distSq <= combinedR * combinedR && _damageCooldown <= 0.f) {
-            _player->take_damage(1);    // 1 damage per contact
+            _player->take_damage(1);    // 1 damage per contact to player
             _damageCooldown = 1.0f;     // 1 second of invulnerability
-            // Later: add hit flash / knockback / UI update etc.
+        }
+
+        // --- Hit flash for invader (if recently damaged) ---
+        if (inv.flashTimer > 0.f) {
+            inv.flashTimer -= dt;
+            float t = std::max(inv.flashTimer / 0.15f, 0.f);
+
+            // Lerp towards white then back to baseColor
+            sf::Color c;
+            c.r = static_cast<sf::Uint8>(
+                inv.baseColor.r + (255 - inv.baseColor.r) * t
+                );
+            c.g = static_cast<sf::Uint8>(
+                inv.baseColor.g + (255 - inv.baseColor.g) * t
+                );
+            c.b = static_cast<sf::Uint8>(
+                inv.baseColor.b + (255 - inv.baseColor.b) * t
+                );
+            c.a = 255;
+            inv.shape.setFillColor(c);
+        }
+        else {
+            inv.shape.setFillColor(inv.baseColor);
         }
     }
 
-    // delete invaders, handle death, etc.
+    // (No removal here – enemies are removed in the attack code when hp <= 0)
 }
+
 
 
 void SafehouseScene::update(const float& dt) {
@@ -283,13 +315,13 @@ void SafehouseScene::update(const float& dt) {
 
         // Get mouse position *relative to the game window* and convert
         // to world coordinates (so it matches the player's coord space)
-        sf::RenderWindow& window = GameSystem::get_window();   // see note below
+        sf::RenderWindow& window = GameSystem::get_window();
         sf::Vector2i mousePix = sf::Mouse::getPosition(window);
         sf::Vector2f mousePos = window.mapPixelToCoords(mousePix);
 
         // Direction from player to mouse in the same coord space
         sf::Vector2f toMouse = mousePos - center;
-        float lenSqMouse = toMouse.x * toMouse.x + toMouse.y * toMouse.y;
+        float        lenSqMouse = toMouse.x * toMouse.x + toMouse.y * toMouse.y;
         sf::Vector2f forward(1.f, 0.f);
 
         if (lenSqMouse > 1.f) {
@@ -297,35 +329,42 @@ void SafehouseScene::update(const float& dt) {
             forward = toMouse / lenMouse;
         }
 
-        // Kill invaders inside the cone
+        // Apply 1 damage to any invader inside the cone
         std::vector<Invader> survivors;
         survivors.reserve(_invaders.size());
 
         for (auto& inv : _invaders) {
             sf::Vector2f d = inv.shape.getPosition() - center;
-            float lenSq = d.x * d.x + d.y * d.y;
+            float        lenSq = d.x * d.x + d.y * d.y;
 
-            if (lenSq > attackRadiusSq) {
-                survivors.push_back(inv);
-                continue;
-            }
+            bool hit = false;
 
             if (lenSq < 1.f) {
-                // Very close = hit
-                continue;
+                // Very close = auto-hit
+                hit = true;
+            }
+            else if (lenSq <= attackRadiusSq) {
+                float len = std::sqrt(lenSq);
+                sf::Vector2f nd = d / len;
+
+                float dot = nd.x * forward.x + nd.y * forward.y;
+
+                if (dot >= cosHalfAngle) {
+                    // Inside 90° arc
+                    hit = true;
+                }
             }
 
-            float len = std::sqrt(lenSq);
-            sf::Vector2f nd = d / len;
-
-            float dot = nd.x * forward.x + nd.y * forward.y;
-
-            if (dot >= cosHalfAngle) {
-                // Inside 90° arc -> hit
-                continue;
+            if (hit) {
+                // Basic attack does 1 damage
+                inv.hp -= 1;
+                inv.flashTimer = 0.15f; // brief flash
             }
 
-            survivors.push_back(inv);
+            if (inv.hp > 0) {
+                survivors.push_back(inv);
+            }
+            // If hp <= 0, we simply don't push it -> enemy dies
         }
 
         _invaders.swap(survivors);
@@ -349,6 +388,7 @@ void SafehouseScene::update(const float& dt) {
 
         _attackEffectTimer = 0.12f;
     }
+
 
     // --- Update invaders chasing the player ---
     update_invaders(dt);

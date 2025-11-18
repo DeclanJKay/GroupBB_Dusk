@@ -75,12 +75,18 @@ private:
     // Enemies that made it out of the tower defence
     struct Invader {
         sf::CircleShape shape;
-        float speed = 60.f;           // movement speed in px/sec
+        float speed = 60.f;                  // movement speed in px/sec
+
+        int   hp = 3;                        // current health
+        int   maxHp = 3;                     // max health
+        float flashTimer = 0.f;              // time left to show hit flash
+        sf::Color baseColor = sf::Color(200, 50, 50); // natural colour
     };
     std::vector<Invader> _invaders;
 
     void spawn_invaders(const std::vector<int>& enemyTypes);
     void update_invaders(float dt);
+
 };
 
 // ---------------------------------

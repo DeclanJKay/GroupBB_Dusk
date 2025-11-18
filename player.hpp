@@ -29,6 +29,8 @@ public:
     // Radius helper for collision with invaders
     float get_radius() const { return kRadius; }
 
+
+
 private:
     static constexpr float kRadius = 25.f;
     static constexpr float kSpeed = 200.f; // units per second
@@ -38,4 +40,7 @@ private:
     // --- Health values ---
     int _maxHealth = 5;
     int _health = _maxHealth;
+
+    float     _flashTimer = 0.f;   // how long to stay in "hit" colour
+    sf::Color _baseColor;          // normal colour for the player
 };

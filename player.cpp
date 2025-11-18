@@ -11,10 +11,14 @@ using ls = LevelSystem;
 Player::Player()
     : Entity(std::make_unique<sf::CircleShape>(kRadius)) {
 
-    _shape->setFillColor(sf::Color::Magenta);
+    // Base colour for the player
+    _baseColor = sf::Color::Magenta;
+    _shape->setFillColor(_baseColor);
+
+    // Center the circle on its position
     _shape->setOrigin({ kRadius, kRadius });
 
-    // This is just a default; MazeScene / Safehouse will overwrite it
+    // Default start position (overwritten by scenes)
     set_position({ 100.f, 100.f });
 }
 
@@ -61,6 +65,19 @@ void Player::update(const float& dt) {
         }
     }
 
+    // --- Hit flash handling (runs every frame) ---
+    if (_flashTimer > 0.f) {
+        _flashTimer -= dt;
+        if (_flashTimer < 0.f) _flashTimer = 0.f;
+
+        // Simple white flash while timer is active
+        _shape->setFillColor(sf::Color::White);
+    }
+    else {
+        // Back to normal colour
+        _shape->setFillColor(_baseColor);
+    }
+
     // Let base Entity do any extra per-frame work
     Entity::update(dt);
 }
@@ -70,13 +87,11 @@ void Player::render(sf::RenderWindow& window) const {
 }
 
 void Player::take_damage(int amount) {
-    _health -= amount;
-    if (_health < 0) {
-        _health = 0;
-    }
+    if (_health <= 0) return;  // already dead, ignore
 
-    // Later we can add:
-    // - brief colour flash
-    // - knockback
-    // - death handling (game over, restart, etc.)
+    _health -= amount;
+    if (_health < 0) _health = 0;
+
+    // Start a short flash
+    _flashTimer = 0.2f;        // 0.2 seconds of flash
 }
