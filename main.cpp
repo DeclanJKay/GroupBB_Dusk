@@ -9,10 +9,6 @@ int main() {
     // Shared run state for this playthrough (e.g. wave number, player stats)
     Scenes::runContext = std::make_shared<RunContext>();
 
-    // Old maze scene (still available if we want to use it later)
-    Scenes::maze = std::make_shared<MazeScene>();
-    std::static_pointer_cast<MazeScene>(Scenes::maze)->set_file_path(param::maze_1);
-
     // Core Dusk scenes
     Scenes::safehouse = std::make_shared<SafehouseScene>();
     Scenes::tower_defence = std::make_shared<TowerDefenceScene>();

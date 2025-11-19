@@ -20,7 +20,6 @@ using param = Parameters;
 // ------------------------------------------------------------
 // Global scene handles (defined here, declared in scenes.hpp)
 // ------------------------------------------------------------
-std::shared_ptr<Scene>      Scenes::maze = nullptr;
 std::shared_ptr<Scene>      Scenes::safehouse = nullptr;
 std::shared_ptr<Scene>      Scenes::tower_defence = nullptr;
 std::shared_ptr<Scene>      Scenes::end = nullptr;
@@ -42,63 +41,6 @@ bool keyPressedOnce(sf::Keyboard::Key key) {
     return (isPressed && !wasPressed);
 }
 
-// ============================================================================
-// MazeScene
-// ============================================================================
-void MazeScene::set_file_path(const std::string& file_path) {
-    _file_path = file_path;
-}
-
-void MazeScene::load() {
-    // Colours
-    ls::set_color(ls::EMPTY, sf::Color(30, 30, 30));
-    ls::set_color(ls::WALL, sf::Color(180, 180, 180));
-    ls::set_color(ls::START, sf::Color(80, 255, 80));
-    ls::set_color(ls::END, sf::Color(255, 80, 80));
-
-    // Player entity
-    auto player = std::make_shared<Player>();
-    player->set_use_tile_collision(true); // Maze uses walls / ends
-    _entities.push_back(player);
-
-    reset();
-}
-
-void MazeScene::reset() {
-    ls::load_level(_file_path, 50.f);
-    if (!_entities.empty()) {
-        _entities.front()->set_position(ls::get_start_position());
-    }
-}
-
-void MazeScene::update(const float& dt) {
-    Scene::update(dt);
-
-    if (_entities.empty()) return;
-    const sf::Vector2f p = _entities.front()->get_position();
-
-    try {
-        if (ls::get_tile_at(p) == ls::END) {
-            if (_file_path == std::string(param::maze_1)) {
-                _file_path = param::maze_2;
-                reset();
-                return;
-            }
-
-            unload();
-            GameSystem::set_active_scene(Scenes::end);
-            return;
-        }
-    }
-    catch (...) {
-        // ignore out of bounds
-    }
-}
-
-void MazeScene::render(sf::RenderWindow& window) {
-    ls::render(window);
-    Scene::render(window);
-}
 
 // ============================================================================
 // SafehouseScene (roguelite side)
@@ -151,6 +93,32 @@ void SafehouseScene::load() {
         _entities.push_back(_player);
     }
 }
+
+void SafehouseScene::tick_simulation(float dt) {
+    // If we’ve never been loaded / initialised, nothing to do
+    if (!_initialised || !_player) return;
+
+    // Cooldown for contact damage still counts down
+    if (_damageCooldown > 0.f) {
+        _damageCooldown -= dt;
+        if (_damageCooldown < 0.f) _damageCooldown = 0.f;
+    }
+
+    // Move invaders and apply contact damage, same as in update()
+    update_invaders(dt);
+
+    // Optional: if player can die off-screen, keep this
+    if (_player->is_dead()) {
+        _invaders.clear();
+
+        if (!Scenes::end) {
+            Scenes::end = std::make_shared<EndScene>();
+        }
+
+        GameSystem::set_active_scene(Scenes::end);
+    }
+}
+
 
 void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
     for (int typeId : enemyTypes) {
@@ -693,88 +661,56 @@ void TowerDefenceScene::place_turret() {
 }
 
 
+// Ask each turret if it wants to fire this frame and spawn bullets
 void TowerDefenceScene::update_turrets(float dt) {
-    if (_enemies.empty() || _turrets.empty()) return;
+    if (_turrets.empty()) return;
 
-    for (auto& turret : _turrets) {
+    for (auto& t : _turrets) {
         sf::Vector2f bulletPos;
         sf::Vector2f bulletDir;
 
-        // Turret decides whether it fires this frame
-        bool fired = turret.update(dt, _enemies, bulletPos, bulletDir);
-        if (!fired) continue;
-
-        // Build a bullet using the data from the turret
-        Bullet b;
-        b.pos = bulletPos;
-        b.vel = bulletDir;
-        b.speed = 300.f;
-        b.damage = 1;
-        b.ttl = 2.0f;
-
-        b.shape.setRadius(4.f);
-        b.shape.setOrigin(4.f, 4.f);
-        b.shape.setFillColor(sf::Color::White);
-        b.shape.setPosition(b.pos);
-
-        _bullets.push_back(b);
-    }
-
-    // Cull dead enemies 
-    std::vector<TDEnemy> alive;
-    alive.reserve(_enemies.size());
-    for (const auto& e : _enemies) {
-        if (!e.isDead()) {
-            alive.push_back(e);
+        // TDTurret handles range, cooldown, target selection.
+        // If it returns true, we spawn a bullet.
+        if (t.update(dt, _enemies, bulletPos, bulletDir)) {
+            _bullets.emplace_back(bulletPos, bulletDir);
         }
     }
-    _enemies.swap(alive);
+
+    // Clean out any enemies that died from turret damage
+    _enemies.erase(
+        std::remove_if(
+            _enemies.begin(), _enemies.end(),
+            [](const TDEnemy& e) { return e.isDead(); }
+        ),
+        _enemies.end()
+    );
 }
 
 
+// Move bullets, apply damage, and cull dead bullets + enemies
 void TowerDefenceScene::update_bullets(float dt) {
     if (_bullets.empty()) return;
 
-    std::vector<Bullet> aliveBullets;
-    aliveBullets.reserve(_bullets.size());
+    std::vector<TDBullet> alive;
+    alive.reserve(_bullets.size());
 
     for (auto& b : _bullets) {
-        b.ttl -= dt;
-        if (b.ttl <= 0.f) continue;
-
-        b.pos += b.vel * b.speed * dt;
-        b.shape.setPosition(b.pos);
-
-        bool hit = false;
-
-        // Check collision with enemies (simple circle-overlap)
-        for (auto& e : _enemies) {
-            if (e.isDead()) continue;
-
-            const sf::CircleShape& enemyShape = e.getShape();
-            sf::Vector2f d = enemyShape.getPosition() - b.pos;
-            float r = enemyShape.getRadius() + b.shape.getRadius();
-
-            if ((d.x * d.x + d.y * d.y) <= r * r) {
-                e.applyDamage(b.damage);   // handle HP + flash in TDEnemy
-                hit = true;
-                break;
-            }
+        // TDBullet::update handles movement + collision + enemy damage.
+        if (b.update(dt, _enemies)) {
+            alive.push_back(b);   // still alive this frame
         }
-
-        if (!hit) {
-            aliveBullets.push_back(b);
-        }
+        // else: bullet expired or hit something -> drop it
     }
-    _bullets.swap(aliveBullets);
+    _bullets.swap(alive);
 
-    // Extra safety clean-up for dead enemies (also cleaned in update_enemies)
-    std::vector<TDEnemy> alive;
-    alive.reserve(_enemies.size());
-    for (const auto& e : _enemies) {
-        if (!e.isDead()) alive.push_back(e);
-    }
-    _enemies.swap(alive);
+    // Clean out enemies that died from bullet damage
+    _enemies.erase(
+        std::remove_if(
+            _enemies.begin(), _enemies.end(),
+            [](const TDEnemy& e) { return e.isDead(); }
+        ),
+        _enemies.end()
+    );
 }
 
 
@@ -791,6 +727,12 @@ std::vector<int> TowerDefenceScene::consume_escaped_enemies() {
 void TowerDefenceScene::update(const float& dt) {
     // Update the player entity in TD scene (movement, clamping, hit flash, etc.)
     Scene::update(dt);
+
+    // Run safehouse simulation in the background too
+    if (Scenes::safehouse) {
+        auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
+        sh->tick_simulation(dt);
+    }
 
     // Swap back to Safehouse with Shift (LShift or RShift)
     if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
@@ -823,7 +765,7 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
 
     // Draw turrets, bullets, and enemies
     for (const auto& turret : _turrets) turret.render(window);
-    for (const auto& b : _bullets)      window.draw(b.shape);
+    for (const auto& b : _bullets)      b.render(window);
     for (const auto& enemy : _enemies)  window.draw(enemy.getShape());
 
     // Scene label at top-left

@@ -10,28 +10,9 @@
 #include "EnemyType.hpp"
 #include "TDEnemy.hpp"
 #include "td_turret.hpp"
+#include "td_bullet.hpp"
 
 class Player;
-
-// ---------------------------------
-// Maze scene (old maze lab reused)
-// ---------------------------------
-class MazeScene : public Scene {
-public:
-    MazeScene() = default;
-
-    void update(const float& dt) override;
-    void render(sf::RenderWindow& window) override;
-    void load() override;
-
-    // Reload the current maze file and reset the player position
-    void reset();
-    // Set which maze text file this scene should use
-    void set_file_path(const std::string& file_path);
-
-private:
-    std::string _file_path;   // path to the maze level file
-};
 
 // ---------------------------------
 // Simple ending / game over screen
@@ -60,12 +41,17 @@ public:
     void update(const float& dt) override;
     void render(sf::RenderWindow& window) override;
 
+    // Run safehouse logic while this scene is not active
+    void tick_simulation(float dt);
+
 private:
     sf::RectangleShape _background;
 
     sf::Font _font;
     sf::Text _label;   // "SAFEHOUSE" title text
     sf::Text _hpText;  // shows player HP
+
+
 
     // Persistent player shared across scenes
     std::shared_ptr<Player> _player = nullptr;
@@ -117,43 +103,35 @@ private:
     sf::RectangleShape _background;
 
     sf::Font _font;
-    sf::Text _label;  // "TOWER DEFENCE"
+    sf::Text _label;
 
-    // Player can walk around the TD grid to place turrets
     std::shared_ptr<Player> _player;
 
+    // Turrets placed on EMPTY tiles
     std::vector<TDTurret> _turrets;
 
-    // Enemy path in world space (centres of the + tiles)
+    // Enemy path in world space (centres of + tiles)
     std::vector<sf::Vector2f> _enemyPath;
 
-    // Simple enemy representation 
+    // Enemies moving along the path
     std::vector<TDEnemy> _enemies;
 
+    // Bullets that the turrets fire
+    std::vector<TDBullet> _bullets;
 
-    // Bullets fired by turrets
-    struct Bullet {
-        sf::Vector2f pos;
-        sf::Vector2f vel;      // normalised direction
-        float speed = 300.f;   // px/sec
-        int   damage = 1;
-        float ttl = 2.0f;      // time to live
-        sf::CircleShape shape; // visual
-    };
-    std::vector<Bullet> _bullets;
+    float _spawnTimer = 0.f;
+    bool  _initialised = false;
+    std::vector<int> _escapedEnemyTypes;
+    int   _totalSpawned = 0;
 
-    float _spawnTimer = 0.f;                // time since last enemy spawn
-    bool  _initialised = false;             // only set up TD once
-    std::vector<int> _escapedEnemyTypes;    // types of enemies that finished the path
-    int   _totalSpawned = 0;                // total enemies spawned so far
-
-    // Helpers for TD logic
     void place_turret();
     void build_enemy_path();
     void spawn_enemy(EnemyType type = EnemyType::Basic);
+    TDEnemy make_enemy(EnemyType type);
     void update_enemies(float dt);
     void update_turrets(float dt);
     void update_bullets(float dt);
+
 };
 
 
@@ -161,7 +139,6 @@ private:
 // Global scene handles (shared everywhere)
 // ---------------------------------
 struct Scenes {
-    static std::shared_ptr<Scene> maze;
     static std::shared_ptr<Scene> safehouse;
     static std::shared_ptr<Scene> tower_defence;
     static std::shared_ptr<Scene> end;
