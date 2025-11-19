@@ -5,7 +5,6 @@
 #include <vector>
 #include "EnemyType.hpp"
 
-// Forward declaration; implementation uses EnemyStats in the .cpp
 class TDEnemy {
 public:
     TDEnemy(EnemyType type, const sf::Vector2f& startPos);
@@ -26,14 +25,20 @@ public:
     sf::CircleShape& getShape() { return _shape; }
     EnemyType              getType()  const { return _type; }
 
+    // World-space centre position (used by turrets)
+    sf::Vector2f getPosition() const { return _shape.getPosition(); }
+
+    // Radius used for simple circle collision
+    float getRadius() const { return _shape.getRadius(); }
+
 private:
-    EnemyType     _type;
-    float         _t = 0.f;          // parametric position along path
+    EnemyType      _type;
+    float          _t = 0.f;          // parametric position along path
     sf::CircleShape _shape;
 
-    int           _hp = 1;
-    int           _maxHp = 1;
-    float         _speed = 60.f;
-    float         _flashTimer = 0.f;
-    sf::Color     _baseColor = sf::Color::Red;
+    int            _hp = 1;
+    int            _maxHp = 1;
+    float          _speed = 60.f;
+    float          _flashTimer = 0.f;
+    sf::Color      _baseColor = sf::Color::Red;
 };

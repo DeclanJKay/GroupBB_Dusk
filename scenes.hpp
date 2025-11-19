@@ -9,6 +9,7 @@
 #include "run_context.hpp"
 #include "EnemyType.hpp"
 #include "TDEnemy.hpp"
+#include "td_turret.hpp"
 
 class Player;
 
@@ -121,13 +122,7 @@ private:
     // Player can walk around the TD grid to place turrets
     std::shared_ptr<Player> _player;
 
-    // Simple turret representation
-    struct Turret {
-        sf::Vector2i grid;        // tile coordinates
-        sf::RectangleShape shape; // visual
-        float cooldown = 0.f;     // time until we can fire again
-    };
-    std::vector<Turret> _turrets;
+    std::vector<TDTurret> _turrets;
 
     // Enemy path in world space (centres of the + tiles)
     std::vector<sf::Vector2f> _enemyPath;

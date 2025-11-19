@@ -654,13 +654,11 @@ void TowerDefenceScene::update_enemies(float dt) {
 }
 
 
-// Place a turret on the tile the player is standing on (if valid)
 void TowerDefenceScene::place_turret() {
     if (!_player) return;
 
     const float tileSize = 50.f;
 
-    // Convert player's world position into grid coordinates (tile indices)
     sf::Vector2f pos = _player->get_position();
     sf::Vector2i grid(
         static_cast<int>(pos.x / tileSize),
@@ -672,96 +670,57 @@ void TowerDefenceScene::place_turret() {
         tile = ls::get_tile(grid);
     }
     catch (...) {
-        // If grid is outside the level, just ignore the request
         return;
     }
 
-    // Only allow placing on EMPTY tiles (can't place on walls, path, etc.)
+    // Only allow placing on EMPTY tiles
     if (tile != ls::EMPTY) {
         return;
     }
 
-    // Prevent placing multiple turrets on the same tile
+    // Don’t double-place a turret on the same tile
     for (const auto& t : _turrets) {
-        if (t.grid == grid) {
+        if (t.getGrid() == grid) {
             return;
         }
     }
 
-    // Create a new turret snapped to the tile position
-    Turret turret;
-    turret.grid = grid;
-    turret.cooldown = 0.f;  // can fire immediately
-    turret.shape.setSize({ tileSize, tileSize });
-    turret.shape.setPosition(ls::get_tile_position(grid));
-    turret.shape.setFillColor(sf::Color(0, 200, 255)); // cyan-ish
+    // World position of this tile
+    sf::Vector2f worldPos = ls::get_tile_position(grid);
 
-    _turrets.push_back(turret);
+    // Create a new turret instance
+    _turrets.emplace_back(grid, worldPos, tileSize);
 }
+
 
 void TowerDefenceScene::update_turrets(float dt) {
     if (_enemies.empty() || _turrets.empty()) return;
 
-    const float tileSize = 50.f;
-    const float rangePixels = tileSize * 3;
-    const float rangeSq = rangePixels * rangePixels;
-    const float fireInterval = 0.5f;
+    for (auto& turret : _turrets) {
+        sf::Vector2f bulletPos;
+        sf::Vector2f bulletDir;
 
-    for (auto& t : _turrets) {
-        if (t.cooldown > 0.f) {
-            t.cooldown -= dt;
-            continue;
-        }
+        // Turret decides whether it fires this frame
+        bool fired = turret.update(dt, _enemies, bulletPos, bulletDir);
+        if (!fired) continue;
 
-        sf::Vector2f turretPos =
-            t.shape.getPosition() + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+        // Build a bullet using the data from the turret
+        Bullet b;
+        b.pos = bulletPos;
+        b.vel = bulletDir;
+        b.speed = 300.f;
+        b.damage = 1;
+        b.ttl = 2.0f;
 
-        // Find closest living enemy within range
-        TDEnemy* bestEnemy = nullptr;
-        float    bestDistSq = rangeSq;
+        b.shape.setRadius(4.f);
+        b.shape.setOrigin(4.f, 4.f);
+        b.shape.setFillColor(sf::Color::White);
+        b.shape.setPosition(b.pos);
 
-        for (auto& e : _enemies) {
-            if (e.isDead()) continue;
-
-            sf::Vector2f diff = e.getShape().getPosition() - turretPos;
-            float d2 = diff.x * diff.x + diff.y * diff.y;
-
-            if (d2 < bestDistSq) {
-                bestDistSq = d2;
-                bestEnemy = &e;
-            }
-        }
-
-        if (bestEnemy) {
-            // Fire a bullet at the chosen enemy
-            Bullet b;
-            b.pos = turretPos;
-
-            sf::Vector2f toEnemy = bestEnemy->getShape().getPosition() - turretPos;
-            float len = std::sqrt(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
-            b.vel = (len > 0.f) ? (toEnemy / len) : sf::Vector2f(0.f, 0.f);
-            b.speed = 300.f;
-            b.damage = 1;
-            b.ttl = 2.0f;
-
-            b.shape.setRadius(4.f);
-            b.shape.setOrigin(4.f, 4.f);
-            b.shape.setFillColor(sf::Color::White);
-            b.shape.setPosition(b.pos);
-
-            _bullets.push_back(b);
-
-            t.cooldown = fireInterval;
-            t.shape.setFillColor(sf::Color(0, 230, 255));
-        }
-        else {
-            // No target in range
-            t.shape.setFillColor(sf::Color(0, 200, 255));
-        }
+        _bullets.push_back(b);
     }
 
-    // This clean-up is now mostly redundant (update_enemies also drops dead enemies),
-    // but it's safe to keep for now.
+    // Cull dead enemies 
     std::vector<TDEnemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
@@ -771,6 +730,7 @@ void TowerDefenceScene::update_turrets(float dt) {
     }
     _enemies.swap(alive);
 }
+
 
 void TowerDefenceScene::update_bullets(float dt) {
     if (_bullets.empty()) return;
@@ -862,7 +822,7 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     Scene::render(window);
 
     // Draw turrets, bullets, and enemies
-    for (const auto& turret : _turrets) window.draw(turret.shape);
+    for (const auto& turret : _turrets) turret.render(window);
     for (const auto& b : _bullets)      window.draw(b.shape);
     for (const auto& enemy : _enemies)  window.draw(enemy.getShape());
 
