@@ -2,7 +2,9 @@
 #include "player.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "game_parameters.hpp"
+#include "TDEnemy.hpp"
 #include "EnemyStats.hpp"
+
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -608,120 +610,49 @@ void TowerDefenceScene::build_enemy_path() {
     std::cout << "Enemy path built with " << _enemyPath.size() << " nodes.\n";
 }
 
-TowerDefenceScene::Enemy TowerDefenceScene::make_enemy(EnemyType type) {
-    Enemy e;
-    e.type = type;
-    e.t = 0.f;
-    e.flashTimer = 0.f;
-
-    // Shared stats for this type
-    EnemyStats stats = get_enemy_stats(type);
-
-    e.hp = stats.hp;
-    e.maxHp = stats.hp;
-    e.speed = stats.speed;
-    e.baseColor = stats.color;
-
-    e.shape.setRadius(stats.radius);
-    e.shape.setOrigin(stats.radius, stats.radius);
-    e.shape.setFillColor(stats.color);
-    e.shape.setPosition(_enemyPath.front());
-
-    return e;
-}
-
-
-
 void TowerDefenceScene::spawn_enemy(EnemyType type) {
     if (_enemyPath.size() < 2) return;
 
-    Enemy e = make_enemy(type);
-    e.shape.setPosition(_enemyPath.front());
+    sf::Vector2f startPos = _enemyPath.front();
 
-    _enemies.push_back(e);
+    // Construct a TDEnemy with the shared stats + starting position
+    TDEnemy enemy(type, startPos);
+    _enemies.push_back(enemy);
+
     _totalSpawned++;
 }
 
 
-// Move enemies along the path and handle escape + hit flashing
+
 void TowerDefenceScene::update_enemies(float dt) {
-    // Need at least 2 points to form a path
     if (_enemyPath.size() < 2) return;
 
     const float tileSize = 50.f;
 
-    // ---- Move each enemy along the path ----
-    for (auto& e : _enemies) {
-        // 't' is parametric distance along the path measured in "tile lengths".
-        // Example: t = 0.0 means at node 0
-        //          t = 1.0 means at node 1
-        //          t = 2.5 means halfway between node 2 and 3
-        //
-        // We convert speed (pixels/sec) into "tile-lengths per second":
-        //   distancePixels / tileSize  -> distance in tiles
-        float deltaT = (e.speed * dt) / tileSize;
-        e.t += deltaT;
-
-        // The integer part of t tells us which segment we’re on (0 → 1, 1 → 2, etc.)
-        int   segment = static_cast<int>(e.t);
-        // The fractional part tells us how far along that segment we are [0..1)
-        float local = e.t - segment;
-
-        // If we’ve gone past the last segment, clamp enemy to the final node
-        if (segment >= static_cast<int>(_enemyPath.size()) - 1) {
-            e.shape.setPosition(_enemyPath.back());
-        }
-        else {
-            // Otherwise, interpolate between path[segment] and path[segment + 1]
-            const sf::Vector2f& a = _enemyPath[static_cast<size_t>(segment)];
-            const sf::Vector2f& b = _enemyPath[static_cast<size_t>(segment + 1)];
-            e.shape.setPosition(a + (b - a) * local);
-        }
-
-        // ---- Hit flash colour ----
-        // When e.flashTimer > 0 we temporarily tint the enemy to show it was hit
-        if (e.flashTimer > 0.f) {
-            e.flashTimer -= dt;
-            float t = std::max(e.flashTimer / 0.2f, 0.f); // 0.2s total flash
-
-            // We blend between a bright hit colour and its base colour.
-            // Here we just drive green/blue up slightly while flashing.
-            sf::Color c;
-            c.r = static_cast<sf::Uint8>(255);
-            c.g = static_cast<sf::Uint8>(180 + 75 * t);
-            c.b = static_cast<sf::Uint8>(180 + 75 * t);
-            e.shape.setFillColor(c);
-        }
-        else {
-            // Reset back to normal colour once flashTimer hits zero
-            e.shape.setFillColor(e.baseColor);
-        }
-    }
-
-    // ---- Handle enemies reaching the end of the path ----
-    // Enemies that get to the last node are considered "escaped" and will respawn
-    // in the safehouse as invaders. Others remain in the _enemies list.
-    std::vector<Enemy> alive;
+    std::vector<TDEnemy> alive;
     alive.reserve(_enemies.size());
 
-    for (const auto& e : _enemies) {
-        int segment = static_cast<int>(e.t);
+    for (auto& enemy : _enemies) {
+        // Skip enemies that have already been killed by turrets/bullets
+        if (enemy.isDead()) {
+            continue;
+        }
 
-        // If the enemy is still on a valid segment, keep it alive
-        if (segment < static_cast<int>(_enemyPath.size()) - 1) {
-            alive.push_back(e);
+        // Let TDEnemy handle movement + flashing
+        bool reachedEnd = enemy.update(dt, _enemyPath, tileSize);
+
+        if (reachedEnd) {
+            // Tell the Safehouse what type escaped
+            _escapedEnemyTypes.push_back(static_cast<int>(enemy.getType()));
         }
         else {
-            // Past the last segment -> it escaped.
-            // We record its type so the Safehouse scene can spawn
-            // the same kind of invader.
-            _escapedEnemyTypes.push_back(static_cast<int>(e.type));
+            alive.push_back(enemy);
         }
     }
 
-    // Replace the current enemy list with only the ones still on the path
     _enemies.swap(alive);
 }
+
 
 // Place a turret on the tile the player is standing on (if valid)
 void TowerDefenceScene::place_turret() {
@@ -768,38 +699,33 @@ void TowerDefenceScene::place_turret() {
     _turrets.push_back(turret);
 }
 
-// Handle turret targeting and firing bullets at enemies
 void TowerDefenceScene::update_turrets(float dt) {
-    // If there are no enemies or no turrets, we don’t need to do anything
     if (_enemies.empty() || _turrets.empty()) return;
 
     const float tileSize = 50.f;
-    const float rangePixels = tileSize * 3;                 // range = 3 tiles
-    const float rangeSq = rangePixels * rangePixels;    // squared range
-    const float fireInterval = 0.5f;                         // 0.5s between shots
+    const float rangePixels = tileSize * 3;
+    const float rangeSq = rangePixels * rangePixels;
+    const float fireInterval = 0.5f;
 
     for (auto& t : _turrets) {
-        // Handle individual turret cooldown
         if (t.cooldown > 0.f) {
             t.cooldown -= dt;
             continue;
         }
 
-        // Turret position in the middle of its tile
         sf::Vector2f turretPos =
             t.shape.getPosition() + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
-        // Find the closest enemy in range
-        Enemy* bestEnemy = nullptr;
-        float  bestDistSq = rangeSq; // we compare squared distances for speed
+        // Find closest living enemy within range
+        TDEnemy* bestEnemy = nullptr;
+        float    bestDistSq = rangeSq;
 
         for (auto& e : _enemies) {
-            if (e.hp <= 0) continue; // skip dead enemies (will be cleaned later)
+            if (e.isDead()) continue;
 
-            sf::Vector2f diff = e.shape.getPosition() - turretPos;
+            sf::Vector2f diff = e.getShape().getPosition() - turretPos;
             float d2 = diff.x * diff.x + diff.y * diff.y;
 
-            // New best candidate if it's closer than anything we've seen so far
             if (d2 < bestDistSq) {
                 bestDistSq = d2;
                 bestEnemy = &e;
@@ -807,21 +733,17 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
 
         if (bestEnemy) {
-            // ---- Fire a bullet at the chosen enemy ----
+            // Fire a bullet at the chosen enemy
             Bullet b;
             b.pos = turretPos;
 
-            // Direction from turret to enemy
-            sf::Vector2f toEnemy = bestEnemy->shape.getPosition() - turretPos;
+            sf::Vector2f toEnemy = bestEnemy->getShape().getPosition() - turretPos;
             float len = std::sqrt(toEnemy.x * toEnemy.x + toEnemy.y * toEnemy.y);
-
-            // Normalise direction; if the length is 0 just give it a zero vector
             b.vel = (len > 0.f) ? (toEnemy / len) : sf::Vector2f(0.f, 0.f);
-            b.speed = 300.f;   // pixels per second
-            b.damage = 1;      // standard bullet damage
-            b.ttl = 2.0f;   // bullet disappears after 2 seconds regardless
+            b.speed = 300.f;
+            b.damage = 1;
+            b.ttl = 2.0f;
 
-            // Visual setup for the bullet (small white circle)
             b.shape.setRadius(4.f);
             b.shape.setOrigin(4.f, 4.f);
             b.shape.setFillColor(sf::Color::White);
@@ -829,28 +751,27 @@ void TowerDefenceScene::update_turrets(float dt) {
 
             _bullets.push_back(b);
 
-            // Put the turret on cooldown and slightly brighten it as "firing" feedback
             t.cooldown = fireInterval;
             t.shape.setFillColor(sf::Color(0, 230, 255));
         }
         else {
-            // No target in range this frame, use idle colour
+            // No target in range
             t.shape.setFillColor(sf::Color(0, 200, 255));
         }
     }
 
-    // ---- Strip out enemies that died from turret fire ----
-    std::vector<Enemy> alive;
+    // This clean-up is now mostly redundant (update_enemies also drops dead enemies),
+    // but it's safe to keep for now.
+    std::vector<TDEnemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
-        if (e.hp > 0) {
+        if (!e.isDead()) {
             alive.push_back(e);
         }
     }
     _enemies.swap(alive);
 }
 
-// Move bullets, check collisions with enemies, and remove expired bullets
 void TowerDefenceScene::update_bullets(float dt) {
     if (_bullets.empty()) return;
 
@@ -858,50 +779,44 @@ void TowerDefenceScene::update_bullets(float dt) {
     aliveBullets.reserve(_bullets.size());
 
     for (auto& b : _bullets) {
-        // Age the bullet and cull if its time-to-live has expired
         b.ttl -= dt;
         if (b.ttl <= 0.f) continue;
 
-        // Move bullet along its velocity vector
         b.pos += b.vel * b.speed * dt;
         b.shape.setPosition(b.pos);
 
         bool hit = false;
 
-        // Check for collision against each enemy (simple circle vs circle overlap)
+        // Check collision with enemies (simple circle-overlap)
         for (auto& e : _enemies) {
-            if (e.hp <= 0) continue; // dead enemies don't collide
+            if (e.isDead()) continue;
 
-            sf::Vector2f d = e.shape.getPosition() - b.pos;
-            float r = e.shape.getRadius() + b.shape.getRadius();
+            const sf::CircleShape& enemyShape = e.getShape();
+            sf::Vector2f d = enemyShape.getPosition() - b.pos;
+            float r = enemyShape.getRadius() + b.shape.getRadius();
 
-            // Compare squared distance to squared combined radii
             if ((d.x * d.x + d.y * d.y) <= r * r) {
-                // Bullet has hit this enemy
-                e.hp -= b.damage;
-                e.flashTimer = 0.2f;   // trigger TD hit flash
+                e.applyDamage(b.damage);   // handle HP + flash in TDEnemy
                 hit = true;
-                break;                 // bullet can only hit one enemy
+                break;
             }
         }
 
-        // Only keep the bullet if it didn't hit anything
         if (!hit) {
             aliveBullets.push_back(b);
         }
     }
-
-    // Replace bullet list with only the ones still alive
     _bullets.swap(aliveBullets);
 
-    // ---- Clean out enemies that died from bullet hits ----
-    std::vector<Enemy> alive;
+    // Extra safety clean-up for dead enemies (also cleaned in update_enemies)
+    std::vector<TDEnemy> alive;
     alive.reserve(_enemies.size());
     for (const auto& e : _enemies) {
-        if (e.hp > 0) alive.push_back(e);
+        if (!e.isDead()) alive.push_back(e);
     }
     _enemies.swap(alive);
 }
+
 
 // Return and clear list of types of enemies that reached the end of the path
 std::vector<int> TowerDefenceScene::consume_escaped_enemies() {
@@ -949,7 +864,7 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Draw turrets, bullets, and enemies
     for (const auto& turret : _turrets) window.draw(turret.shape);
     for (const auto& b : _bullets)      window.draw(b.shape);
-    for (const auto& enemy : _enemies)  window.draw(enemy.shape);
+    for (const auto& enemy : _enemies)  window.draw(enemy.getShape());
 
     // Scene label at top-left
     window.draw(_label);

@@ -8,6 +8,7 @@
 #include "game_systems.hpp"
 #include "run_context.hpp"
 #include "EnemyType.hpp"
+#include "TDEnemy.hpp"
 
 class Player;
 
@@ -131,19 +132,9 @@ private:
     // Enemy path in world space (centres of the + tiles)
     std::vector<sf::Vector2f> _enemyPath;
 
-    // Simple enemy representation
-    struct Enemy {
-        EnemyType type = EnemyType::Basic;   // which type (Basic/Fast/Tank)
-        float t = 0.f;                       // position along the path
-        sf::CircleShape shape;               // visual
-        int   hp = 3;                        // current health
-        int   maxHp = 3;                     // max health (for later UI if needed)
-        float speed = 60.f;                  // movement speed px/sec
-        float flashTimer = 0.f;              // hit-flash timer
-        sf::Color baseColor = sf::Color::Red; // natural colour for this enemy
-    };
+    // Simple enemy representation 
+    std::vector<TDEnemy> _enemies;
 
-    std::vector<Enemy> _enemies;
 
     // Bullets fired by turrets
     struct Bullet {
@@ -165,7 +156,6 @@ private:
     void place_turret();
     void build_enemy_path();
     void spawn_enemy(EnemyType type = EnemyType::Basic);
-    Enemy make_enemy(EnemyType type);
     void update_enemies(float dt);
     void update_turrets(float dt);
     void update_bullets(float dt);

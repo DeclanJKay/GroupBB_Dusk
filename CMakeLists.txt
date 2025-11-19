@@ -28,6 +28,8 @@ add_executable(tile_engine
   entity.cpp
   player.cpp
   scenes.cpp
+  EnemyStats.cpp
+  TDEnemy.cpp
 
   # headers optional (for VS visibility)
   game_systems.hpp
@@ -36,7 +38,7 @@ add_executable(tile_engine
   scenes.hpp
   game_parameters.hpp
   tile_level_loader/level_system.hpp
-  EnemyStats.cpp
+
 )
 
 # Link SFML + our library
