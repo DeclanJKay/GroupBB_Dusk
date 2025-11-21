@@ -13,13 +13,17 @@ endforeach()
 
 # ==== SFML submodule ====
 add_subdirectory("lib/SFML")
+set(SFML_INCS "lib/SFML/include")
+link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
 
 # ==== Level system library (build FIRST) ====
 add_library(tile_level STATIC
   tile_level_loader/level_system.cpp
-)
-target_include_directories(tile_level INTERFACE tile_level_loader)
-target_link_libraries(tile_level PUBLIC sfml-graphics)
+  EnemyStats.cpp
+  td_turret.cpp 
+  td_bullet.cpp)
+target_include_directories(tile_level INTERFACE tile_level)
+target_link_libraries(tile_level sfml-graphics)
 
 # ==== Game executable ====
 add_executable(tile_engine
@@ -28,6 +32,10 @@ add_executable(tile_engine
   entity.cpp
   player.cpp
   scenes.cpp
+  EnemyStats.cpp
+  TDEnemy.cpp
+  td_turret.cpp
+  td_bullet.cpp
 
   # headers optional (for VS visibility)
   game_systems.hpp
@@ -36,15 +44,12 @@ add_executable(tile_engine
   scenes.hpp
   game_parameters.hpp
   tile_level_loader/level_system.hpp
-)
+
+  )
 
 # Link SFML + our library
-target_link_libraries(tile_engine PRIVATE
-  sfml-graphics
-  sfml-window
-  sfml-system
-  tile_level
-)
+target_include_directories(tile_engine PRIVATE ${SFML_INCS} tile_level)
+target_link_libraries(tile_engine sfml-graphics tile_level)
 
 # ==== Copy resources ====
 add_custom_target(copy_resources ALL

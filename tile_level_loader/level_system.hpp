@@ -7,35 +7,50 @@
 
 class LevelSystem {
 public:
-	enum Tile { EMPTY, START, END, WALL, ENEMY, WAYPOINT };
+    // Types of tiles we support in the level file
+    enum Tile { EMPTY, START, END, WALL, ENEMY, WAYPOINT };
 
-	static void load_level(const std::string& path, float tile_size = 100.f);
-	static void render(sf::RenderWindow& window);
+    // Load a level text file and build tiles/sprites
+    static void load_level(const std::string& path, float tile_size = 100.f);
 
-	static sf::Color get_color(Tile t);
-	static void set_color(Tile t, sf::Color c);
+    // Draw all level tiles
+    static void render(sf::RenderWindow& window);
 
-	static Tile get_tile(sf::Vector2i grid);
-	static Tile get_tile_at(sf::Vector2f world);
+    // Colour helpers for each tile type
+    static sf::Color get_color(Tile t);
+    static void set_color(Tile t, sf::Color c);
 
-	static sf::Vector2f get_tile_position(sf::Vector2i grid);
-	static int get_height();
-	static int get_width();
-	static sf::Vector2f get_start_position();
+    // Query tile type by grid or world position
+    static Tile get_tile(sf::Vector2i grid);
+    static Tile get_tile_at(sf::Vector2f world);
+
+    // Convert grid coords to world position (top-left of tile)
+    static sf::Vector2f get_tile_position(sf::Vector2i grid);
+
+    // Level dimensions and start position
+    static int get_height();
+    static int get_width();
+    static sf::Vector2f get_start_position();
 
 protected:
-	static std::unique_ptr<Tile[]> _tiles;
-	static int _width;
-	static int _height;
-	static sf::Vector2f _offset;
-	static float _tile_size;
-	static std::map<Tile, sf::Color> _colors;
-	static sf::Vector2f _start_position;
+    // Raw tile data (row-major order)
+    static std::unique_ptr<Tile[]> _tiles;
+    static int _width;
+    static int _height;
 
-	static std::vector<std::unique_ptr<sf::RectangleShape>> _sprites;
-	static void build_sprites();
+    // Global offset + tile size in pixels
+    static sf::Vector2f _offset;
+    static float _tile_size;
+
+    // Per-tile colours and cached start position
+    static std::map<Tile, sf::Color> _colors;
+    static sf::Vector2f _start_position;
+
+    // One rect per tile for drawing
+    static std::vector<std::unique_ptr<sf::RectangleShape>> _sprites;
+    static void build_sprites();
 
 private:
-	LevelSystem() = delete;
-	~LevelSystem() = delete;
+    LevelSystem() = delete;
+    ~LevelSystem() = delete;
 };
