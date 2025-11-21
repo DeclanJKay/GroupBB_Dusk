@@ -5,5 +5,17 @@
 enum class EnemyType {
     Basic,
     Fast,
-    Tank
+    Tank,
+	shortRanged,
+	Exploder,
+    Medium,
+	RangedMelee,
+	FastExploder,
+	LongRange,
+	HeavyTank,
+	Boss1,
+	Boss2,
+	Boss3,
+	Boss4,
+	Boss5
 };

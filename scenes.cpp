@@ -70,6 +70,13 @@ void SafehouseScene::load() {
     _hpText.setPosition(20.f, 60.f);   // a bit below the title
     _hpText.setString("HP: 0/0");
 
+    // NEW: Wave / level text
+    _waveText.setFont(_font);
+    _waveText.setCharacterSize(24);
+    _waveText.setFillColor(sf::Color::White);
+    _waveText.setPosition(20.f, 90.f);   // just below HP text
+    _waveText.setString("Level 1 - Wave 1/5");
+
 	// Make the attack arc shape
     _attackArcShape.setPointCount(3);
     _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
@@ -239,6 +246,32 @@ void SafehouseScene::update(const float& dt) {
         );
     }
 
+    // --- Wave / Level UI (query TowerDefenceScene) ---
+    if (Scenes::tower_defence) {
+        auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
+
+        if (!td->hasFinishedAllWaves()) {
+            int levelIdx = td->getCurrentLevelIndex() + 1; // 0-based -> 1-based
+            int waveIdx = td->getCurrentWaveIndex() + 1;
+            int totalWaves = td->getWavesInCurrentLevel();
+
+            std::string extra;
+            if (td->isWaitingForPlayer()) {
+                extra = "  (Press E in TD to start)";
+            }
+
+            _waveText.setString(
+                "Level " + std::to_string(levelIdx) +
+                " - Wave " + std::to_string(waveIdx) +
+                "/" + std::to_string(totalWaves) +
+                extra
+            );
+        }
+        else {
+            _waveText.setString("All waves complete");
+        }
+    }
+
     // --- Attack + damage timers ---
     if (_attackCooldown > 0.f) {
         _attackCooldown -= dt;
@@ -380,6 +413,7 @@ void SafehouseScene::render(sf::RenderWindow& window) {
 
     window.draw(_label);
     window.draw(_hpText);   // show HP of player 
+    window.draw(_waveText);
 }
 
 // ============================================================================
@@ -402,6 +436,13 @@ void TowerDefenceScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
+    // Wave UI text
+    _waveText.setFont(_font);
+    _waveText.setCharacterSize(24);
+    _waveText.setFillColor(sf::Color::White);
+    _waveText.setPosition(20.f, 60.f);
+    _waveText.setString("Wave 0/0");
+
     const float tileSize = 50.f;
 
     // Configure level tile colours for TD
@@ -419,11 +460,13 @@ void TowerDefenceScene::load() {
         _enemies.clear();
         _bullets.clear();
         _enemyPath.clear();
-        _spawnTimer = 0.f;
         _escapedEnemyTypes.clear();
 
         // Build the path (+ tiles) enemies will follow
         build_enemy_path();
+
+        // Reset wave manager at the start of a new run / level
+        _waveManager.reset();
 
         // Create the shared player for TD mode
         _entities.clear();
@@ -444,52 +487,28 @@ void TowerDefenceScene::load() {
         std::cout << "[TD] Resumed with existing state.\n";
     }
 }
-
-// Runs the TD simulation even if this scene is not currently active
 void TowerDefenceScene::tick_simulation(float dt) {
-    if (!_enemyPath.empty()) {
-        _spawnTimer += dt;
-        const float spawnInterval = 2.0f;
-        while (_spawnTimer >= spawnInterval) {
-            _spawnTimer -= spawnInterval;
+    if (_enemyPath.empty()) return;
 
-            // Very simple spawn progression / wave logic:
-            // - Start with Basic
-            // - After 5 spawns, mix in Fast
-            // - After 15 spawns, mix in Tank
-            EnemyType type = EnemyType::Basic;
-
-            if (_totalSpawned >= 15) {
-                // After 15 spawns: occasionally tanks + fasts
-                if (_totalSpawned % 5 == 0) {
-                    type = EnemyType::Tank;
-                }
-                else {
-                    type = EnemyType::Fast;
-                }
-            }
-            else if (_totalSpawned >= 5) {
-                // After 5 spawns: mix basic + fast
-                if (_totalSpawned % 3 == 0) {
-                    type = EnemyType::Fast;
-                }
-                else {
-                    type = EnemyType::Basic;
-                }
-            }
-            else {
-                // First few: only basic enemies
-                type = EnemyType::Basic;
-            }
-
-            spawn_enemy(type);
+    // 1) WaveManager handles spawning when an active wave is running
+    _waveManager.update(
+        dt,
+        static_cast<int>(_enemies.size()),
+        [this](EnemyType type)
+        {
+            // When WaveManager wants a new enemy, spawn it at the start of the path
+            const sf::Vector2f startPos = _enemyPath.front();
+            _enemies.emplace_back(type, startPos);
         }
-    }
+    );
 
+    // 2) Normal TD simulation
     update_enemies(dt);
     update_turrets(dt);
     update_bullets(dt);
 }
+
+
 
 // Build list of world-space positions enemies move through (from + tiles)
 void TowerDefenceScene::build_enemy_path() {
@@ -577,19 +596,6 @@ void TowerDefenceScene::build_enemy_path() {
 
     std::cout << "Enemy path built with " << _enemyPath.size() << " nodes.\n";
 }
-
-void TowerDefenceScene::spawn_enemy(EnemyType type) {
-    if (_enemyPath.size() < 2) return;
-
-    sf::Vector2f startPos = _enemyPath.front();
-
-    // Construct a TDEnemy with the shared stats + starting position
-    TDEnemy enemy(type, startPos);
-    _enemies.push_back(enemy);
-
-    _totalSpawned++;
-}
-
 
 
 void TowerDefenceScene::update_enemies(float dt) {
@@ -725,13 +731,18 @@ std::vector<int> TowerDefenceScene::consume_escaped_enemies() {
 }
 
 void TowerDefenceScene::update(const float& dt) {
-    // Update the player entity in TD scene (movement, clamping, hit flash, etc.)
+    // Update the player in this scene
     Scene::update(dt);
 
     // Run safehouse simulation in the background too
     if (Scenes::safehouse) {
         auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
         sh->tick_simulation(dt);
+    }
+
+    // Handle starting the next wave with E
+    if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::E)) {
+        _waveManager.startNextWave();
     }
 
     // Swap back to Safehouse with Shift (LShift or RShift)
@@ -745,13 +756,32 @@ void TowerDefenceScene::update(const float& dt) {
         place_turret();
     }
 
-    // Run the TD simulation every frame while in this scene:
-    //  - enemy spawning
-    //  - enemies moving along the path
-    //  - turrets firing
-    //  - bullets flying and dealing damage
+    // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
+
+    // --- Update wave UI text ---
+    if (!_waveManager.hasFinishedAllWaves()) {
+        int levelIdx = _waveManager.getCurrentLevelIndex() + 1;
+        int waveIdx = _waveManager.getCurrentWaveIndex() + 1;
+        int totalWaves = _waveManager.getWavesInCurrentLevel();
+
+        std::string extra;
+        if (_waveManager.isWaitingForPlayer()) {
+            extra = "  (Press E to start)";
+        }
+
+        _waveText.setString(
+            "Level " + std::to_string(levelIdx) +
+            " - Wave " + std::to_string(waveIdx) +
+            "/" + std::to_string(totalWaves) +
+            extra
+        );
+    }
+    else {
+        _waveText.setString("All waves complete");
+    }
 }
+
 
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Background colour for TD scene
@@ -770,6 +800,7 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
 
     // Scene label at top-left
     window.draw(_label);
+    window.draw(_waveText);
 }
 
 // ============================================================================

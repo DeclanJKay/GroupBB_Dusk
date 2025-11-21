@@ -11,6 +11,9 @@
 #include "TDEnemy.hpp"
 #include "td_turret.hpp"
 #include "td_bullet.hpp"
+#include "WaveGeneration.hpp"
+#include "TDEnemy.hpp"
+
 
 class Player;
 
@@ -50,6 +53,7 @@ private:
     sf::Font _font;
     sf::Text _label;   // "SAFEHOUSE" title text
     sf::Text _hpText;  // shows player HP
+	sf::Text _waveText; // shows instructions
 
 
 
@@ -93,17 +97,27 @@ public:
     void update(const float& dt) override;
     void render(sf::RenderWindow& window) override;
 
+
+
     // Runs even when this isn’t the active scene (background sim)
     void tick_simulation(float dt);
 
     // Safehouse pulls escaped enemy types from here
     std::vector<int> consume_escaped_enemies();
 
+    // Wave UI helpers for other scenes (like Safehouse)
+    bool hasFinishedAllWaves()  const { return _waveManager.hasFinishedAllWaves(); }
+    bool isWaitingForPlayer()   const { return _waveManager.isWaitingForPlayer(); }
+    int  getCurrentLevelIndex() const { return _waveManager.getCurrentLevelIndex(); }
+    int  getCurrentWaveIndex()  const { return _waveManager.getCurrentWaveIndex(); }
+    int  getWavesInCurrentLevel() const { return _waveManager.getWavesInCurrentLevel(); }
+
 private:
     sf::RectangleShape _background;
 
     sf::Font _font;
     sf::Text _label;
+    sf::Text _waveText;
 
     std::shared_ptr<Player> _player;
 
@@ -119,10 +133,10 @@ private:
     // Bullets that the turrets fire
     std::vector<TDBullet> _bullets;
 
-    float _spawnTimer = 0.f;
+	WaveManager _waveManager;   // handles wave spawning 
+
     bool  _initialised = false;
     std::vector<int> _escapedEnemyTypes;
-    int   _totalSpawned = 0;
 
     void place_turret();
     void build_enemy_path();
