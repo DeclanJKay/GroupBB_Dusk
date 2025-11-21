@@ -1,136 +1,223 @@
+// WaveGeneration.cpp
 #include "WaveGeneration.hpp"
+#include "EnemyStats.hpp"
 
-// -----------------------------
-// Level / wave definitions
-// -----------------------------
-std::vector<Level> getWaveDefinitions()
-{
-    std::vector<Level> levels;
+#include <random>
+#include <algorithm>
+#include <cassert>
 
-    // For now: 1 level with 5 waves (last is a boss).
-    Level l1;
-
-    l1.waves.push_back(Wave{ 5, 1.2f, EnemyType::Basic });
-    l1.waves.push_back(Wave{ 7, 1.0f, EnemyType::Basic });
-    l1.waves.push_back(Wave{ 8, 0.9f, EnemyType::Fast });
-    l1.waves.push_back(Wave{ 10, 0.8f, EnemyType::Tank });
-    l1.waves.push_back(Wave{ 1, 0.0f, EnemyType::Boss1 }); // boss wave
-
-    levels.push_back(l1);
-
-    return levels;
+// Small helper: clamp float
+static float clampf(float v, float lo, float hi) {
+    return std::max(lo, std::min(hi, v));
 }
 
-// -----------------------------
-// WaveManager
-// -----------------------------
+static EnemyType boss_for_level(int levelIndex) {
+    switch (levelIndex) {
+    case 0: return EnemyType::Boss1;
+    case 1: return EnemyType::Boss2;
+    case 2: return EnemyType::Boss3;
+    case 3: return EnemyType::Boss4;
+    case 4: default: return EnemyType::Boss5;
+    }
+}
 
-WaveManager::WaveManager()
-    : _levels(getWaveDefinitions())
-{
+// Decide which enemy types are unlocked on a given level
+static std::vector<EnemyType> allowed_for_level(int levelIndex) {
+    std::vector<EnemyType> types;
+
+    // Level 1
+    types.push_back(EnemyType::Basic);
+    types.push_back(EnemyType::Fast);
+
+    if (levelIndex >= 1) {
+        // Level 2 unlock
+        types.push_back(EnemyType::Tank);
+    }
+    if (levelIndex >= 2) {
+        // Level 3 unlocks
+        types.push_back(EnemyType::shortRanged);
+        types.push_back(EnemyType::Exploder);
+    }
+    if (levelIndex >= 3) {
+        // Level 4 unlocks
+        types.push_back(EnemyType::Medium);
+        types.push_back(EnemyType::RangedMelee);
+        types.push_back(EnemyType::FastExploder);
+    }
+    if (levelIndex >= 4) {
+        // Level 5 unlocks
+        types.push_back(EnemyType::LongRange);
+        types.push_back(EnemyType::HeavyTank);
+    }
+
+    return types;
+}
+
+// Build a point budget + spawn interval for this level/wave
+static WaveConfig make_wave_config(int levelIndex, int waveIndex) {
+    WaveConfig cfg{};
+    cfg.levelIndex = levelIndex;
+    cfg.waveIndex = waveIndex;
+
+    // Base budget increases with level and wave:
+    // e.g. L1W1 ~12 points, L5W5 much higher.
+    int base = 10;
+    int perLevel = 8 * levelIndex;   // 0, 8, 16, ...
+    int perWave = 3 * waveIndex;    // 0, 3, 6, 9, 12
+    cfg.pointBudget = base + perLevel + perWave;
+
+    // Spawn interval gets slightly faster over time, clamped to 0.25s
+    float baseInterval = 1.0f;
+    float speedUp = 0.05f * (levelIndex + waveIndex); // small reduction
+    cfg.spawnInterval = clampf(baseInterval - speedUp, 0.25f, 1.0f);
+
+    cfg.allowedTypes = allowed_for_level(levelIndex);
+
+    // Boss only on the last wave of the level
+    cfg.hasBoss = (waveIndex == WaveManager::kWavesPerLevel - 1);
+    if (cfg.hasBoss) {
+        cfg.bossType = boss_for_level(levelIndex);
+    }
+
+    return cfg;
+}
+
+// --------------------------
+// WaveManager implementation
+// --------------------------
+
+WaveManager::WaveManager() {
+    // Simple deterministic seed so behaviour is repeatable between runs.
+    // We can swap this to std::random_device later for true randomness.
+    _rngSeed = 123456u;
     reset();
 }
 
-void WaveManager::reset()
-{
+void WaveManager::reset() {
     _currentLevel = 0;
     _currentWave = 0;
-    _spawnTimer = 0.f;
-    _spawnedThisWave = 0;
+    _waitingForPlayer = true;
+    _allWavesDone = false;
 
-    if (_levels.empty() || _levels[0].waves.empty()) {
-        _state = State::FinishedAll;
+    _timeSinceSpawn = 0.f;
+    _bossSpawnedThisWave = false;
+
+    setupCurrentWave();
+}
+
+void WaveManager::setupCurrentWave() {
+    if (_currentLevel >= kTotalLevels) {
+        _allWavesDone = true;
+        return;
     }
-    else {
-        _state = State::WaitingForStart;
-    }
+
+    _currentConfig = make_wave_config(_currentLevel, _currentWave);
+    _remainingPoints = _currentConfig.pointBudget;
+    _timeSinceSpawn = 0.f;
+    _bossSpawnedThisWave = false;
 }
 
-const Wave& WaveManager::currentWave() const
-{
-    return _levels[_currentLevel].waves[_currentWave];
-}
+EnemyType WaveManager::chooseRandomEnemyType() {
+    // Filter to enemies we can afford with remaining points
+    std::vector<EnemyType> candidates;
+    candidates.reserve(_currentConfig.allowedTypes.size());
 
-int WaveManager::getWavesInCurrentLevel() const
-{
-    if (_levels.empty()) return 0;
-    return static_cast<int>(_levels[_currentLevel].waves.size());
-}
-
-bool WaveManager::isWaitingForPlayer() const
-{
-    return _state == State::WaitingForStart;
-}
-
-bool WaveManager::isSpawningWave() const
-{
-    return _state == State::Spawning;
-}
-
-bool WaveManager::hasFinishedAllWaves() const
-{
-    return _state == State::FinishedAll;
-}
-
-void WaveManager::startNextWave()
-{
-    if (_state != State::WaitingForStart) return;
-    if (_levels.empty()) return;
-
-    _spawnTimer = 0.f;
-    _spawnedThisWave = 0;
-    _state = State::Spawning;
-}
-
-void WaveManager::update(
-    float dt,
-    int activeEnemies,
-    const std::function<void(EnemyType)>& spawnFn)
-{
-    if (_state == State::FinishedAll || _levels.empty()) return;
-
-    // --- Spawning phase ---
-    if (_state == State::Spawning) {
-        _spawnTimer += dt;
-        const Wave& wave = currentWave();
-
-        // Spawn as many as the timer allows
-        while (_spawnedThisWave < wave.numEnemies &&
-            _spawnTimer >= wave.spawnInterval) {
-
-            _spawnTimer -= wave.spawnInterval;
-            spawnFn(wave.enemyType);
-            _spawnedThisWave++;
-        }
-
-        // Once we've spawned them all, wait until the map is clear
-        if (_spawnedThisWave >= wave.numEnemies) {
-            _state = State::WaitingForClear;
+    for (auto t : _currentConfig.allowedTypes) {
+        EnemyStats st = get_enemy_stats(t);
+        int cost = std::max(st.cost, 1);
+        if (cost <= _remainingPoints) {
+            candidates.push_back(t);
         }
     }
 
-    // --- Waiting for all enemies to be gone ---
-    if (_state == State::WaitingForClear) {
-        if (activeEnemies == 0) {
-            // Advance wave / level
-            int lastWaveIndex = static_cast<int>(_levels[_currentLevel].waves.size()) - 1;
-            int lastLevelIndex = static_cast<int>(_levels.size()) - 1;
-
-            if (_currentWave < lastWaveIndex) {
-                // Next wave in same level
-                _currentWave++;
-                _state = State::WaitingForStart;
-            }
-            else if (_currentLevel < lastLevelIndex) {
-                // Next level
-                _currentLevel++;
-                _currentWave = 0;
-                _state = State::WaitingForStart;
-            }
-            else {
-                // No more levels/waves
-                _state = State::FinishedAll;
-            }
-        }
+    // If nothing fits in the remaining budget, end the wave
+    if (candidates.empty()) {
+        _remainingPoints = 0;
+        // Just return something; caller will see 0 points and not spawn further
+        return _currentConfig.allowedTypes.front();
     }
+
+    // Simple LCG-style RNG for repeatable behaviour
+    _rngSeed = _rngSeed * 1664525u + 1013904223u;
+    unsigned int idx = _rngSeed % static_cast<unsigned int>(candidates.size());
+    return candidates[idx];
+}
+
+void WaveManager::startNextWave() {
+    if (_allWavesDone) return;
+
+    // Only meaningful if we were waiting
+    _waitingForPlayer = false;
+    _timeSinceSpawn = 0.f;
+}
+
+void WaveManager::update(float dt,
+    int currentEnemyCount,
+    const std::function<void(EnemyType)>& spawnEnemy)
+{
+    if (_allWavesDone) return;
+
+    // If we're waiting for the player to press E, do nothing
+    if (_waitingForPlayer) return;
+
+    // Check if the current wave has fully finished:
+    //  - no points left
+    //  - no enemies alive
+    //  - boss has spawned (if this is a boss wave)
+    bool waveBudgetDone = (_remainingPoints <= 0);
+    bool bossRequirementMet =
+        (!_currentConfig.hasBoss) || _bossSpawnedThisWave;
+
+    if (waveBudgetDone && bossRequirementMet && currentEnemyCount == 0) {
+        // Advance wave/level
+        _currentWave++;
+        if (_currentWave >= kWavesPerLevel) {
+            _currentWave = 0;
+            _currentLevel++;
+        }
+
+        if (_currentLevel >= kTotalLevels) {
+            _allWavesDone = true;
+            _waitingForPlayer = false;
+            return;
+        }
+
+        setupCurrentWave();
+        _waitingForPlayer = true;   // wait for E again
+        return;
+    }
+
+    // Still mid-wave: handle spawn timing
+    _timeSinceSpawn += dt;
+    if (_timeSinceSpawn < _currentConfig.spawnInterval) {
+        return;
+    }
+    _timeSinceSpawn = 0.f;
+
+    // Boss spawn: on boss waves we spawn the boss first, then normal enemies
+    if (_currentConfig.hasBoss && !_bossSpawnedThisWave) {
+        spawnEnemy(_currentConfig.bossType);
+        _bossSpawnedThisWave = true;
+        return;
+    }
+
+    // No points left -> nothing else to spawn, just wait for enemies to die/escape
+    if (_remainingPoints <= 0) {
+        return;
+    }
+
+    // Pick a type that fits our remaining budget
+    EnemyType type = chooseRandomEnemyType();
+    EnemyStats stats = get_enemy_stats(type);
+    int cost = std::max(stats.cost, 1);
+
+    if (cost > _remainingPoints) {
+        // Should be rare because chooseRandomEnemyType has already filtered,
+        // but guard anyway.
+        _remainingPoints = 0;
+        return;
+    }
+
+    _remainingPoints -= cost;
+    spawnEnemy(type);
 }

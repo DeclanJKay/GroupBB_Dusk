@@ -1,69 +1,68 @@
+// WaveGeneration.hpp
 #pragma once
 
 #include <vector>
 #include <functional>
 #include "EnemyType.hpp"
 
-// A single wave: how many enemies, how fast they spawn, and which type.
-struct Wave {
-    int       numEnemies = 0;
-    float     spawnInterval = 1.0f;        // seconds between spawns
-    EnemyType enemyType = EnemyType::Basic;
+// A single wave configuration (point budget + which enemies can appear)
+struct WaveConfig {
+    int   levelIndex = 0;      // 0..4
+    int   waveIndex = 0;      // 0..4
+    int   pointBudget = 0;      // how many "points" we can spend
+    float spawnInterval = 1.0f;   // seconds between spawns
+
+    std::vector<EnemyType> allowedTypes;  // pool we pick from randomly
+
+    bool      hasBoss = false;          // true only on last wave of level
+    EnemyType bossType = EnemyType::Boss1;
 };
 
-// A level is just a list of waves.
-struct Level {
-    std::vector<Wave> waves;
-};
-
-// Returns all level/wave definitions for the run.
-std::vector<Level> getWaveDefinitions();
-
-// ---------------------------------------------
-// WaveManager
-// ---------------------------------------------
+// Handles progression across 5 levels * 5 waves, using a point system.
 class WaveManager {
 public:
+    // Only defined ONCE here – remove any duplicates below
+    static constexpr int kTotalLevels = 5;
+    static constexpr int kWavesPerLevel = 5;
+
     WaveManager();
 
-    // Reset back to level 0, wave 0, no active wave.
+    // Reset to Level 1, Wave 1 waiting for player to press E
     void reset();
 
-    // Called every frame:
+    // Update the wave logic:
     //  - dt: delta time
-    //  - activeEnemies: number of enemies currently alive on the map
-    //  - spawnFn: callback to actually spawn an enemy of a given type
+    //  - currentEnemyCount: how many enemies are alive in the scene
+    //  - spawnEnemy: callback invoked to spawn a new enemy
     void update(float dt,
-        int activeEnemies,
-        const std::function<void(EnemyType)>& spawnFn);
+        int currentEnemyCount,
+        const std::function<void(EnemyType)>& spawnEnemy);
 
-    // Called when the player presses E to start the next wave.
+    // UI helpers
+    bool isWaitingForPlayer()      const { return _waitingForPlayer; }
+    bool hasFinishedAllWaves()     const { return _allWavesDone; }
+
+    int  getCurrentLevelIndex()    const { return _currentLevel; }     // 0-based
+    int  getCurrentWaveIndex()     const { return _currentWave; }      // 0-based
+    int  getWavesInCurrentLevel()  const { return kWavesPerLevel; }
+
+    // Called when the player presses E to begin / continue
     void startNextWave();
 
-    bool isWaitingForPlayer() const;     // ready, waiting for E
-    bool isSpawningWave() const;         // currently spawning enemies
-    bool hasFinishedAllWaves() const;    // run is fully done
-
-    // 0-based indices (add +1 for UI)
-    int getCurrentLevelIndex() const { return _currentLevel; }
-    int getCurrentWaveIndex()  const { return _currentWave; }
-    int getWavesInCurrentLevel() const;
-
 private:
-    enum class State {
-        WaitingForStart,   // waiting for player to press E
-        Spawning,          // spawning enemies on a timer
-        WaitingForClear,   // all enemies for this wave spawned, waiting for 0 alive
-        FinishedAll        // no more waves/levels
-    };
+    int   _currentLevel = 0;   // 0..4
+    int   _currentWave = 0;   // 0..4
+    bool  _waitingForPlayer = true;
+    bool  _allWavesDone = false;
 
-    const Wave& currentWave() const;
+    WaveConfig _currentConfig{};
+    int        _remainingPoints = 0;   // points left to spend this wave
+    float      _timeSinceSpawn = 0.f;
+    bool       _bossSpawnedThisWave = false;
 
-    std::vector<Level> _levels;
+    // Random engine shared across waves
+    unsigned int _rngSeed = 0u;
 
-    int   _currentLevel = 0;
-    int   _currentWave = 0;
-    float _spawnTimer = 0.f;
-    int   _spawnedThisWave = 0;
-    State _state = State::WaitingForStart;
+    void      setupCurrentWave();
+    EnemyType chooseRandomEnemyType();
 };
