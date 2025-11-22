@@ -1,10 +1,12 @@
 // game_systems.cpp
 // Implements Scene base behaviour and the global GameSystem loop.
 
+#include <iostream>
 #include "game_systems.hpp"
 #include "entity.hpp" // needed for update/render calls
 
 #include <SFML/Graphics.hpp>
+#include <box2d/box2d.h>
 
 // -------------------------
 // Static storage

@@ -16,6 +16,11 @@ add_subdirectory("lib/SFML")
 set(SFML_INCS "lib/SFML/include")
 link_directories("${CMAKE_BINARY_DIR}/lib/SFML/lib")
 
+add_subdirectory("lib/box2d")
+set(BOX2D_INCS "lib/SFML/include")
+link_directories("${CMAKE_BINARY_DIR}/lib/box2d/lib")
+
+
 # ==== Level system library (build FIRST) ====
 add_library(tile_level STATIC
   tile_level_loader/level_system.cpp
@@ -48,8 +53,8 @@ add_executable(tile_engine
   )
 
 # Link SFML + our library
-target_include_directories(tile_engine PRIVATE ${SFML_INCS} tile_level)
-target_link_libraries(tile_engine sfml-graphics tile_level)
+target_include_directories(tile_engine PRIVATE ${SFML_INCS} ${BOX2D_INCS} tile_level)
+target_link_libraries(tile_engine sfml-graphics box2d tile_level)
 
 # ==== Copy resources ====
 add_custom_target(copy_resources ALL
