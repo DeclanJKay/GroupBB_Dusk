@@ -134,6 +134,9 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
         // Convert int -> EnemyType
         EnemyType type = static_cast<EnemyType>(typeId);
 
+
+        inv.type = type;
+
         // Look up shared stats
         EnemyStats stats = get_enemy_stats(type);
 
@@ -187,8 +190,13 @@ void SafehouseScene::update_invaders(float dt) {
         float combinedR = playerR + inv.shape.getRadius();
 
         if (distSq <= combinedR * combinedR && _damageCooldown <= 0.f) {
-            _player->take_damage(1);    // 1 damage per contact to player
-            _damageCooldown = 1.0f;     // 1 second of invulnerability
+            // Look up stats for this invader’s type so bosses / tanks hit harder
+            EnemyStats st = get_enemy_stats(inv.type);
+            int dmg = std::max(st.damage, 1);
+
+            _player->take_damage(dmg);
+            _damageCooldown = 1.0f; // still 1s i-frames for now
+        
         }
 
         // --- Hit flash for invader (if recently damaged) ---

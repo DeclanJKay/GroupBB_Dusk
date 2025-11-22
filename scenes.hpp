@@ -13,7 +13,7 @@
 #include "td_bullet.hpp"
 #include "WaveGeneration.hpp"
 #include "TDEnemy.hpp"
-
+#include "EnemyType.hpp"
 
 class Player;
 
@@ -76,6 +76,8 @@ private:
         int   maxHp = 3;                       // max health
         float flashTimer = 0.f;                // hit flash timer
         sf::Color baseColor = sf::Color(200, 50, 50); // default colour
+
+        EnemyType type = EnemyType::Basic;
     };
     std::vector<Invader> _invaders;
 
