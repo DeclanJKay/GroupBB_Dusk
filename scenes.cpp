@@ -114,6 +114,7 @@ void SafehouseScene::tick_simulation(float dt) {
     // Move invaders and apply contact damage, same as in update()
     update_invaders(dt);
 
+	update_enemy_bullets(dt); //keep enemy bullets updating too
     // Optional: if player can die off-screen, keep this
     if (_player->is_dead()) {
         _invaders.clear();
@@ -140,10 +141,17 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
         // Look up shared stats
         EnemyStats stats = get_enemy_stats(type);
 
+        inv.type = type;
         inv.speed = stats.speed;
         inv.hp = stats.hp;
         inv.maxHp = stats.hp;
         inv.baseColor = stats.color;
+        inv.isRanged = stats.isRanged;
+        inv.rangeLimit = stats.rangeLimit;
+        inv.damage = std::max(stats.damage, 1);
+        inv.explodes = stats.explodes;
+        inv.explosionRadius = stats.explosionRadius;
+        inv.shootCooldown = 0.f; // ready to shoot
 
         inv.shape.setRadius(stats.radius);
         inv.shape.setOrigin(stats.radius, stats.radius);
@@ -167,7 +175,6 @@ void SafehouseScene::spawn_invaders(const std::vector<int>& enemyTypes) {
 void SafehouseScene::update_invaders(float dt) {
     if (_invaders.empty() || !_player) return;
 
-    // Player data
     sf::Vector2f playerPos = _player->get_position();
     float        playerR = _player->get_radius();
 
@@ -176,35 +183,81 @@ void SafehouseScene::update_invaders(float dt) {
         sf::Vector2f dir = playerPos - pos;
 
         float lenSq = dir.x * dir.x + dir.y * dir.y;
-        if (lenSq > 1.0f) { // avoid division by zero when very close
-            float len = std::sqrt(lenSq);
+        float len = (lenSq > 0.f) ? std::sqrt(lenSq) : 0.f;
+
+        // ------------------------
+        // Movement towards player
+        // ------------------------
+        if (lenSq > 1.0f) {
             sf::Vector2f norm = dir / len;
 
-            pos += norm * inv.speed * dt;
-            inv.shape.setPosition(pos);
+            // If ranged, we can stop closing quite so aggressively when in range
+            bool shouldMove = true;
+            if (inv.isRanged && inv.rangeLimit > 0.f) {
+                // stop pushing too close once inside ~80% of range
+                if (len <= inv.rangeLimit * 0.8f) {
+                    shouldMove = false;
+                }
+            }
+
+            if (shouldMove) {
+                pos += norm * inv.speed * dt;
+                inv.shape.setPosition(pos);
+            }
         }
 
-        // --- Contact damage to player ---
+        // ------------------------
+        // Ranged attack behaviour
+        // ------------------------
+        if (inv.isRanged && inv.rangeLimit > 0.f) {
+            inv.shootCooldown -= dt;
+            if (inv.shootCooldown < 0.f) inv.shootCooldown = 0.f;
+
+            // Only shoot if player within range
+            if (len > 0.f && len <= inv.rangeLimit && inv.shootCooldown <= 0.f) {
+                EnemyBullet b;
+                b.damage = (inv.damage > 0) ? inv.damage : 1;
+                b.speed = 220.f;
+                b.ttl = 3.f;
+
+                // Small bullet, coloured like the invader
+                b.shape.setRadius(4.f);
+                b.shape.setOrigin(4.f, 4.f);
+                b.shape.setFillColor(inv.baseColor);
+                b.shape.setPosition(pos);
+
+                sf::Vector2f shotDir = dir / len; // already have len from above
+                b.vel = shotDir;
+
+                _enemyBullets.push_back(b);
+
+                // Cooldown between shots
+                inv.shootCooldown = 1.2f; // tweak as needed
+            }
+        }
+
+        // ------------------------
+        // Contact damage to player
+        // ------------------------
         sf::Vector2f diff = playerPos - pos;
         float distSq = diff.x * diff.x + diff.y * diff.y;
         float combinedR = playerR + inv.shape.getRadius();
 
         if (distSq <= combinedR * combinedR && _damageCooldown <= 0.f) {
-            // Look up stats for this invader’s type so bosses / tanks hit harder
-            EnemyStats st = get_enemy_stats(inv.type);
-            int dmg = std::max(st.damage, 1);
+            // Use damage from EnemyStats so stronger enemies hurt more
+            int dmg = (inv.damage > 0) ? inv.damage : 1;
 
             _player->take_damage(dmg);
-            _damageCooldown = 1.0f; // still 1s i-frames for now
-        
+            _damageCooldown = 1.0f; // 1 second of invulnerability
         }
 
-        // --- Hit flash for invader (if recently damaged) ---
+        // ------------------------
+        // Hit flash 
+        // ------------------------
         if (inv.flashTimer > 0.f) {
             inv.flashTimer -= dt;
             float t = std::max(inv.flashTimer / 0.15f, 0.f);
 
-            // Lerp towards white then back to baseColor
             sf::Color c;
             c.r = static_cast<sf::Uint8>(
                 inv.baseColor.r + (255 - inv.baseColor.r) * t
@@ -222,18 +275,58 @@ void SafehouseScene::update_invaders(float dt) {
             inv.shape.setFillColor(inv.baseColor);
         }
     }
-
 }
 
 
+void SafehouseScene::update_enemy_bullets(float dt) {
+    if (_enemyBullets.empty() || !_player) return;
+
+    std::vector<EnemyBullet> alive;
+    alive.reserve(_enemyBullets.size());
+
+    sf::Vector2f playerPos = _player->get_position();
+    float        playerR = _player->get_radius();
+
+    for (auto& b : _enemyBullets) {
+        b.ttl -= dt;
+        if (b.ttl <= 0.f) {
+            continue; // bullet expired
+        }
+
+        // Move bullet
+        b.shape.move(b.vel * b.speed * dt);
+
+        // Check collision with player
+        sf::Vector2f diff = playerPos - b.shape.getPosition();
+        float distSq = diff.x * diff.x + diff.y * diff.y;
+        float combinedR = playerR + b.shape.getRadius();
+
+        bool hitPlayer = false;
+        if (distSq <= combinedR * combinedR) {
+            // Only apply damage if player's invulnerability is down
+            if (_damageCooldown <= 0.f) {
+                int dmg = (b.damage > 0) ? b.damage : 1;
+                _player->take_damage(dmg);
+                _damageCooldown = 0.6f; 
+            }
+            hitPlayer = true;
+        }
+
+        if (!hitPlayer) {
+            alive.push_back(b);
+        }
+    }
+
+    _enemyBullets.swap(alive);
+}
+
 
 void SafehouseScene::update(const float& dt) {
-    // Safehouse player entity 
+    // Update player entity (movement etc.)
     Scene::update(dt);
 
     // TD simulation continues in the background
     if (Scenes::tower_defence) {
-        // We know this really is a TowerDefenceScene
         auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
         td->tick_simulation(dt);
 
@@ -254,7 +347,7 @@ void SafehouseScene::update(const float& dt) {
         );
     }
 
-    // --- Wave / Level UI (query TowerDefenceScene) ---
+    // --- Wave / Level UI (TowerDefenceScene) ---
     if (Scenes::tower_defence) {
         auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
 
@@ -278,18 +371,50 @@ void SafehouseScene::update(const float& dt) {
         else {
             _waveText.setString("All waves complete");
         }
+
+        // --- Debug / testing: spawn specific invader types with number keys ---
+        auto spawnTestEnemy = [this](EnemyType type)
+            {
+                std::vector<int> v;
+                v.push_back(static_cast<int>(type));
+                spawn_invaders(v);
+            };
+
+        if (keyPressedOnce(sf::Keyboard::Num1)) {
+            spawnTestEnemy(EnemyType::Basic);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num2)) {
+            spawnTestEnemy(EnemyType::Fast);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num3)) {
+            spawnTestEnemy(EnemyType::Tank);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num4)) {
+            spawnTestEnemy(EnemyType::shortRanged);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num5)) {
+            spawnTestEnemy(EnemyType::Exploder);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num6)) {
+            spawnTestEnemy(EnemyType::Medium);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num7)) {
+            spawnTestEnemy(EnemyType::RangedMelee);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num8)) {
+            spawnTestEnemy(EnemyType::FastExploder);
+        }
+        if (keyPressedOnce(sf::Keyboard::Num9)) {
+            spawnTestEnemy(EnemyType::LongRange);
+        }
+
     }
 
     // --- Attack + damage timers ---
-    if (_attackCooldown > 0.f) {
-        _attackCooldown -= dt;
-    }
-    if (_attackEffectTimer > 0.f) {
-        _attackEffectTimer -= dt;
-    }
-    if (_damageCooldown > 0.f) {
-        _damageCooldown -= dt;
-    }
+    if (_attackCooldown > 0.f)    _attackCooldown -= dt;
+    if (_attackEffectTimer > 0.f) _attackEffectTimer -= dt;
+    if (_damageCooldown > 0.f)    _damageCooldown -= dt;
+
     // Melee attack in a 90-degree arc towards the mouse
     bool doAttack = false;
     if (_attackCooldown <= 0.f && keyPressedOnce(sf::Keyboard::Space)) {
@@ -304,13 +429,11 @@ void SafehouseScene::update(const float& dt) {
 
         sf::Vector2f center = _player->get_position();
 
-        // Get mouse position *relative to the game window* and convert
-        // to world coordinates (so it matches the player's coord space)
+        // Mouse position in world coords
         sf::RenderWindow& window = GameSystem::get_window();
         sf::Vector2i mousePix = sf::Mouse::getPosition(window);
         sf::Vector2f mousePos = window.mapPixelToCoords(mousePix);
 
-        // Direction from player to mouse in the same coord space
         sf::Vector2f toMouse = mousePos - center;
         float        lenSqMouse = toMouse.x * toMouse.x + toMouse.y * toMouse.y;
         sf::Vector2f forward(1.f, 0.f);
@@ -320,7 +443,6 @@ void SafehouseScene::update(const float& dt) {
             forward = toMouse / lenMouse;
         }
 
-        // Apply 1 damage to any invader inside the cone
         std::vector<Invader> survivors;
         survivors.reserve(_invaders.size());
 
@@ -335,7 +457,7 @@ void SafehouseScene::update(const float& dt) {
                 hit = true;
             }
             else if (lenSq <= attackRadiusSq) {
-                float len = std::sqrt(lenSq);
+                float        len = std::sqrt(lenSq);
                 sf::Vector2f nd = d / len;
 
                 float dot = nd.x * forward.x + nd.y * forward.y;
@@ -350,12 +472,27 @@ void SafehouseScene::update(const float& dt) {
                 // Basic attack does 1 damage
                 inv.hp -= 1;
                 inv.flashTimer = 0.15f; // brief flash
+
+                // Exploders deal AoE damage to player on death
+                if (inv.hp <= 0 && inv.explodes && _player) {
+                    sf::Vector2f centerInv = inv.shape.getPosition();
+                    sf::Vector2f toPlayer = _player->get_position() - centerInv;
+                    float        distSq = toPlayer.x * toPlayer.x + toPlayer.y * toPlayer.y;
+                    float        blastR = inv.explosionRadius + _player->get_radius();
+                    float        blastRSq = blastR * blastR;
+
+                    if (distSq <= blastRSq && _damageCooldown <= 0.f) {
+                        int dmg = (inv.damage > 0) ? inv.damage : 1;
+                        _player->take_damage(dmg);
+                        _damageCooldown = 1.0f; // reuse same i-frames as contact
+                    }
+                }
             }
 
             if (inv.hp > 0) {
                 survivors.push_back(inv);
             }
-            // If hp <= 0, we simply don't push it -> enemy dies
+            // if hp <= 0: enemy dies (and may have exploded above)
         }
 
         _invaders.swap(survivors);
@@ -380,21 +517,18 @@ void SafehouseScene::update(const float& dt) {
         _attackEffectTimer = 0.12f;
     }
 
-
-    // --- Update invaders chasing the player ---
+    // --- Update invaders and their bullets ---
     update_invaders(dt);
+    update_enemy_bullets(dt);
 
     // --- Death check ---
     if (_player && _player->is_dead()) {
-        // Clear any remaining invaders (optional, just to be tidy)
         _invaders.clear();
 
-        // Make sure the EndScene exists
         if (!Scenes::end) {
             Scenes::end = std::make_shared<EndScene>();
         }
 
-        // Switch to Game Over screen
         GameSystem::set_active_scene(Scenes::end);
         return;
     }
@@ -407,12 +541,17 @@ void SafehouseScene::update(const float& dt) {
 }
 
 
+
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
     Scene::render(window); // player
 
     for (const auto& inv : _invaders) {
         window.draw(inv.shape);
+    }
+
+    for (const auto& b : _enemyBullets) {
+        window.draw(b.shape);
     }
 
     if (_attackEffectTimer > 0.f) {
