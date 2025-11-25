@@ -1,6 +1,6 @@
 #include "entity.hpp"
 
-// Base entity constructor – takes ownership of a drawable shape
+// Base entity constructor ï¿½ takes ownership of a drawable shape
 Entity::Entity(std::unique_ptr<sf::Shape> s)
     : _shape(std::move(s)) {
 }
@@ -20,3 +20,5 @@ void Entity::move(const sf::Vector2f& delta) {
 void Entity::update(const float& /*dt*/) {
     // Base does nothing; override in derived classes when needed.
 }
+
+EntType EntityTags::typeArray[(int)count];

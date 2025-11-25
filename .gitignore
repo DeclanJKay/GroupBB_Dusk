@@ -3,6 +3,7 @@
 
 /build/*
 /out/* 
+/.vscode/settings.json
 
 ### C++ ###
 # Prerequisites

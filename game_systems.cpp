@@ -42,6 +42,17 @@ void Scene::unload() {
 // GameSystem implementation
 // -------------------------
 
+b2WorldId worldId;
+sf::RectangleShape groundShape;
+sf::RectangleShape testShape;
+b2BodyId groundId;
+b2BodyId testId;
+
+Goon yes;
+
+static EntType typeArray[(int)count];
+
+
 void GameSystem::start(unsigned int width,
     unsigned int height,
     const std::string& name,
@@ -123,16 +134,94 @@ void GameSystem::set_active_scene(const std::shared_ptr<Scene>& act_sc) {
     if (_active_scene) _active_scene->load();
 }
 
-void GameSystem::_init() {
+void GameSystem::_init() 
+{
     // One-time setup point for global managers if needed
+    EntityTags::PopulateArray();
+
+
+    b2WorldDef wDef = b2DefaultWorldDef();
+    wDef.gravity = (b2Vec2){0.0f, -10.0f};
+    worldId = b2CreateWorld(&wDef);
+
+    /*
+    groundShape.setSize(sf::Vector2f(800.f,32.f));
+    groundShape.setOrigin(400.f, 16.f);
+    groundShape.setFillColor(sf::Color::White);
+
+    b2BodyDef gdef = b2DefaultBodyDef();
+    gdef.position = (b2Vec2){12.5f, 0.00f};
+    gdef.userData = &typeArray[(int)player];
+    groundId = b2CreateBody(worldId, &gdef);
+    b2Polygon gBox = b2MakeBox(12.5f, 0.5f);
+    b2ShapeDef gshapedef = b2DefaultShapeDef();
+    b2CreatePolygonShape(groundId, &gshapedef, &gBox);
+
+    testShape.setSize(sf::Vector2f(32.f,32.f));
+    testShape.setOrigin(16.f, 16.f);
+    testShape.setFillColor(sf::Color::White);
+
+    b2BodyDef tdef = b2DefaultBodyDef();
+    tdef.type = b2_dynamicBody;
+    tdef.position = (b2Vec2){10.0f, 10.0f};
+    testId = b2CreateBody(worldId, &tdef);
+    b2Polygon tBox = b2MakeBox(0.5f,0.5f);
+    b2ShapeDef tshapedef = b2DefaultShapeDef();
+    tshapedef.density = 1.0f;
+    tshapedef.enableHitEvents = true;
+    tshapedef.material.friction = 0.3f;
+    b2CreatePolygonShape(testId, &tshapedef, &tBox);
+    */
+
+    yes = Goon(&worldId);
+
+    if(EntityTags::CheckForTag(yes.getBodyID(), player)){std::cout<<"yes";}
 }
 
 void GameSystem::_update(const float& dt) {
     // Forward update to the active scene
     if (_active_scene) _active_scene->update(dt);
+    b2World_Step(worldId, 1.f/60.f, 4);
+
+    auto events = b2World_GetContactEvents(worldId);
+    
+    /*
+    b2Vec2 dir = b2Vec2{0,0};
+    EntType* iptr = (EntType*)b2Body_GetUserData(groundId);
+    //if (*iptr == player){std::cout<<"hooray";}
+
+    // Basic WASD / Arrow movement input
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::A) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Left))  dir.x -= 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::D) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Right)) dir.x += 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::W) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Up))    dir.y -= 1.f;
+    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) ||
+        sf::Keyboard::isKeyPressed(sf::Keyboard::Down))  dir.y += 1.f;
+
+    if (dir.x != 0 || dir.y != 0 ) {b2Body_ApplyLinearImpulseToCenter(testId, dir, true);}
+
+    for (int i = 0; i < events.hitCount; i++)
+    {
+        auto &ev = events.hitEvents[i];
+        auto bod1 = b2Shape_GetBody(ev.shapeIdA);
+        auto bod2 = b2Shape_GetBody(ev.shapeIdB);
+    }
+        */
 }
 
 void GameSystem::_render(sf::RenderWindow& window) {
     // Forward render to the active scene
     if (_active_scene) _active_scene->render(window);
+
+    //auto tPos = b2Body_GetPosition(testId);
+    //testShape.setPosition(tPos.x*32.f, tPos.y*32.f);
+
+    //auto gPos = b2Body_GetPosition(groundId);
+    //groundShape.setPosition(gPos.x*32.f, gPos.y*32.f);
+
+    //window.draw(testShape);
+    //window.draw(groundShape);
+    yes.RenderHitbox(window, sf::Color::Green);
 }
