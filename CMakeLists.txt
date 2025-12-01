@@ -26,7 +26,7 @@ add_library(tile_level STATIC
   tile_level_loader/level_system.cpp
   EnemyStats.cpp
   td_turret.cpp 
-  td_bullet.cpp "WaveGeneration.cpp")
+  td_bullet.cpp "WaveGeneration.cpp" "TurretStats.cpp")
 target_include_directories(tile_level INTERFACE tile_level)
 target_link_libraries(tile_level sfml-graphics)
 
@@ -42,7 +42,7 @@ add_executable(tile_engine
   td_turret.cpp
   td_bullet.cpp
   WaveGeneration.cpp
-
+  TurretStats.cpp
 
   # headers optional (for VS visibility)
   game_systems.hpp
@@ -52,7 +52,7 @@ add_executable(tile_engine
   game_parameters.hpp
   tile_level_loader/level_system.hpp
 
-  )
+   )
 
 # Link SFML + our library
 target_include_directories(tile_engine PRIVATE ${SFML_INCS} ${BOX2D_INCS} tile_level)

@@ -147,7 +147,7 @@ private:
     void update_enemies(float dt);
     void update_turrets(float dt);
     void update_bullets(float dt);
-    void place_turret();
+    void place_turret(TurretType type);
 };
 
 

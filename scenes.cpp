@@ -775,7 +775,7 @@ void TowerDefenceScene::update_enemies(float dt) {
 }
 
 
-void TowerDefenceScene::place_turret() {
+void TowerDefenceScene::place_turret(TurretType type) {
     if (!_player) return;
 
     const float tileSize = 50.f;
@@ -809,9 +809,10 @@ void TowerDefenceScene::place_turret() {
     // World position of this tile
     sf::Vector2f worldPos = ls::get_tile_position(grid);
 
-    // Create a new turret instance
-    _turrets.emplace_back(grid, worldPos, tileSize);
+    // Create a new turret instance of the chosen type
+    _turrets.emplace_back(grid, worldPos, tileSize, type);
 }
+
 
 
 // Ask each turret if it wants to fire this frame and spawn bullets
@@ -898,10 +899,57 @@ void TowerDefenceScene::update(const float& dt) {
         return;
     }
 
-    // Place a turret on the player's current tile with F
-    if (keyPressedOnce(sf::Keyboard::F)) {
-        place_turret();
+    // Place turrets using number keys (top row or numpad)
+    TurretType typeToPlace;
+    bool wantPlace = false;
+
+    if (keyPressedOnce(sf::Keyboard::Num1) || keyPressedOnce(sf::Keyboard::Numpad1)) {
+        typeToPlace = TurretType::Basic;
+        wantPlace = true;
     }
+    else if (keyPressedOnce(sf::Keyboard::Num2) || keyPressedOnce(sf::Keyboard::Numpad2)) {
+        typeToPlace = TurretType::SMG;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num3) || keyPressedOnce(sf::Keyboard::Numpad3)) {
+        typeToPlace = TurretType::Sniper;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num4) || keyPressedOnce(sf::Keyboard::Numpad4)) {
+        typeToPlace = TurretType::Bomb;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num5) || keyPressedOnce(sf::Keyboard::Numpad5)) {
+        typeToPlace = TurretType::Fire;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num6) || keyPressedOnce(sf::Keyboard::Numpad6)) {
+        typeToPlace = TurretType::Lightening;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num7) || keyPressedOnce(sf::Keyboard::Numpad7)) {
+        typeToPlace = TurretType::Freeze;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num8) || keyPressedOnce(sf::Keyboard::Numpad8)) {
+        typeToPlace = TurretType::Buff;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num9) || keyPressedOnce(sf::Keyboard::Numpad9)) {
+        typeToPlace = TurretType::Scatter;
+        wantPlace = true;
+    }
+    
+    else if (keyPressedOnce(sf::Keyboard::Num0) || keyPressedOnce(sf::Keyboard::Numpad0)) {
+        typeToPlace = TurretType::BananaFarm;
+        wantPlace = true;
+    }
+
+    if (wantPlace) {
+        place_turret(typeToPlace);
+    }
+
+
 
     // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
