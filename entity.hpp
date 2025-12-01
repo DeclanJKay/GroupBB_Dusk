@@ -9,7 +9,7 @@ enum EntType
 {
     enemy,
     player,
-    count
+    count //NEEDS TO BE AT THE BOTTOM, DONT REMOVE
 };
 
 class EntityTags
@@ -122,7 +122,8 @@ class RigidEntity
                 }
             }
         }
-
+        //virtual void update(const float& dt);
+        //virtual void render(sf::RenderWindow& window) const = 0;
         b2BodyId getBodyID()
         {
             return _bodyID;
@@ -142,7 +143,10 @@ class Goon : public RigidEntity
             _bodyID = b2CreateBody(*worldID, &def);
             b2Circle gBox;
             gBox.radius = 3;
+            gBox.center = b2Vec2{0,0};
             b2ShapeDef gshapedef = b2DefaultShapeDef();
             b2CreateCircleShape(_bodyID, &gshapedef, &gBox);
         }
+        //void update(const float& dt) override {}
+        //void render(sf::RenderWindow& window) const override {}
 };

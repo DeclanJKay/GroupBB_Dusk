@@ -43,11 +43,6 @@ void Scene::unload() {
 // -------------------------
 
 b2WorldId worldId;
-sf::RectangleShape groundShape;
-sf::RectangleShape testShape;
-b2BodyId groundId;
-b2BodyId testId;
-
 Goon yes;
 
 static EntType typeArray[(int)count];
@@ -55,8 +50,7 @@ static EntType typeArray[(int)count];
 
 void GameSystem::start(unsigned int width,
     unsigned int height,
-    const std::string& name,
-    const float& time_step)
+    const std::string& name)
 {
     // Create and own the main render window
     _window = std::make_unique<sf::RenderWindow>(
@@ -65,6 +59,7 @@ void GameSystem::start(unsigned int width,
     );
     sf::RenderWindow& window = *_window;
     window.setFramerateLimit(0); // we control pacing manually
+    window.setVerticalSyncEnabled(true);
 
     _init();
 
@@ -94,11 +89,6 @@ void GameSystem::start(unsigned int width,
         window.clear();
         _update(dt);
         _render(window);
-
-        // Optional fixed pacing (acts like a manual vsync)
-        if (time_step > 0.0f) {
-            sf::sleep(sf::seconds(time_step));
-        }
         window.display();
     }
 
@@ -144,35 +134,6 @@ void GameSystem::_init()
     wDef.gravity = (b2Vec2){0.0f, -10.0f};
     worldId = b2CreateWorld(&wDef);
 
-    /*
-    groundShape.setSize(sf::Vector2f(800.f,32.f));
-    groundShape.setOrigin(400.f, 16.f);
-    groundShape.setFillColor(sf::Color::White);
-
-    b2BodyDef gdef = b2DefaultBodyDef();
-    gdef.position = (b2Vec2){12.5f, 0.00f};
-    gdef.userData = &typeArray[(int)player];
-    groundId = b2CreateBody(worldId, &gdef);
-    b2Polygon gBox = b2MakeBox(12.5f, 0.5f);
-    b2ShapeDef gshapedef = b2DefaultShapeDef();
-    b2CreatePolygonShape(groundId, &gshapedef, &gBox);
-
-    testShape.setSize(sf::Vector2f(32.f,32.f));
-    testShape.setOrigin(16.f, 16.f);
-    testShape.setFillColor(sf::Color::White);
-
-    b2BodyDef tdef = b2DefaultBodyDef();
-    tdef.type = b2_dynamicBody;
-    tdef.position = (b2Vec2){10.0f, 10.0f};
-    testId = b2CreateBody(worldId, &tdef);
-    b2Polygon tBox = b2MakeBox(0.5f,0.5f);
-    b2ShapeDef tshapedef = b2DefaultShapeDef();
-    tshapedef.density = 1.0f;
-    tshapedef.enableHitEvents = true;
-    tshapedef.material.friction = 0.3f;
-    b2CreatePolygonShape(testId, &tshapedef, &tBox);
-    */
-
     yes = Goon(&worldId);
 
     if(EntityTags::CheckForTag(yes.getBodyID(), player)){std::cout<<"yes";}
@@ -181,7 +142,8 @@ void GameSystem::_init()
 void GameSystem::_update(const float& dt) {
     // Forward update to the active scene
     if (_active_scene) _active_scene->update(dt);
-    b2World_Step(worldId, 1.f/60.f, 4);
+    b2World_Step(worldId, 0.016f, 4); //(timestep set to 1/60)
+    std::cout<< 1/dt <<"\n"; 
 
     auto events = b2World_GetContactEvents(worldId);
     

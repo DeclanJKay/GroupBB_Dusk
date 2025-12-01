@@ -21,8 +21,7 @@ int main() {
     GameSystem::start(
         param::game_width,
         param::game_height,
-        "Dusk",
-        param::time_step
+        "Dusk"
     );
 
     return 0;

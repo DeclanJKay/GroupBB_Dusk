@@ -24,7 +24,7 @@ public:
     virtual void load() = 0;   // called when the scene becomes active
     virtual void unload();     // default: clear all entities
 
-    // Access to the scene’s entity list
+    // Access to the sceneï¿½s entity list
     std::vector<std::shared_ptr<Entity>>& get_entities() { return _entities; }
 
 protected:
@@ -44,8 +44,7 @@ public:
     // Create window and run the main loop
     static void start(unsigned int width,
         unsigned int height,
-        const std::string& name,
-        const float& time_step = 0.0f);
+        const std::string& name);
 
     // Global access to the SFML window (e.g. for mouse coords)
     static sf::RenderWindow& get_window();
