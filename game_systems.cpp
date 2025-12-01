@@ -176,14 +176,5 @@ void GameSystem::_update(const float& dt) {
 void GameSystem::_render(sf::RenderWindow& window) {
     // Forward render to the active scene
     if (_active_scene) _active_scene->render(window);
-
-    //auto tPos = b2Body_GetPosition(testId);
-    //testShape.setPosition(tPos.x*32.f, tPos.y*32.f);
-
-    //auto gPos = b2Body_GetPosition(groundId);
-    //groundShape.setPosition(gPos.x*32.f, gPos.y*32.f);
-
-    //window.draw(testShape);
-    //window.draw(groundShape);
     yes.RenderHitbox(window, sf::Color::Green);
 }

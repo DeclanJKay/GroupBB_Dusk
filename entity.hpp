@@ -40,6 +40,35 @@ class EntityTags
         }
 };
 
+class B2Helper
+{
+    private:
+        static constexpr float b2scaleFactor = 32;
+    public:
+        static float SFMLtoB2(float num)
+        {
+            num /= b2scaleFactor;
+            return num;
+        }
+        static b2Vec2 SFMLtoB2(sf::Vector2f nums)
+        {
+            nums.x /= b2scaleFactor;
+            nums.y /= b2scaleFactor;
+            return b2Vec2{nums.x,nums.y};
+        }
+        static float B2toSFML(float num)
+        {
+            num *= b2scaleFactor;
+            return num;
+        }
+        static sf::Vector2f B2toSFML(b2Vec2 nums)
+        {
+            nums.x *= b2scaleFactor;
+            nums.y *= b2scaleFactor;
+            return sf::Vector2f(nums.x,nums.y);
+        }
+};
+
 class Entity {
 public:
     // Must be constructed with a Shape (CircleShape, RectangleShape, etc.)
@@ -63,71 +92,19 @@ protected:
     sf::Vector2f _position{ 0.f, 0.f }; // cached world position
 };
 
-class RigidEntity
+class RigidEntity //DO NOT CREATE AN OBJECT OF THIS CLASS, ONLY MEANT FOR INHERITANCE
 {
     private:
-        sf::Vector2f GetPolySize(b2Polygon poly)
-        {
-            sf::Vector2f xRange = sf::Vector2f(poly.vertices[0].x, poly.vertices[0].x);
-            sf::Vector2f yRange = sf::Vector2f(poly.vertices[0].y, poly.vertices[0].y);
-            for (int i = 1; i < sizeof(poly.vertices)/sizeof(b2Vec2); i++)
-            {
-                if (poly.vertices[i].x < xRange.x) {xRange.x = poly.vertices[i].x;}
-                else if (poly.vertices[i].x > xRange.y) {xRange.y = poly.vertices[i].x;}
-
-                if (poly.vertices[i].y < yRange.x) {yRange.x = poly.vertices[i].y;}
-                else if (poly.vertices[i].y > yRange.y) {yRange.y = poly.vertices[i].y;}
-            }
-            return sf::Vector2f(xRange.y-xRange.x, yRange.y-yRange.x);
-        }
+        sf::Vector2f GetPolySize(b2Polygon poly);
     protected:
         b2BodyId _bodyID;
     public:
-        RigidEntity() {};
+        RigidEntity() = default;
         ~RigidEntity() = default;
-        void RenderHitbox(sf::RenderWindow& window, sf::Color col)
-        {
-            int shapeCount = b2Body_GetShapeCount(_bodyID);
-            b2ShapeId shapeIDs[shapeCount];
-            b2Body_GetShapes(_bodyID, shapeIDs, shapeCount);
-
-            for (int i = 0; i < shapeCount; i++)
-            {
-                auto type = b2Shape_GetType(shapeIDs[0]);
-
-                if (type == b2_polygonShape)
-                {
-                    auto rectB2 = b2Shape_GetPolygon(shapeIDs[i]);
-                    sf::RectangleShape rectSF;
-                    auto posB2 = b2Body_GetTransform(_bodyID);
-                    rectSF.setPosition(posB2.p.x*32, posB2.p.y*32);
-                    auto size = GetPolySize(rectB2);
-                    rectSF.setSize(sf::Vector2f(size.x*32, size.y*32));
-                    rectSF.setOrigin(size.x*32/2, size.y*32/2);
-                    rectSF.setFillColor(col);
-
-                    window.draw(rectSF);
-                    std::cout<<"size: " << rectSF.getPosition().x << " " << rectSF.getPosition().y << "\n";
-                }
-                else if (type == b2_circleShape)
-                {
-                    auto cirB2 = b2Shape_GetCircle(shapeIDs[i]);
-                    sf::CircleShape cirSF;
-                    auto posB2 = b2Body_GetTransform(_bodyID);
-                    cirSF.setPosition(posB2.p.x*32, posB2.p.y*32);
-                    cirSF.setRadius(cirB2.radius*32);
-                    cirSF.setFillColor(col);
-                    cirSF.setOrigin(cirB2.radius*32,cirB2.radius*32);
-                    window.draw(cirSF);
-                }
-            }
-        }
-        //virtual void update(const float& dt);
-        //virtual void render(sf::RenderWindow& window) const = 0;
-        b2BodyId getBodyID()
-        {
-            return _bodyID;
-        }
+        void RenderHitbox(sf::RenderWindow& window, sf::Color col);
+        virtual void Update(const float& dt);
+        virtual void Render(sf::RenderWindow& window) const = 0;
+        b2BodyId getBodyID();
 };
 
 //here is an example class from rigid entity
@@ -147,6 +124,6 @@ class Goon : public RigidEntity
             b2ShapeDef gshapedef = b2DefaultShapeDef();
             b2CreateCircleShape(_bodyID, &gshapedef, &gBox);
         }
-        //void update(const float& dt) override {}
-        //void render(sf::RenderWindow& window) const override {}
+        void Update(const float& dt) override {}
+        void Render(sf::RenderWindow& window) const override {}
 };
