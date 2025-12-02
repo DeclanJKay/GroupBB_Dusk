@@ -12,7 +12,8 @@ public:
         const sf::Vector2f& direction,
         float speed = 300.f,
         int   damage = 1,
-        float ttl = 2.0f);
+        float ttl = 2.0f,
+        float explosionRadius = 0.f);  // AEO radius (0 = no AoE)
 
     // Move the bullet and check for collisions.
     // Returns true if the bullet is still alive after this frame,
@@ -30,5 +31,7 @@ private:
     float          _speed;
     int            _damage;
     float          _ttl;      // time-to-live in seconds
+    float          _explosionRadius;   // NEW: AoE radius in world units (0 = single target)
+
     sf::CircleShape _shape;
 };

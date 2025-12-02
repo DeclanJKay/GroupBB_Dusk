@@ -4,7 +4,7 @@
 #include "game_parameters.hpp"
 #include "TDEnemy.hpp"
 #include "EnemyStats.hpp"
-
+#include "TurretType.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -826,7 +826,22 @@ void TowerDefenceScene::update_turrets(float dt) {
         // TDTurret handles range, cooldown, target selection.
         // If it returns true, we spawn a bullet.
         if (t.update(dt, _enemies, bulletPos, bulletDir)) {
-            _bullets.emplace_back(bulletPos, bulletDir);
+            // Look up stats for this turret type
+            TurretStats stats = get_turret_stats(t.getType());
+
+            float bulletSpeed = 300.f;          // can move into stats later
+            int   damage = stats.damage;
+            float ttl = 2.0f;
+            float explosion = stats.explosionRadius;  // Bomb turret has 80.f here
+
+            _bullets.emplace_back(
+                bulletPos,
+                bulletDir,
+                bulletSpeed,
+                damage,
+                ttl,
+                explosion
+            );
         }
     }
 
@@ -839,6 +854,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
 
 
 // Move bullets, apply damage, and cull dead bullets + enemies
