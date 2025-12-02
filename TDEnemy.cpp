@@ -22,9 +22,32 @@ TDEnemy::TDEnemy(EnemyType type, const sf::Vector2f& startPos)
 }
 
 bool TDEnemy::update(float dt,
-    const std::vector<sf::Vector2f>& path,
-    float tileSize)
+                     const std::vector<sf::Vector2f>& path,
+                     float tileSize)
 {
+
+    // --- Burn / damage-over-time tick ---
+    if (_dotTimeRemaining > 0.f && _dotDps > 0.f) {
+        _dotTimeRemaining -= dt;
+        if (_dotTimeRemaining < 0.f) _dotTimeRemaining = 0.f;
+
+        // accumulate fractional damage over time
+        _dotAccumulator += _dotDps * dt;
+        while (_dotAccumulator >= 1.f && _hp > 0) {
+            _hp -= 1;
+            _dotAccumulator -= 1.f;
+
+            // optional: small flash when burn ticks
+            _flashTimer = 0.2f;
+        }
+
+        // If burn killed the enemy, we stop here.
+        // TowerDefenceScene removes it because isDead() will be true.
+        if (_hp <= 0) {
+            return false;
+        }
+    }
+	// --- Movement along path ---
     if (path.size() < 2) {
         return false; // nowhere to go
     }
@@ -75,3 +98,14 @@ void TDEnemy::applyDamage(int amount)
 
     _flashTimer = 0.2f;  // trigger short flash
 }
+
+void TDEnemy::applyDot(float duration, float dps)
+{
+    if (duration <= 0.f || dps <= 0.f) return;
+
+    // For now we just overwrite any existing burn with the new one.
+    _dotTimeRemaining = duration;
+    _dotDps = dps;
+    // we are keeping _dotAccumulator as-is so fractional damage carries on smoothly
+}
+

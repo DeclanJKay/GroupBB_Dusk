@@ -6,13 +6,17 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     float speed,
     int   damage,
     float ttl,
-    float explosionRadius)
+    float explosionRadius,
+    float dotDuration,
+    float dotDps)
     : _pos(startPos)
     , _vel(direction)
     , _speed(speed)
     , _damage(damage)
     , _ttl(ttl)
     , _explosionRadius(explosionRadius)
+    , _dotDuration(dotDuration)
+    , _dotDps(dotDps)
 {
     // Small white circle while flying
     _shape.setRadius(4.f);
@@ -21,8 +25,11 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     _shape.setPosition(_pos);
 }
 
-bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
-
+bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
+{
+    // ---------------------------
+    // Explosion phase (visual only)
+    // ---------------------------
     if (_inExplosion) {
         _explosionTimer -= dt;
         if (_explosionTimer <= 0.f) {
@@ -43,7 +50,9 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
         return true;
     }
 
-    // Lifetime countdown for flying bullet
+    // ---------------------------
+    // Flying bullet phase
+    // ---------------------------
     _ttl -= dt;
     if (_ttl <= 0.f) {
         return false; // die quietly
@@ -53,8 +62,8 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
     _pos += _vel * _speed * dt;
     _shape.setPosition(_pos);
 
-    // Check collision against enemies (did we hit anything?)
-    bool hit = false;
+    // Check if we collided with anything this frame
+    bool hitSomething = false;
     for (auto& e : enemies) {
         if (e.isDead()) continue;
 
@@ -67,17 +76,19 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
         float r = enemyRadius + bulletRadius;
 
         if (distSq <= r * r) {
-            hit = true;
+            hitSomething = true;
             break;
         }
     }
 
-    if (!hit) {
+    if (!hitSomething) {
         // No impact this frame, keep flying
         return true;
     }
 
-    // --- We hit something: resolve damage (once) ---
+    // ---------------------------
+    // We hit something: resolve damage (once)
+    // ---------------------------
     if (!_hasDealtDamage) {
         if (_explosionRadius <= 0.f) {
             // Single-target bullet: damage the first enemy we collide with
@@ -94,6 +105,11 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
 
                 if (distSq <= r * r) {
                     e.applyDamage(_damage);
+
+                    // Apply burn if this bullet has DoT
+                    if (_dotDuration > 0.f && _dotDps > 0.f) {
+                        e.applyDot(_dotDuration, _dotDps);
+                    }
                     break;
                 }
             }
@@ -114,6 +130,11 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
 
                 if (distSq <= combinedSq) {
                     e.applyDamage(_damage);
+
+                    // Apply burn as well if configured
+                    if (_dotDuration > 0.f && _dotDps > 0.f) {
+                        e.applyDot(_dotDuration, _dotDps);
+                    }
                 }
             }
         }
@@ -121,9 +142,11 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies) {
         _hasDealtDamage = true;
     }
 
-    // --- Decide if we show an explosion or just vanish ---
+    // ---------------------------
+    // Decide if we show an explosion or just vanish
+    // ---------------------------
     if (_explosionRadius <= 0.f) {
-        // Non-AoE bullets: disappear immediately (same behaviour as before)
+        // Non-AoE bullets: disappear immediately after dealing damage
         return false;
     }
 

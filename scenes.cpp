@@ -5,6 +5,7 @@
 #include "TDEnemy.hpp"
 #include "EnemyStats.hpp"
 #include "TurretType.hpp"
+#include "TurretStats.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -826,26 +827,36 @@ void TowerDefenceScene::update_turrets(float dt) {
         // TDTurret handles range, cooldown, target selection.
         // If it returns true, we spawn a bullet.
         if (t.update(dt, _enemies, bulletPos, bulletDir)) {
-            // Look up stats for this turret type
-            TurretStats stats = get_turret_stats(t.getType());
+            TurretType   type = t.getType();
+            TurretStats  stats = get_turret_stats(type);
 
-            float bulletSpeed = 300.f;          // can move into stats later
-            int   damage = stats.damage;
-            float ttl = 2.0f;
-            float explosion = stats.explosionRadius;  // Bomb turret has 80.f here
+            // Explosion radius straight from TurretStats (Bomb, AOE, etc.)
+            float explosionRadius = stats.explosionRadius;
+
+            // Defaults: no burn
+            float dotDuration = 0.f;
+            float dotDps = 0.f;
+
+            // Fire turret: give its bullets a burn effect
+            if (type == TurretType::Fire && stats.damageOverTime > 0.f) {
+                dotDuration = 3.0f;                 // burn lasts 3 seconds
+                dotDps = stats.damageOverTime; // DPS from TurretStats
+            }
 
             _bullets.emplace_back(
                 bulletPos,
                 bulletDir,
-                bulletSpeed,
-                damage,
-                ttl,
-                explosion
+                300.f,             // speed
+                stats.damage,      // hit damage
+                2.0f,              // ttl in seconds
+                explosionRadius,   // AoE radius (0 for most turrets)
+                dotDuration,
+                dotDps
             );
         }
     }
 
-    // Clean out any enemies that died from turret damage
+    // Clean out any enemies that died from turret/bullet damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),

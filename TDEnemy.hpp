@@ -21,15 +21,19 @@ public:
     bool isDead() const { return _hp <= 0; }
 
     // Accessors used by turrets / bullets
-    const sf::CircleShape& getShape() const { return _shape; }
-    sf::CircleShape& getShape() { return _shape; }
-    EnemyType              getType()  const { return _type; }
+    const sf::CircleShape&  getShape() const { return _shape; }
+    sf::CircleShape&        getShape()       { return _shape; }
+    EnemyType               getType()  const { return _type; }
 
     // World-space centre position (used by turrets)
     sf::Vector2f getPosition() const { return _shape.getPosition(); }
 
     // Radius used for simple circle collision
     float getRadius() const { return _shape.getRadius(); }
+
+    // Apply a burning damage-over-time effect
+    void applyDot(float duration, float dps);
+
 
 private:
     EnemyType      _type;
@@ -41,4 +45,10 @@ private:
     float          _speed = 60.f;
     float          _flashTimer = 0.f;
     sf::Color      _baseColor = sf::Color::Red;
+
+    // --- Burn / DoT state ---
+    float _dotTimeRemaining = 0.f;   // how long the burn lasts (seconds)
+    float _dotDps = 0.f;   // damage per second
+    float _dotAccumulator = 0.f;   // accumulates fractional damage
+
 };
