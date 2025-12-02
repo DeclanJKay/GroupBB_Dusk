@@ -10,7 +10,8 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     float dotDuration,
     float dotDps,
     float slowDuration,
-    float slowPercent)
+    float slowPercent,
+    float stunDuration)
     : _pos(startPos)
     , _vel(direction)
     , _speed(speed)
@@ -21,6 +22,7 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     , _dotDps(dotDps)
     , _slowDuration(slowDuration)
     , _slowPercent(slowPercent)
+    , _stunDuration(stunDuration)
 {
     // Small white circle while flying
     _shape.setRadius(4.f);
@@ -110,14 +112,14 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
                 if (distSq <= r * r) {
                     e.applyDamage(_damage);
 
-                    // Apply burn if this bullet has DoT
                     if (_dotDuration > 0.f && _dotDps > 0.f) {
                         e.applyDot(_dotDuration, _dotDps);
                     }
-
-                    // Apply slow if configured
                     if (_slowDuration > 0.f && _slowPercent > 0.f) {
                         e.applySlow(_slowDuration, _slowPercent);
+                    }
+                    if (_stunDuration > 0.f) {
+                        e.applyStun(_stunDuration);
                     }
                     break;
                 }
@@ -146,6 +148,9 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
                     }
                     if (_slowDuration > 0.f && _slowPercent > 0.f) {
                         e.applySlow(_slowDuration, _slowPercent);
+                    }
+                    if (_stunDuration > 0.f) {
+                        e.applyStun(_stunDuration);
                     }
                 }
             }

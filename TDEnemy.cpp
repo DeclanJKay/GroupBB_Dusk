@@ -45,6 +45,12 @@ bool TDEnemy::update(float dt,
         return false;
     }
 
+    // --- Stun timer tick ---
+    if (_stunTimeRemaining > 0.f) {
+        _stunTimeRemaining -= dt;
+        if (_stunTimeRemaining < 0.f) _stunTimeRemaining = 0.f;
+    }
+
     // --- Slow timer tick ---
     if (_slowTimeRemaining > 0.f) {
         _slowTimeRemaining -= dt;
@@ -59,10 +65,15 @@ bool TDEnemy::update(float dt,
         return false; // nowhere to go
     }
 
-    // Effective speed this frame (affected by slow)
+    // Effective speed this frame (stun overrides slow)
     float effectiveSpeed = _speed;
-    if (_slowTimeRemaining > 0.f && _slowPercent > 0.f) {
-        float factor = 1.f - _slowPercent;
+
+    if (_stunTimeRemaining > 0.f) {
+        // Fully stunned: no movement
+        effectiveSpeed = 0.f;
+    }
+    else if (_slowTimeRemaining > 0.f && _slowPercent > 0.f) {
+        float factor = 1.f - _slowPercent;  // e.g. 0.5 = 50% slower
         if (factor < 0.f) factor = 0.f;
         effectiveSpeed *= factor;
     }
@@ -132,5 +143,15 @@ void TDEnemy::applySlow(float duration, float percent)
     if (duration > _slowTimeRemaining || percent > _slowPercent) {
         _slowTimeRemaining = duration;
         _slowPercent = percent;
+    }
+}
+
+void TDEnemy::applyStun(float duration)
+{
+    if (duration <= 0.f) return;
+
+    // Keep the longest stun
+    if (duration > _stunTimeRemaining) {
+        _stunTimeRemaining = duration;
     }
 }

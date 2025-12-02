@@ -34,7 +34,7 @@ public:
     // Apply status effects
     void applyDot(float duration, float dps);
     void applySlow(float duration, float percent);
-
+    void applyStun(float duration);
 
 private:
     EnemyType      _type;
@@ -55,4 +55,7 @@ private:
     // --- Slow state ---
     float _slowTimeRemaining = 0.f;   // how long the slow lasts
     float _slowPercent = 0.f;   // 0..1 fraction (0.5 = 50% slower)
+
+    // --- Stun state ---
+    float _stunTimeRemaining = 0.f;   // how long the enemy is stunned
 };

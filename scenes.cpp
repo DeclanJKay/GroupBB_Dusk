@@ -838,6 +838,7 @@ void TowerDefenceScene::update_turrets(float dt) {
             float dotDps = stats.damageOverTime;    // 0 for most turrets
             float slowDuration = stats.slowDownTime;
             float slowPercent = stats.slowDownPercent;
+			float stunDuration = stats.stunTime;
 
             _bullets.emplace_back(
                 bulletPos,
@@ -849,7 +850,8 @@ void TowerDefenceScene::update_turrets(float dt) {
                 dotDuration,
                 dotDps,
                 slowDuration,
-                slowPercent
+                slowPercent,
+                stunDuration
             );
         }
 

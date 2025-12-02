@@ -82,12 +82,9 @@ TurretStats get_turret_stats(TurretType type)
         stats.rangeTiles = 3.f;
         stats.fireInterval = 0.8f;
         stats.damage = 1;
-        stats.stunTime = 0.5f;
+        stats.stunTime = 0.7f;   // tweak this to taste
         stats.color = sf::Color(180, 180, 255);
         stats.cost = 7;
-
-        stats.bulletSpeed = 340.f;
-        stats.bulletTtl = 2.0f;
         break;
 
         // -------- Freeze (slow + damage) --------

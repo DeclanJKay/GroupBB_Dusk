@@ -16,7 +16,8 @@ public:
         float dotDuration = 0.f,
         float dotDps = 0.f,
         float slowDuration = 0.f,
-        float slowPercent = 0.f);
+        float slowPercent = 0.f,
+        float stunDuration = 0.f);
 
     // Move the bullet and check for collisions.
     // Returns true if the bullet is still alive after this frame,
@@ -40,7 +41,7 @@ private:
     float          _dotDps;            // burn DPS
     float          _slowDuration;      // slow duration
     float          _slowPercent;       // 0..1 fraction slow
-
+	float          _stunDuration;      // How long to stun enemy    
     // Explosion visual state
     bool           _inExplosion = false;
     bool           _hasDealtDamage = false;
