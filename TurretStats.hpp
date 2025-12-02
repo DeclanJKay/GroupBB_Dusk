@@ -19,6 +19,9 @@ struct TurretStats
     float     slowDownPercent = 0.f;          // 0..1 fraction slow
     float     stunTime = 0.f;          // seconds stunned
 
+    float     bulletSpeed = 300.f;               // how fast bullets travel (units/s)
+    float     bulletTtl = 2.0f;                // how long bullets live (seconds)
+
     bool      isBuff = false;        // buff turret aura
     float     buffDamageMult = 1.0f;         // e.g. 1.25 = +25% damage
     float     buffFireRateMult = 1.0f;         // <1 = faster fire, >1 = slower

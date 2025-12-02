@@ -3,14 +3,14 @@
 
 TurretStats get_turret_stats(TurretType type)
 {
-    TurretStats stats{};
+    TurretStats stats{}; // gets all the defaults from the struct
 
     switch (type)
     {
         // -------- Basic --------
     case TurretType::Basic:
         stats.rangeTiles = 4.f;
-        stats.fireInterval = 0.8f;          // ~0.8s between shots
+        stats.fireInterval = 0.8f;
         stats.damage = 1;
         stats.explosionRadius = 0.f;
         stats.damageOverTime = 0.f;
@@ -21,15 +21,21 @@ TurretStats get_turret_stats(TurretType type)
         stats.generatesIncome = false;
         stats.color = sf::Color::Cyan;
         stats.cost = 4;
+
+        stats.bulletSpeed = 300.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- SMG (short range, fast fire) --------
     case TurretType::SMG:
         stats.rangeTiles = 2.f;
-        stats.fireInterval = 0.4f;          // faster
+        stats.fireInterval = 0.4f;
         stats.damage = 1;
         stats.color = sf::Color::Blue;
         stats.cost = 6;
+
+        stats.bulletSpeed = 320.f;
+        stats.bulletTtl = 1.5f;
         break;
 
         // -------- Sniper (long range, slow fire, high damage) --------
@@ -39,6 +45,9 @@ TurretStats get_turret_stats(TurretType type)
         stats.damage = 4;
         stats.color = sf::Color::Red;
         stats.cost = 10;
+
+        stats.bulletSpeed = 420.f;   // faster, flies further
+        stats.bulletTtl = 3.0f;    // lives longer
         break;
 
         // -------- Bomb (AOE damage) --------
@@ -49,19 +58,24 @@ TurretStats get_turret_stats(TurretType type)
         stats.explosionRadius = 80.f;
         stats.color = sf::Color(200, 150, 0);
         stats.cost = 8;
+
+        stats.bulletSpeed = 260.f;   // slower chunky shells
+        stats.bulletTtl = 2.5f;
         break;
 
         // -------- Fire (DoT) --------
     case TurretType::Fire:
-        stats.rangeTiles = 5.f;
-        stats.fireInterval = 2.f;
+        stats.rangeTiles = 3.f;
+        stats.fireInterval = 0.8f;
         stats.damage = 0;
-        stats.damageOverTime = 1.f;   // DPS
-        stats.dotDuration = 3.0f;   // DoT lasts 3 seconds (tune as you like)
+        stats.damageOverTime = 1.f;    // DPS
+        stats.dotDuration = 3.0f;    // DoT lasts 3 seconds
         stats.color = sf::Color(255, 120, 0);
         stats.cost = 7;
-        break;
 
+        stats.bulletSpeed = 280.f;
+        stats.bulletTtl = 2.0f;
+        break;
 
         // -------- Lightening (stun) --------
     case TurretType::Lightening:
@@ -71,6 +85,9 @@ TurretStats get_turret_stats(TurretType type)
         stats.stunTime = 0.5f;
         stats.color = sf::Color(180, 180, 255);
         stats.cost = 7;
+
+        stats.bulletSpeed = 340.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- Freeze (slow + damage) --------
@@ -79,30 +96,39 @@ TurretStats get_turret_stats(TurretType type)
         stats.fireInterval = 0.8f;
         stats.damage = 1;
         stats.slowDownTime = 1.5f;
-        stats.slowDownPercent = 0.5f;          // 50% slow
+        stats.slowDownPercent = 0.5f;     // 50% slow
         stats.color = sf::Color(150, 220, 255);
         stats.cost = 7;
+
+        stats.bulletSpeed = 280.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- Buff (buff nearby turrets) --------
     case TurretType::Buff:
-        stats.rangeTiles = 3.f;       // buff aura radius in tiles
-        stats.fireInterval = 1.0f;      // how often it "re-applies" buff (if you use it)
-        stats.damage = 0;         // no direct damage
+        stats.rangeTiles = 3.f;
+        stats.fireInterval = 1.0f;
+        stats.damage = 0;
         stats.isBuff = true;
-        stats.buffDamageMult = 1.25f;     // +25% damage
-        stats.buffFireRateMult = 0.8f;      // 20% faster (cooldown * 0.8)
+        stats.buffDamageMult = 1.25f;
+        stats.buffFireRateMult = 0.8f;
         stats.color = sf::Color(200, 255, 200);
         stats.cost = 10;
+
+        stats.bulletSpeed = 300.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- Scatter (shotgun style) --------
     case TurretType::Scatter:
         stats.rangeTiles = 3.f;
         stats.fireInterval = 0.7f;
-        stats.damage = 1;             // per pellet; multiple pellets later
+        stats.damage = 1;
         stats.color = sf::Color(255, 255, 0);
         stats.cost = 9;
+
+        stats.bulletSpeed = 300.f;
+        stats.bulletTtl = 1.8f;
         break;
 
         // -------- AOE aura around turret --------
@@ -113,6 +139,9 @@ TurretStats get_turret_stats(TurretType type)
         stats.explosionRadius = 60.f;
         stats.color = sf::Color(255, 180, 0);
         stats.cost = 8;
+
+        stats.bulletSpeed = 260.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- Slow aura / no damage --------
@@ -124,17 +153,23 @@ TurretStats get_turret_stats(TurretType type)
         stats.slowDownPercent = 0.6f;
         stats.color = sf::Color(120, 220, 220);
         stats.cost = 6;
+
+        stats.bulletSpeed = 260.f;
+        stats.bulletTtl = 2.0f;
         break;
 
         // -------- BananaFarm / income generator --------
     case TurretType::BananaFarm:
-        stats.rangeTiles = 0.f;       // no shots
-        stats.fireInterval = 2.0f;      // money every 2s (for example)
+        stats.rangeTiles = 0.f;
+        stats.fireInterval = 2.0f;
         stats.damage = 0;
         stats.generatesIncome = true;
-        stats.incomePerTick = 5;         // +5 money per tick
+        stats.incomePerTick = 5;
         stats.color = sf::Color(255, 230, 120);
         stats.cost = 15;
+
+        stats.bulletSpeed = 0.f;
+        stats.bulletTtl = 0.f;
         break;
     }
 
