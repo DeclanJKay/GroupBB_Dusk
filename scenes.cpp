@@ -828,7 +828,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         // If it returns true, we spawn a bullet.
         if (t.update(dt, _enemies, bulletPos, bulletDir)) {
             TurretType   type = t.getType();
-            TurretStats  stats = get_turret_stats(type);
+            const TurretStats& stats = t.getStats();
 
             // Explosion radius straight from TurretStats (Bomb, AOE, etc.)
             float explosionRadius = stats.explosionRadius;
@@ -836,12 +836,15 @@ void TowerDefenceScene::update_turrets(float dt) {
             // Defaults: no burn
             float dotDuration = 0.f;
             float dotDps = 0.f;
+                // Fire turret: pull DoT values from TurretStats
+            if (type == TurretType::Fire &&
+                stats.damageOverTime > 0.f &&
+                stats.dotDuration > 0.f) {
 
-            // Fire turret: give its bullets a burn effect
-            if (type == TurretType::Fire && stats.damageOverTime > 0.f) {
-                dotDuration = 3.0f;                 // burn lasts 3 seconds
-                dotDps = stats.damageOverTime; // DPS from TurretStats
+                dotDuration = stats.dotDuration;
+                dotDps = stats.damageOverTime;
             }
+
 
             _bullets.emplace_back(
                 bulletPos,

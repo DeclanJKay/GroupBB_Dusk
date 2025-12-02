@@ -14,6 +14,7 @@ struct TurretStats
     int       damage = 1;            // direct hit damage
     float     explosionRadius = 0.f;          // AOE radius (world units)
     float     damageOverTime = 0.f;          // DoT per second
+    float     dotDuration = 0.f;       // how long the DoT lasts (seconds)
     float     slowDownTime = 0.f;          // how long slow lasts (s)
     float     slowDownPercent = 0.f;          // 0..1 fraction slow
     float     stunTime = 0.f;          // seconds stunned

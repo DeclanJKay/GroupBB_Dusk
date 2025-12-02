@@ -53,13 +53,15 @@ TurretStats get_turret_stats(TurretType type)
 
         // -------- Fire (DoT) --------
     case TurretType::Fire:
-        stats.rangeTiles = 3.f;
-        stats.fireInterval = 0.8f;
-        stats.damage = 1;
-        stats.damageOverTime = 0.5f;
+        stats.rangeTiles = 5.f;
+        stats.fireInterval = 2.f;
+        stats.damage = 0;
+        stats.damageOverTime = 1.f;   // DPS
+        stats.dotDuration = 3.0f;   // DoT lasts 3 seconds (tune as you like)
         stats.color = sf::Color(255, 120, 0);
         stats.cost = 7;
         break;
+
 
         // -------- Lightening (stun) --------
     case TurretType::Lightening:
