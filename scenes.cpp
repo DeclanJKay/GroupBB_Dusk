@@ -817,47 +817,105 @@ void TowerDefenceScene::place_turret(TurretType type) {
 
 
 // Ask each turret if it wants to fire this frame and spawn bullets
+// Ask each turret if it wants to fire this frame and spawn bullets
 void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
-    for (auto& t : _turrets) {
+    const float tileSize = 50.f;
+
+    const size_t count = _turrets.size();
+
+    // Per-turret multipliers, start at 1.0 (no buff)
+    std::vector<float> damageMult(count, 1.f);
+    std::vector<float> fireRateMult(count, 1.f);
+
+    // ---------------------------
+    // 1) First pass: apply Buff turret auras
+    // ---------------------------
+    for (size_t i = 0; i < count; ++i) {
+        const TDTurret& buffTurret = _turrets[i];
+        const TurretStats& buffStats = buffTurret.getStats();
+
+        if (!buffStats.isBuff) {
+            continue; // only Buff turrets grant auras
+        }
+
+        // Aura radius in world units
+        float buffRadius = buffStats.rangeTiles * tileSize;
+        float buffRadiusSq = buffRadius * buffRadius;
+
+        // Centre position of this buff turret (use tile centre)
+        sf::Vector2i buffGrid = buffTurret.getGrid();
+        sf::Vector2f buffPos = ls::get_tile_position(buffGrid) +
+            sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+        for (size_t j = 0; j < count; ++j) {
+            // If you DON'T want the buff turret to buff itself, uncomment this:
+            // if (i == j) continue;
+
+            sf::Vector2i otherGrid = _turrets[j].getGrid();
+            sf::Vector2f otherPos = ls::get_tile_position(otherGrid) +
+                sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+            sf::Vector2f d = otherPos - buffPos;
+            float distSq = d.x * d.x + d.y * d.y;
+
+            if (distSq <= buffRadiusSq) {
+                damageMult[j] *= buffStats.buffDamageMult;
+                fireRateMult[j] *= buffStats.buffFireRateMult;
+            }
+        }
+    }
+
+    // ---------------------------
+    // 2) Second pass: update turrets & spawn bullets
+    // ---------------------------
+    for (size_t i = 0; i < count; ++i) {
+        auto& t = _turrets[i];
+        const TurretStats& stats = t.getStats();
+
+        float dmgM = damageMult[i];
+        if (dmgM < 0.f) dmgM = 0.f;
+
+        float frM = fireRateMult[i];
+        if (frM <= 0.f) frM = 0.01f; // avoid zero/negative
+
         sf::Vector2f bulletPos;
         sf::Vector2f bulletDir;
 
+        // Trick: scale dt to speed up / slow down fire rate.
+        // frM > 1 => fires more often, frM < 1 => slower.
+        float dtForTurret = dt * frM;
+
         // TDTurret handles range, cooldown, target selection.
-        // If it returns true, we spawn a bullet.
-        if (t.update(dt, _enemies, bulletPos, bulletDir)) {
-            // Pull the stats the turret was created with
-            const TurretStats& stats = t.getStats();
+        if (t.update(dtForTurret, _enemies, bulletPos, bulletDir)) {
 
-            // Explosion radius straight from TurretStats (Bomb, AOE, etc.)
-            float explosionRadius = stats.explosionRadius;
+            // Buff turrets themselves don't shoot bullets, they’re just auras.
+            if (stats.isBuff) {
+                continue;
+            }
 
-            // DoT straight from TurretStats (Fire turret)
-            float dotDuration = stats.dotDuration;       // 0 for most turrets
-            float dotDps = stats.damageOverTime;    // 0 for most turrets
-            float slowDuration = stats.slowDownTime;
-            float slowPercent = stats.slowDownPercent;
-			float stunDuration = stats.stunTime;
+            // Bullet damage comes from TurretStats AND buff multipliers
+            int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
+            if (bulletDamage < 0) bulletDamage = 0;
 
             _bullets.emplace_back(
                 bulletPos,
                 bulletDir,
-                stats.bulletSpeed,              // global bullet speed (not per-turret)
-                stats.damage,       // damage from TurretStats
-                stats.bulletTtl,    // bullet lifetime
-                explosionRadius,    // AoE radius
-                dotDuration,
-                dotDps,
-                slowDuration,
-                slowPercent,
-                stunDuration
+                stats.bulletSpeed,        // now turret-specific
+                bulletDamage,             // buffed damage
+                stats.bulletTtl,          // turret-specific lifetime
+                stats.explosionRadius,    // AoE radius (Bomb, AOE, Slow, etc.)
+                stats.dotDuration,        // Fire DoT duration
+                stats.damageOverTime,     // Fire DoT DPS
+                stats.slowDownTime,       // Freeze/Slow duration
+                stats.slowDownPercent,    // Freeze/Slow percent
+                stats.stunTime            // Lightning stun duration
             );
         }
-
     }
 
-    // Clean out any enemies that died from turret/bullet damage
+    // Clean out enemies that died from turret/bullet damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
@@ -866,6 +924,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
 
 
 

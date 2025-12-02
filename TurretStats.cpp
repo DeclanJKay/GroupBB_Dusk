@@ -103,17 +103,19 @@ TurretStats get_turret_stats(TurretType type)
 
         // -------- Buff (buff nearby turrets) --------
     case TurretType::Buff:
-        stats.rangeTiles = 3.f;
+        stats.rangeTiles = 3.f;       // buff aura radius in tiles
         stats.fireInterval = 1.0f;
-        stats.damage = 0;
+        stats.damage = 0;             // no direct damage
         stats.isBuff = true;
-        stats.buffDamageMult = 1.25f;
-        stats.buffFireRateMult = 0.8f;
+        stats.buffDamageMult = 1.25f; // +25% damage
+        stats.buffFireRateMult = 1.25f; // +25% fire rate (fires 25% faster)
         stats.color = sf::Color(200, 255, 200);
         stats.cost = 10;
 
-        stats.bulletSpeed = 300.f;
-        stats.bulletTtl = 2.0f;
+        stats.bulletSpeed = 0.f;      // doesn’t actually shoot
+        stats.bulletTtl = 0.f;
+        break;
+
         break;
 
         // -------- Scatter (shotgun style) --------
