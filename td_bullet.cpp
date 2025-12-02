@@ -8,7 +8,9 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     float ttl,
     float explosionRadius,
     float dotDuration,
-    float dotDps)
+    float dotDps,
+    float slowDuration,
+    float slowPercent)
     : _pos(startPos)
     , _vel(direction)
     , _speed(speed)
@@ -17,6 +19,8 @@ TDBullet::TDBullet(const sf::Vector2f& startPos,
     , _explosionRadius(explosionRadius)
     , _dotDuration(dotDuration)
     , _dotDps(dotDps)
+    , _slowDuration(slowDuration)
+    , _slowPercent(slowPercent)
 {
     // Small white circle while flying
     _shape.setRadius(4.f);
@@ -91,7 +95,7 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
     // ---------------------------
     if (!_hasDealtDamage) {
         if (_explosionRadius <= 0.f) {
-            // Single-target bullet: damage the first enemy we collide with
+            // Single-target bullet
             for (auto& e : enemies) {
                 if (e.isDead()) continue;
 
@@ -110,12 +114,17 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
                     if (_dotDuration > 0.f && _dotDps > 0.f) {
                         e.applyDot(_dotDuration, _dotDps);
                     }
+
+                    // Apply slow if configured
+                    if (_slowDuration > 0.f && _slowPercent > 0.f) {
+                        e.applySlow(_slowDuration, _slowPercent);
+                    }
                     break;
                 }
             }
         }
         else {
-            // AoE bullet: damage everything in a blast radius around impact point
+            // AoE bullet: affect everything in a blast radius
             for (auto& e : enemies) {
                 if (e.isDead()) continue;
 
@@ -129,11 +138,14 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
                 float distSq = d.x * d.x + d.y * d.y;
 
                 if (distSq <= combinedSq) {
-                    e.applyDamage(_damage);
-
-                    // Apply burn as well if configured
+                    if (_damage > 0) {
+                        e.applyDamage(_damage);
+                    }
                     if (_dotDuration > 0.f && _dotDps > 0.f) {
                         e.applyDot(_dotDuration, _dotDps);
+                    }
+                    if (_slowDuration > 0.f && _slowPercent > 0.f) {
+                        e.applySlow(_slowDuration, _slowPercent);
                     }
                 }
             }

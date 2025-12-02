@@ -21,8 +21,8 @@ public:
     bool isDead() const { return _hp <= 0; }
 
     // Accessors used by turrets / bullets
-    const sf::CircleShape&  getShape() const { return _shape; }
-    sf::CircleShape&        getShape()       { return _shape; }
+    const sf::CircleShape& getShape() const { return _shape; }
+    sf::CircleShape& getShape() { return _shape; }
     EnemyType               getType()  const { return _type; }
 
     // World-space centre position (used by turrets)
@@ -31,8 +31,9 @@ public:
     // Radius used for simple circle collision
     float getRadius() const { return _shape.getRadius(); }
 
-    // Apply a burning damage-over-time effect
+    // Apply status effects
     void applyDot(float duration, float dps);
+    void applySlow(float duration, float percent);
 
 
 private:
@@ -51,4 +52,7 @@ private:
     float _dotDps = 0.f;   // damage per second
     float _dotAccumulator = 0.f;   // accumulates fractional damage
 
+    // --- Slow state ---
+    float _slowTimeRemaining = 0.f;   // how long the slow lasts
+    float _slowPercent = 0.f;   // 0..1 fraction (0.5 = 50% slower)
 };

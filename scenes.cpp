@@ -836,6 +836,8 @@ void TowerDefenceScene::update_turrets(float dt) {
             // DoT straight from TurretStats (Fire turret)
             float dotDuration = stats.dotDuration;       // 0 for most turrets
             float dotDps = stats.damageOverTime;    // 0 for most turrets
+            float slowDuration = stats.slowDownTime;
+            float slowPercent = stats.slowDownPercent;
 
             _bullets.emplace_back(
                 bulletPos,
@@ -845,7 +847,9 @@ void TowerDefenceScene::update_turrets(float dt) {
                 stats.bulletTtl,    // bullet lifetime
                 explosionRadius,    // AoE radius
                 dotDuration,
-                dotDps
+                dotDps,
+                slowDuration,
+                slowPercent
             );
         }
 

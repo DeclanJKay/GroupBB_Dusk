@@ -148,9 +148,10 @@ TurretStats get_turret_stats(TurretType type)
     case TurretType::Slow:
         stats.rangeTiles = 3.f;
         stats.fireInterval = 1.0f;
-        stats.damage = 0;
+        stats.damage = 0;        // no damage
         stats.slowDownTime = 1.5f;
         stats.slowDownPercent = 0.6f;
+        stats.explosionRadius = 60.f;     // AoE slow in an area
         stats.color = sf::Color(120, 220, 220);
         stats.cost = 6;
 
