@@ -961,6 +961,15 @@ void TowerDefenceScene::update(const float& dt) {
         wantPlace = true;
     }
 
+    else if (keyPressedOnce(sf::Keyboard::O)) {
+        typeToPlace = TurretType::AOE;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::P)) {
+        typeToPlace = TurretType::Slow;
+        wantPlace = true;
+    }
+
     if (wantPlace) {
         place_turret(typeToPlace);
     }

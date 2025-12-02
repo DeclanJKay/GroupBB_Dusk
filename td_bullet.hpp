@@ -13,7 +13,7 @@ public:
         float speed = 300.f,
         int   damage = 1,
         float ttl = 2.0f,
-        float explosionRadius = 0.f);  // AEO radius (0 = no AoE)
+        float explosionRadius = 0.f);  // AoE radius (0 = no AoE)
 
     // Move the bullet and check for collisions.
     // Returns true if the bullet is still alive after this frame,
@@ -31,7 +31,14 @@ private:
     float          _speed;
     int            _damage;
     float          _ttl;      // time-to-live in seconds
-    float          _explosionRadius;   // NEW: AoE radius in world units (0 = single target)
+
+    float          _explosionRadius;        // AoE radius in world units (0 = no AoE)
+
+    // Explosion visual state
+    bool           _inExplosion = false;
+    bool           _hasDealtDamage = false;
+    float          _explosionTimer = 0.f;
+    float          _explosionDuration = 0.15f;   // how long the flash lasts
 
     sf::CircleShape _shape;
 };
