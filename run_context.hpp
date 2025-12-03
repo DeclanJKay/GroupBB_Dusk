@@ -22,3 +22,7 @@ struct RunContext {
     // std::vector<std::shared_ptr<Turret>> turrets;
     // std::vector<std::shared_ptr<Enemy>>  enemies;
 };
+
+//Making a singleton-like run context
+RunContext& get_run_context();
+void reset_run_context();

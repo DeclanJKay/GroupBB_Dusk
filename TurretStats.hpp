@@ -12,28 +12,28 @@ struct TurretStats
     sf::Color color = sf::Color::White;
 
     int       damage = 1;            // direct hit damage
-    float     explosionRadius = 0.f;          // AOE radius (world units)
-    float     damageOverTime = 0.f;          // DoT per second
-    float     dotDuration = 0.f;       // how long the DoT lasts (seconds)
-    float     slowDownTime = 0.f;          // how long slow lasts (s)
-    float     slowDownPercent = 0.f;          // 0..1 fraction slow
-    float     stunTime = 0.f;          // seconds stunned
+    float     explosionRadius = 0.f; // AOE radius (world units)
+    float     damageOverTime = 0.f;  // DoT per second
+    float     dotDuration = 0.f;     // how long the DoT lasts (seconds)
+    float     slowDownTime = 0.f;    // how long slow lasts (s)
+    float     slowDownPercent = 0.f; // 0..1 fraction slow
+    float     stunTime = 0.f;        // seconds stunned
 
-    float     bulletSpeed = 300.f;               // how fast bullets travel (units/s)
-    float     bulletTtl = 2.0f;                // how long bullets live (seconds)
+    float     bulletSpeed = 300.f;   // how fast bullets travel (units/s)
+    float     bulletTtl = 2.0f;      // how long bullets live (seconds)
 
     bool      isBuff = false;        // buff turret aura
-    float     buffDamageMult = 1.0f;         // e.g. 1.25 = +25% damage
-    float     buffFireRateMult = 1.0f;         // <1 = faster fire, >1 = slower
+    float     buffDamageMult = 1.0f; // e.g. 1.25 = +25% damage
+    float     buffFireRateMult = 1.0f;// <1 = faster fire, >1 = slower
 
-    bool      generatesIncome = false;        // money 
-    int       incomePerTick = 0;            // how much per tick (per fireInterval)
+    bool      generatesIncome = false;// money 
+    int       incomePerTick = 0;      // how much per tick (per fireInterval)
 
-    int       cost = 0;            // purchase cost
+    int       cost = 0;               // purchase cost
 
     // scatter/shotgun behaviour
-    int       pelletCount = 1;    // 1 = normal turret
-    float     spreadAngleDeg = 0.f;  // total cone angle in degrees
+    int       pelletCount = 1;        // 1 = normal turret
+    float     spreadAngleDeg = 0.f;   // total cone angle in degrees
 };
 
 // Look up stats for a given turret type
