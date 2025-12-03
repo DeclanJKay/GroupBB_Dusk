@@ -97,6 +97,10 @@ private:
     bool _showInventory = false;
     sf::Text _inventoryText;
 
+	// Shop hint text
+    sf::Text _shopHintText;
+    bool     _showShopHint = false;
+
     std::shared_ptr<Player> _player;
 
     std::vector<Invader>      _invaders;

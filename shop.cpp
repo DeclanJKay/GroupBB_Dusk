@@ -4,7 +4,7 @@
 
 #include <random>
 #include <algorithm> // std::find
-
+#include <iostream>
 Shop::Shop() = default;
 
 // Name helper for turrets
@@ -98,35 +98,82 @@ void Shop::regenerateItems() {
 
 void Shop::render(sf::RenderWindow& window) const {
     for (const auto& item : _items) {
+        if (!item.active) continue;
         window.draw(item.box);
         window.draw(item.nameText);
         window.draw(item.costText);
     }
 }
 
-bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx) {
-    for (const auto& item : _items) {
-        if (item.box.getGlobalBounds().contains(playerPos)) {
+bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx)
+{
+    const float interactRadius = 48.f;
+    const float interactRadiusSq = interactRadius * interactRadius;
 
-            // Already own this turret type? Treat as an unlock, not stackable.
-            auto& inv = ctx.turretInventory;
-            bool alreadyOwned =
-                std::find(inv.begin(), inv.end(), item.type) != inv.end();
+    for (auto& slot : _items) {
+        if (!slot.active) continue; // skip items already bought
 
-            if (alreadyOwned) {
-                // Could print a message if you want
-                return false;
-            }
+        // Centre of the slot box
+        sf::Vector2f boxPos = slot.box.getPosition();
+        sf::Vector2f boxSize = slot.box.getSize();
+        sf::Vector2f centre = boxPos + 0.5f * boxSize;
 
-            if (ctx.currency < item.cost) {
-                // Not enough money
-                return false;
-            }
+        sf::Vector2f d = playerPos - centre;
+        float distSq = d.x * d.x + d.y * d.y;
 
-            ctx.currency -= item.cost;
-            inv.push_back(item.type);
-            return true;
+        if (distSq > interactRadiusSq) {
+            continue; // player too far from this slot
+        }
+
+        // Player is close enough -> attempt purchase
+        if (ctx.currency < slot.cost) {
+            std::cout << "Not enough money for " << turretName(slot.type)
+                << " (cost " << slot.cost << ", have " << ctx.currency << ")\n";
+            return false;
+        }
+
+        // Spend money
+        ctx.currency -= slot.cost;
+
+        // Allow multiple of the same turret type: just push another copy
+        ctx.turretInventory.push_back(slot.type);
+
+        // Mark this slot as bought so it disappears
+        slot.active = false;
+        // Optional: if you want to keep the box but mark as SOLD:
+        // slot.label.setString("SOLD");
+
+        std::cout << "Bought " << turretName(slot.type)
+            << " for " << slot.cost
+            << ". Remaining money: " << ctx.currency << "\n";
+
+        return true;
+    }
+
+    return false; // no slot in range
+}
+
+
+bool Shop::hasItemNear(const sf::Vector2f& playerPos) const
+{
+    const float interactRadius = 48.f;
+    const float interactRadiusSq = interactRadius * interactRadius;
+
+    for (const auto& slot : _items) {
+        if (!slot.active) continue; // ignore items that were already bought
+
+        sf::Vector2f boxPos = slot.box.getPosition();
+        sf::Vector2f boxSize = slot.box.getSize();
+        sf::Vector2f centre = boxPos + 0.5f * boxSize;
+
+        sf::Vector2f d = playerPos - centre;
+        float distSq = d.x * d.x + d.y * d.y;
+
+        if (distSq <= interactRadiusSq) {
+            return true; // there is at least one active slot near the player
         }
     }
+
     return false;
 }
+

@@ -111,6 +111,12 @@ void SafehouseScene::load() {
     _inventoryText.setCharacterSize(18);
     _inventoryText.setFillColor(sf::Color::White);
 
+    // Hint text ("Press E to buy")
+    _shopHintText.setFont(_font);
+    _shopHintText.setCharacterSize(18);
+    _shopHintText.setFillColor(sf::Color::White);
+    _shopHintText.setString("Press E to buy");
+
     // Hook existing player into entity list
     _entities.clear();
     if (_player) {
@@ -405,6 +411,23 @@ void SafehouseScene::update(const float& dt) {
             }
         }
 
+        // --- Shop hint text logic ---
+        _showShopHint = false;
+        if (_canUseShop && _player) {
+            sf::Vector2f playerPos = _player->get_position();
+
+            // Ask the shop if there is an active item near the player
+            if (_shop.hasItemNear(playerPos)) {   // NEW Shop method
+                _showShopHint = true;
+
+                // Position the hint slightly above the player
+                sf::Vector2f textPos = playerPos;
+                textPos.y -= 40.f;
+                _shopHintText.setPosition(textPos);
+            }
+        }
+
+
 
         // --- Debug / testing: spawn specific invader types with number keys ---
         auto spawnTestEnemy = [this](EnemyType type)
@@ -564,8 +587,7 @@ void SafehouseScene::update(const float& dt) {
         sf::Vector2f playerPos = _player->get_position();
         bool bought = _shop.tryPurchaseAt(playerPos, *Scenes::runContext);
         if (bought) {
-            // Optional: regenerate the shop to show new items
-            // _shop.regenerateItems();
+            // no reroll here – wave end handles rerolls
         }
     }
 
@@ -643,6 +665,11 @@ void SafehouseScene::render(sf::RenderWindow& window) {
         _inventoryText.setString(invText);
         _inventoryText.setPosition(50.f, 150.f);
         window.draw(_inventoryText);
+    }
+
+    // --- Shop hint ("Press E to buy") ---
+    if (_showShopHint) {
+        window.draw(_shopHintText);
     }
 
 

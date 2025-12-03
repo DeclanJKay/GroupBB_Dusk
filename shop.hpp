@@ -28,6 +28,9 @@ public:
     // Returns true if a purchase was made.
     bool tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx);
 
+
+    // NEW: used by SafehouseScene to show "Press E to buy"
+    bool hasItemNear(const sf::Vector2f& playerPos) const;
     // Helper for displaying turret names in other places (inventory, etc.)
     static std::string turretName(TurretType type);
 
@@ -38,6 +41,7 @@ private:
         sf::RectangleShape box;
         sf::Text nameText;
         sf::Text costText;
+		bool    active = true;
     };
 
     const sf::Font* _font = nullptr;
