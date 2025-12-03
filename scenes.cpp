@@ -78,6 +78,13 @@ void SafehouseScene::load() {
     _waveText.setPosition(20.f, 90.f);   // just below HP text
     _waveText.setString("Level 1 - Wave 1/5");
 
+    // === MONEY UI ===
+    _moneyText.setFont(_font);
+    _moneyText.setCharacterSize(24);
+    _moneyText.setFillColor(sf::Color::Yellow);
+    _moneyText.setPosition(param::game_width - 200.f, 20.f);
+    _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
+
 	// Make the attack arc shape
     _attackArcShape.setPointCount(3);
     _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
@@ -348,6 +355,10 @@ void SafehouseScene::update(const float& dt) {
         );
     }
 
+    // Update money display
+    _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
+
+
     // --- Wave / Level UI (TowerDefenceScene) ---
     if (Scenes::tower_defence) {
         auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
@@ -562,6 +573,8 @@ void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_label);
     window.draw(_hpText);   // show HP of player 
     window.draw(_waveText);
+    window.draw(_moneyText);
+
 }
 
 // ============================================================================
@@ -590,6 +603,15 @@ void TowerDefenceScene::load() {
     _waveText.setFillColor(sf::Color::White);
     _waveText.setPosition(20.f, 60.f);
     _waveText.setString("Wave 0/0");
+
+
+    // === MONEY UI ===
+    _moneyText.setFont(_font);
+    _moneyText.setCharacterSize(24);
+    _moneyText.setFillColor(sf::Color::Yellow);
+    _moneyText.setPosition(param::game_width - 200.f, 20.f);
+    _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
+
 
     const float tileSize = 50.f;
 
@@ -779,6 +801,19 @@ void TowerDefenceScene::update_enemies(float dt) {
 void TowerDefenceScene::place_turret(TurretType type) {
     if (!_player) return;
 
+    const TurretStats& stats = get_turret_stats(type);
+
+    // --- Money check ---
+    if (Scenes::runContext->currency < stats.cost)
+    {
+        std::cout << "Not enough money! Need " << stats.cost << ", have "
+            << Scenes::runContext->currency << "\n";
+        return;
+    }
+
+    // Deduct cost and place the turret
+    Scenes::runContext->currency -= stats.cost;
+
     const float tileSize = 50.f;
 
     sf::Vector2f pos = _player->get_position();
@@ -812,6 +847,9 @@ void TowerDefenceScene::place_turret(TurretType type) {
 
     // Create a new turret instance of the chosen type
     _turrets.emplace_back(grid, worldPos, tileSize, type);
+
+    // Keep income timers aligned with turrets
+    _turretIncomeTimers.push_back(0.f);
 }
 
 
@@ -820,12 +858,14 @@ void TowerDefenceScene::place_turret(TurretType type) {
 void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
+    float _incomeTimer = 0.f;
     const float tileSize = 50.f;
     const size_t count = _turrets.size();
 
     // Per-turret multipliers, start at 1.0 (no buff)
     std::vector<float> damageMult(count, 1.f);
     std::vector<float> fireRateMult(count, 1.f);
+
 
     // ---------------------------
     // 1) First pass: apply Buff turret auras
@@ -866,8 +906,13 @@ void TowerDefenceScene::update_turrets(float dt) {
     }
 
     // ---------------------------
-    // 2) Second pass: update turrets & spawn bullets
-    // ---------------------------
+// 2) Second pass: update turrets & spawn bullets
+// ---------------------------
+// Make sure our income timer vector matches the number of turrets
+    if (_turretIncomeTimers.size() < _turrets.size()) {
+        _turretIncomeTimers.resize(_turrets.size(), 0.f);
+    }
+
     for (size_t i = 0; i < count; ++i) {
         auto& t = _turrets[i];
         const TurretStats& stats = t.getStats();
@@ -877,6 +922,24 @@ void TowerDefenceScene::update_turrets(float dt) {
 
         float frM = fireRateMult[i];
         if (frM <= 0.f) frM = 0.01f; // avoid zero/negative
+
+        // ---------------------------
+        // Income turrets (e.g. Banana Farm)
+        // ---------------------------
+        if (stats.generatesIncome) {
+            // Use fireInterval as the "tick" period
+            _turretIncomeTimers[i] += dt * frM;
+            if (_turretIncomeTimers[i] >= stats.fireInterval) {
+                _turretIncomeTimers[i] = 0.f;
+
+                if (Scenes::runContext) {
+                    Scenes::runContext->currency += stats.incomePerTick;
+                }
+            }
+
+            // Income turrets don't shoot bullets
+            continue;
+        }
 
         sf::Vector2f bulletPos;
         sf::Vector2f bulletDir;
@@ -890,7 +953,6 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
 
         TurretType type = t.getType();
-
         // Buff turrets themselves don't shoot bullets, they’re just auras.
         if (stats.isBuff) {
             continue;
@@ -904,7 +966,6 @@ void TowerDefenceScene::update_turrets(float dt) {
         // AOE turret: pulse around itself
         // ---------------------------
         if (type == TurretType::AOE) {
-            // Explosion centre = turret tile centre
             sf::Vector2i grid = t.getGrid();
             sf::Vector2f centre = ls::get_tile_position(grid)
                 + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
@@ -1023,6 +1084,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
 
 
 
@@ -1193,6 +1255,8 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Scene label at top-left
     window.draw(_label);
     window.draw(_waveText);
+    window.draw(_moneyText);
+
 }
 
 // ============================================================================

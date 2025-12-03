@@ -85,6 +85,8 @@ private:
     sf::Text           _hpText;
     sf::Text           _waveText;
     sf::ConvexShape    _attackArcShape;
+    sf::Text           _moneyText;
+
 
     std::shared_ptr<Player> _player;
 
@@ -129,12 +131,17 @@ private:
     sf::Font           _font;
     sf::Text           _label;
     sf::Text           _waveText;
+    sf::Text           _moneyText;
+
 
     std::shared_ptr<Player> _player;
 
     std::vector<TDTurret> _turrets;
     std::vector<TDEnemy>  _enemies;
     std::vector<TDBullet> _bullets;
+
+    // For turrets that generate income (e.g., Banana Farm)
+    std::vector<float> _turretIncomeTimers;
 
     std::vector<sf::Vector2f> _enemyPath;
     std::vector<int>          _escapedEnemyTypes;
