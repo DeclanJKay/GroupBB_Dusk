@@ -1,5 +1,7 @@
 #pragma once
 #include <memory>
+#include "TurretType.hpp"
+#include <vector>
 
 // Shared data for a single run of the game (used across scenes)
 
@@ -15,8 +17,11 @@ struct RunContext {
     int  waveNumber = 1;   // current wave in the tower defence
     int  currency = 0;   // money earned this run
     bool runOver = false;
+    // Inventory of purchased turrets
 
     PlayerStats playerStats;  // health values for the player
+
+    std::vector<TurretType> turretInventory;
 
     // later:
     // std::vector<std::shared_ptr<Turret>> turrets;

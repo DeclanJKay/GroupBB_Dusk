@@ -14,6 +14,7 @@
 #include "WaveGeneration.hpp"
 #include "TDEnemy.hpp"
 #include "EnemyType.hpp"
+#include "shop.hpp"
 
 class Player;
 
@@ -67,6 +68,7 @@ private:
         bool  explodes = false;
         float explosionRadius = 0.f;
         float shootCooldown = 0.f;   // ranged fire cooldown
+
     };
 
     struct EnemyBullet {
@@ -87,6 +89,10 @@ private:
     sf::ConvexShape    _attackArcShape;
     sf::Text           _moneyText;
 
+    //Shop interaction
+    Shop _shop;
+    bool _showInventory = false;
+    sf::Text _inventoryText;
 
     std::shared_ptr<Player> _player;
 

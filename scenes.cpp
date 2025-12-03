@@ -53,6 +53,8 @@ void SafehouseScene::load() {
         });
     _background.setFillColor(sf::Color(30, 15, 15));
 
+
+
     // UI font 
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
@@ -85,6 +87,8 @@ void SafehouseScene::load() {
     _moneyText.setPosition(param::game_width - 200.f, 20.f);
     _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
 
+
+
 	// Make the attack arc shape
     _attackArcShape.setPointCount(3);
     _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
@@ -101,6 +105,15 @@ void SafehouseScene::load() {
 
         _initialised = true;
     }
+
+    // --- Shop + inventory UI ---
+    // Place the shop boxes near the bottom of the screen
+    _shop.init(_font, sf::Vector2f(100.f, static_cast<float>(param::game_height) - 180.f));
+
+    _inventoryText.setFont(_font);
+    _inventoryText.setCharacterSize(18);
+    _inventoryText.setFillColor(sf::Color::White);
+
 
     // Hook existing player into entity list
     _entities.clear();
@@ -537,6 +550,22 @@ void SafehouseScene::update(const float& dt) {
         _attackEffectTimer = 0.12f;
     }
 
+    // --- Shop interaction (buy with E) ---
+    if (_player && Scenes::runContext && keyPressedOnce(sf::Keyboard::E)) {
+        sf::Vector2f playerPos = _player->get_position();
+        bool bought = _shop.tryPurchaseAt(playerPos, *Scenes::runContext);
+        if (bought) {
+            // Optional: regenerate the shop to show new items
+            // _shop.regenerateItems();
+        }
+    }
+
+    // --- Toggle inventory overlay with I ---
+    if (keyPressedOnce(sf::Keyboard::I)) {
+        _showInventory = !_showInventory;
+    }
+
+
     // --- Update invaders and their bullets ---
     update_invaders(dt);
     update_enemy_bullets(dt);
@@ -577,6 +606,26 @@ void SafehouseScene::render(sf::RenderWindow& window) {
     if (_attackEffectTimer > 0.f) {
         window.draw(_attackArcShape);
     }
+
+    // --- Shop UI ---
+    _shop.render(window);
+
+    // --- Inventory UI ---
+    if (_showInventory && Scenes::runContext) {
+        std::string invText = "Inventory:\n";
+
+        int index = 1;
+        for (auto t : Scenes::runContext->turretInventory) {
+            invText += std::to_string(index) + ") "
+                + Shop::turretName(t) + "\n";
+            ++index;
+        }
+
+        _inventoryText.setString(invText);
+        _inventoryText.setPosition(50.f, 150.f);
+        window.draw(_inventoryText);
+    }
+
 
     window.draw(_label);
     window.draw(_hpText);   // show HP of player 
