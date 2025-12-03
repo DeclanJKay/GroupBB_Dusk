@@ -1,4 +1,3 @@
-// TDEnemy.cpp
 #include "TDEnemy.hpp"
 #include "EnemyStats.hpp"    // for get_enemy_stats
 
@@ -12,7 +11,7 @@ TDEnemy::TDEnemy(EnemyType type, const sf::Vector2f& startPos)
 
     _hp = stats.hp;
     _maxHp = stats.hp;
-    _speed = stats.speed;
+    _speed = stats.speed;      // base speed
     _baseColor = stats.color;
 
     _shape.setRadius(stats.radius);
@@ -25,12 +24,62 @@ bool TDEnemy::update(float dt,
     const std::vector<sf::Vector2f>& path,
     float tileSize)
 {
+    // --- Burn / damage-over-time tick ---
+    if (_dotTimeRemaining > 0.f && _dotDps > 0.f && _hp > 0) {
+        _dotTimeRemaining -= dt;
+        if (_dotTimeRemaining < 0.f) _dotTimeRemaining = 0.f;
+
+        // accumulate fractional damage over time
+        _dotAccumulator += _dotDps * dt;
+        while (_dotAccumulator >= 1.f && _hp > 0) {
+            _hp -= 1;
+            _dotAccumulator -= 1.f;
+
+            // small flash when burn ticks
+            _flashTimer = 0.2f;
+        }
+    }
+
+    // If DoT killed us, we’re done
+    if (_hp <= 0) {
+        return false;
+    }
+
+    // --- Stun timer tick ---
+    if (_stunTimeRemaining > 0.f) {
+        _stunTimeRemaining -= dt;
+        if (_stunTimeRemaining < 0.f) _stunTimeRemaining = 0.f;
+    }
+
+    // --- Slow timer tick ---
+    if (_slowTimeRemaining > 0.f) {
+        _slowTimeRemaining -= dt;
+        if (_slowTimeRemaining < 0.f) {
+            _slowTimeRemaining = 0.f;
+            _slowPercent = 0.f;
+        }
+    }
+
+    // --- Movement along path ---
     if (path.size() < 2) {
         return false; // nowhere to go
     }
 
+    // Effective speed this frame (stun overrides slow)
+    float effectiveSpeed = _speed;
+
+    if (_stunTimeRemaining > 0.f) {
+        // Fully stunned: no movement
+        effectiveSpeed = 0.f;
+    }
+    else if (_slowTimeRemaining > 0.f && _slowPercent > 0.f) {
+        float factor = 1.f - _slowPercent;  // e.g. 0.5 = 50% slower
+        if (factor < 0.f) factor = 0.f;
+        effectiveSpeed *= factor;
+    }
+
     // Move along the path in "tile segments"
-    float deltaT = (_speed * dt) / tileSize;
+    float deltaT = (effectiveSpeed * dt) / tileSize;
     _t += deltaT;
 
     int   segment = static_cast<int>(_t);
@@ -74,4 +123,35 @@ void TDEnemy::applyDamage(int amount)
     if (_hp < 0) _hp = 0;
 
     _flashTimer = 0.2f;  // trigger short flash
+}
+
+void TDEnemy::applyDot(float duration, float dps)
+{
+    if (duration <= 0.f || dps <= 0.f) return;
+
+    // Overwrite any existing burn with the new one.
+    _dotTimeRemaining = duration;
+    _dotDps = dps;
+    // we keep _dotAccumulator so fractional damage carries on smoothly
+}
+
+void TDEnemy::applySlow(float duration, float percent)
+{
+    if (duration <= 0.f || percent <= 0.f) return;
+
+    // Keep the stronger / longer slow
+    if (duration > _slowTimeRemaining || percent > _slowPercent) {
+        _slowTimeRemaining = duration;
+        _slowPercent = percent;
+    }
+}
+
+void TDEnemy::applyStun(float duration)
+{
+    if (duration <= 0.f) return;
+
+    // Keep the longest stun
+    if (duration > _stunTimeRemaining) {
+        _stunTimeRemaining = duration;
+    }
 }

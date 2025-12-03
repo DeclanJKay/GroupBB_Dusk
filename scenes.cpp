@@ -4,7 +4,8 @@
 #include "game_parameters.hpp"
 #include "TDEnemy.hpp"
 #include "EnemyStats.hpp"
-
+#include "TurretType.hpp"
+#include "TurretStats.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Window/Mouse.hpp>
@@ -775,7 +776,7 @@ void TowerDefenceScene::update_enemies(float dt) {
 }
 
 
-void TowerDefenceScene::place_turret() {
+void TowerDefenceScene::place_turret(TurretType type) {
     if (!_player) return;
 
     const float tileSize = 50.f;
@@ -809,27 +810,211 @@ void TowerDefenceScene::place_turret() {
     // World position of this tile
     sf::Vector2f worldPos = ls::get_tile_position(grid);
 
-    // Create a new turret instance
-    _turrets.emplace_back(grid, worldPos, tileSize);
+    // Create a new turret instance of the chosen type
+    _turrets.emplace_back(grid, worldPos, tileSize, type);
 }
+
 
 
 // Ask each turret if it wants to fire this frame and spawn bullets
 void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
-    for (auto& t : _turrets) {
-        sf::Vector2f bulletPos;
-        sf::Vector2f bulletDir;
+    const float tileSize = 50.f;
+    const size_t count = _turrets.size();
 
-        // TDTurret handles range, cooldown, target selection.
-        // If it returns true, we spawn a bullet.
-        if (t.update(dt, _enemies, bulletPos, bulletDir)) {
-            _bullets.emplace_back(bulletPos, bulletDir);
+    // Per-turret multipliers, start at 1.0 (no buff)
+    std::vector<float> damageMult(count, 1.f);
+    std::vector<float> fireRateMult(count, 1.f);
+
+    // ---------------------------
+    // 1) First pass: apply Buff turret auras
+    // ---------------------------
+    for (size_t i = 0; i < count; ++i) {
+        const TDTurret& buffTurret = _turrets[i];
+        const TurretStats& buffStats = buffTurret.getStats();
+
+        if (!buffStats.isBuff) {
+            continue; // only Buff turrets grant auras
+        }
+
+        // Aura radius in world units
+        float buffRadius = buffStats.rangeTiles * tileSize;
+        float buffRadiusSq = buffRadius * buffRadius;
+
+        // Centre position of this buff turret (tile centre)
+        sf::Vector2i buffGrid = buffTurret.getGrid();
+        sf::Vector2f buffPos = ls::get_tile_position(buffGrid)
+            + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+        for (size_t j = 0; j < count; ++j) {
+            // If you DON'T want the buff turret to buff itself, uncomment:
+            // if (i == j) continue;
+
+            sf::Vector2i otherGrid = _turrets[j].getGrid();
+            sf::Vector2f otherPos = ls::get_tile_position(otherGrid)
+                + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+            sf::Vector2f d = otherPos - buffPos;
+            float distSq = d.x * d.x + d.y * d.y;
+
+            if (distSq <= buffRadiusSq) {
+                damageMult[j] *= buffStats.buffDamageMult;
+                fireRateMult[j] *= buffStats.buffFireRateMult;
+            }
         }
     }
 
-    // Clean out any enemies that died from turret damage
+    // ---------------------------
+    // 2) Second pass: update turrets & spawn bullets
+    // ---------------------------
+    for (size_t i = 0; i < count; ++i) {
+        auto& t = _turrets[i];
+        const TurretStats& stats = t.getStats();
+
+        float dmgM = damageMult[i];
+        if (dmgM < 0.f) dmgM = 0.f;
+
+        float frM = fireRateMult[i];
+        if (frM <= 0.f) frM = 0.01f; // avoid zero/negative
+
+        sf::Vector2f bulletPos;
+        sf::Vector2f bulletDir;
+
+        // Scale dt to speed up / slow down fire rate via buff
+        float dtForTurret = dt * frM;
+
+        // TDTurret handles range, cooldown, target selection.
+        if (!t.update(dtForTurret, _enemies, bulletPos, bulletDir)) {
+            continue;
+        }
+
+        TurretType type = t.getType();
+
+        // Buff turrets themselves don't shoot bullets, they’re just auras.
+        if (stats.isBuff) {
+            continue;
+        }
+
+        // Base damage from stats * buff multiplier
+        int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
+        if (bulletDamage < 0) bulletDamage = 0;
+
+        // ---------------------------
+        // AOE turret: pulse around itself
+        // ---------------------------
+        if (type == TurretType::AOE) {
+            // Explosion centre = turret tile centre
+            sf::Vector2i grid = t.getGrid();
+            sf::Vector2f centre = ls::get_tile_position(grid)
+                + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+            float radius = stats.explosionRadius;
+            float radiusSq = radius * radius;
+
+            for (auto& e : _enemies) {
+                if (e.isDead()) continue;
+
+                sf::Vector2f enemyPos = e.getPosition();
+                float        enemyRad = e.getRadius();
+
+                sf::Vector2f d = enemyPos - centre;
+                float distSq = d.x * d.x + d.y * d.y;
+                float r = radius + enemyRad;
+
+                if (distSq <= r * r) {
+                    if (bulletDamage > 0) {
+                        e.applyDamage(bulletDamage);
+                    }
+                    if (stats.dotDuration > 0.f && stats.damageOverTime > 0.f) {
+                        e.applyDot(stats.dotDuration, stats.damageOverTime);
+                    }
+                    if (stats.slowDownTime > 0.f && stats.slowDownPercent > 0.f) {
+                        e.applySlow(stats.slowDownTime, stats.slowDownPercent);
+                    }
+                    if (stats.stunTime > 0.f) {
+                        e.applyStun(stats.stunTime);
+                    }
+                }
+            }
+
+            // Optional: visual flash using a bullet in "explosion only" mode
+            if (stats.explosionRadius > 0.f) {
+                TDBullet visual(
+                    centre,
+                    sf::Vector2f(0.f, 0.f),
+                    0.f,                 // no movement
+                    0,                   // no extra damage
+                    stats.bulletTtl,     // ttl not really used in explosion phase
+                    stats.explosionRadius,
+                    0.f, 0.f,            // no DoT
+                    0.f, 0.f,            // no slow
+                    0.f                  // no stun
+                );
+                visual.startExplosionVisual();
+                _bullets.push_back(visual);
+            }
+
+            continue; // skip normal bullet creation
+        }
+
+        // ---------------------------
+        // Scatter turret: multiple pellets
+        // ---------------------------
+        if (type == TurretType::Scatter) {
+            int   pelletCount = stats.pelletCount;
+            if (pelletCount <= 0) pelletCount = 1;
+
+            float spreadDegrees = stats.spreadAngleDeg;
+            if (spreadDegrees < 0.f) spreadDegrees = 0.f;
+            const float halfSpreadRad = (spreadDegrees * 3.14159265f / 180.f) * 0.5f;
+
+            float baseAngle = std::atan2(bulletDir.y, bulletDir.x);
+            float startAngle = baseAngle - halfSpreadRad;
+            float step = (pelletCount > 1)
+                ? (2.f * halfSpreadRad) / static_cast<float>(pelletCount - 1)
+                : 0.f;
+
+            for (int p = 0; p < pelletCount; ++p) {
+                float angle = startAngle + step * static_cast<float>(p);
+                sf::Vector2f dir(std::cos(angle), std::sin(angle));
+
+                _bullets.emplace_back(
+                    bulletPos,
+                    dir,
+                    stats.bulletSpeed,
+                    bulletDamage,
+                    stats.bulletTtl,
+                    stats.explosionRadius,
+                    stats.dotDuration,
+                    stats.damageOverTime,
+                    stats.slowDownTime,
+                    stats.slowDownPercent,
+                    stats.stunTime
+                );
+            }
+        }
+        else {
+            // ---------------------------
+            // All other turrets: one bullet
+            // ---------------------------
+            _bullets.emplace_back(
+                bulletPos,
+                bulletDir,
+                stats.bulletSpeed,
+                bulletDamage,
+                stats.bulletTtl,
+                stats.explosionRadius,
+                stats.dotDuration,
+                stats.damageOverTime,
+                stats.slowDownTime,
+                stats.slowDownPercent,
+                stats.stunTime
+            );
+        }
+    }
+
+    // Clean out enemies that died from turret/bullet damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
@@ -838,6 +1023,10 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
+
+
+
 
 
 // Move bullets, apply damage, and cull dead bullets + enemies
@@ -898,10 +1087,66 @@ void TowerDefenceScene::update(const float& dt) {
         return;
     }
 
-    // Place a turret on the player's current tile with F
-    if (keyPressedOnce(sf::Keyboard::F)) {
-        place_turret();
+    // Place turrets using number keys (top row or numpad)
+    TurretType typeToPlace;
+    bool wantPlace = false;
+
+    if (keyPressedOnce(sf::Keyboard::Num1) || keyPressedOnce(sf::Keyboard::Numpad1)) {
+        typeToPlace = TurretType::Basic;
+        wantPlace = true;
     }
+    else if (keyPressedOnce(sf::Keyboard::Num2) || keyPressedOnce(sf::Keyboard::Numpad2)) {
+        typeToPlace = TurretType::SMG;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num3) || keyPressedOnce(sf::Keyboard::Numpad3)) {
+        typeToPlace = TurretType::Sniper;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num4) || keyPressedOnce(sf::Keyboard::Numpad4)) {
+        typeToPlace = TurretType::Bomb;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num5) || keyPressedOnce(sf::Keyboard::Numpad5)) {
+        typeToPlace = TurretType::Fire;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num6) || keyPressedOnce(sf::Keyboard::Numpad6)) {
+        typeToPlace = TurretType::Lightening;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num7) || keyPressedOnce(sf::Keyboard::Numpad7)) {
+        typeToPlace = TurretType::Freeze;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num8) || keyPressedOnce(sf::Keyboard::Numpad8)) {
+        typeToPlace = TurretType::Buff;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::Num9) || keyPressedOnce(sf::Keyboard::Numpad9)) {
+        typeToPlace = TurretType::Scatter;
+        wantPlace = true;
+    }
+    
+    else if (keyPressedOnce(sf::Keyboard::Num0) || keyPressedOnce(sf::Keyboard::Numpad0)) {
+        typeToPlace = TurretType::BananaFarm;
+        wantPlace = true;
+    }
+
+    else if (keyPressedOnce(sf::Keyboard::O)) {
+        typeToPlace = TurretType::AOE;
+        wantPlace = true;
+    }
+    else if (keyPressedOnce(sf::Keyboard::P)) {
+        typeToPlace = TurretType::Slow;
+        wantPlace = true;
+    }
+
+    if (wantPlace) {
+        place_turret(typeToPlace);
+    }
+
+
 
     // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
