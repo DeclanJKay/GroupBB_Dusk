@@ -53,8 +53,6 @@ void SafehouseScene::load() {
         });
     _background.setFillColor(sf::Color(30, 15, 15));
 
-
-
     // UI font 
     if (!_font.loadFromFile("res/fonts/ARIAL.TTF")) {
         std::cerr << "Failed to load font: res/fonts/ARIAL.TTF\n";
@@ -66,54 +64,52 @@ void SafehouseScene::load() {
     _label.setFillColor(sf::Color::White);
     _label.setPosition(20.f, 20.f);
 
-	//Player HP text
+    // Player HP text
     _hpText.setFont(_font);
     _hpText.setCharacterSize(24);
     _hpText.setFillColor(sf::Color::White);
-    _hpText.setPosition(20.f, 60.f);   // a bit below the title
+    _hpText.setPosition(20.f, 60.f);
     _hpText.setString("HP: 0/0");
 
-    // NEW: Wave / level text
+    // Wave / level text
     _waveText.setFont(_font);
     _waveText.setCharacterSize(24);
     _waveText.setFillColor(sf::Color::White);
-    _waveText.setPosition(20.f, 90.f);   // just below HP text
+    _waveText.setPosition(20.f, 90.f);
     _waveText.setString("Level 1 - Wave 1/5");
 
-    // === MONEY UI ===
+    // Money UI
     _moneyText.setFont(_font);
     _moneyText.setCharacterSize(24);
     _moneyText.setFillColor(sf::Color::Yellow);
     _moneyText.setPosition(param::game_width - 200.f, 20.f);
     _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
 
-
-
-	// Make the attack arc shape
+    // Attack arc
     _attackArcShape.setPointCount(3);
     _attackArcShape.setFillColor(sf::Color(255, 255, 255, 60));
 
-    // First time only: create the player
+    // First time only: create player AND initialise shop
     if (!_initialised) {
         _player = std::make_shared<Player>();
         _player->set_use_tile_collision(false); // Safehouse ignores tiles
-
         _player->set_position({
             param::game_width * 0.5f,
             param::game_height * 0.5f
             });
 
+        _shop.init(
+            _font,
+            sf::Vector2f(100.f, static_cast<float>(param::game_height) - 180.f)
+        );
+
         _initialised = true;
     }
 
-    // --- Shop + inventory UI ---
-    // Place the shop boxes near the bottom of the screen
-    _shop.init(_font, sf::Vector2f(100.f, static_cast<float>(param::game_height) - 180.f));
-
+    // Inventory text setup
     _inventoryText.setFont(_font);
     _inventoryText.setCharacterSize(18);
     _inventoryText.setFillColor(sf::Color::White);
-
 
     // Hook existing player into entity list
     _entities.clear();
@@ -121,6 +117,7 @@ void SafehouseScene::load() {
         _entities.push_back(_player);
     }
 }
+
 
 void SafehouseScene::tick_simulation(float dt) {
     // If we’ve never been loaded / initialised, nothing to do
@@ -589,7 +586,9 @@ void SafehouseScene::update(const float& dt) {
     }
 }
 
-
+void SafehouseScene::rerollShop() {
+    _shop.regenerateItems();
+}
 
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
@@ -607,9 +606,16 @@ void SafehouseScene::render(sf::RenderWindow& window) {
         window.draw(_attackArcShape);
     }
 
-    // --- Shop UI ---
-    _shop.render(window);
+    bool tdIsActive = false;
+    if (Scenes::tower_defence) {
+        auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
+        tdIsActive = !td->isWaitingForPlayer(); // wave currently running
+    }
 
+    // --- Shop UI ---
+    if (!tdIsActive) {
+        _shop.render(window);
+    }
     // --- Inventory UI ---
     if (_showInventory && Scenes::runContext) {
         std::string invText = "Inventory:\n";
@@ -856,23 +862,23 @@ void TowerDefenceScene::update_enemies(float dt) {
 
 
 void TowerDefenceScene::place_turret(TurretType type) {
-    if (!_player) return;
+    if (!_player || !Scenes::runContext) return;
 
-    const TurretStats& stats = get_turret_stats(type);
+    // --- 1) Must have one copy in inventory ---
+    auto& inv = Scenes::runContext->turretInventory;
+    auto it = std::find(inv.begin(), inv.end(), type);
 
-    // --- Money check ---
-    if (Scenes::runContext->currency < stats.cost)
-    {
-        std::cout << "Not enough money! Need " << stats.cost << ", have "
-            << Scenes::runContext->currency << "\n";
+    if (it == inv.end()) {
+        std::cout << "No turret of this type in inventory to place.\n";
         return;
     }
 
-    // Deduct cost and place the turret
-    Scenes::runContext->currency -= stats.cost;
+    // Consume ONE copy from the inventory
+    inv.erase(it);
 
     const float tileSize = 50.f;
 
+    // --- 2) Snap player position to a tile ---
     sf::Vector2f pos = _player->get_position();
     sf::Vector2i grid(
         static_cast<int>(pos.x / tileSize),
@@ -1290,12 +1296,10 @@ void TowerDefenceScene::update(const float& dt) {
         typeToPlace = TurretType::Scatter;
         wantPlace = true;
     }
-    
     else if (keyPressedOnce(sf::Keyboard::Num0) || keyPressedOnce(sf::Keyboard::Numpad0)) {
         typeToPlace = TurretType::BananaFarm;
         wantPlace = true;
     }
-
     else if (keyPressedOnce(sf::Keyboard::O)) {
         typeToPlace = TurretType::AOE;
         wantPlace = true;
@@ -1309,10 +1313,19 @@ void TowerDefenceScene::update(const float& dt) {
         place_turret(typeToPlace);
     }
 
-
-
     // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
+
+    // --- Wave-end detection: reroll shop when a wave finishes ---
+    bool nowWaiting = _waveManager.isWaitingForPlayer();
+    if (nowWaiting && !_wasWaitingForPlayer) {
+        // We have just transitioned from "wave running" -> "waiting"
+        if (Scenes::safehouse) {
+            auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
+            sh->rerollShop();
+        }
+    }
+    _wasWaitingForPlayer = nowWaiting;
 
     // --- Update wave UI text ---
     if (!_waveManager.hasFinishedAllWaves()) {
@@ -1336,6 +1349,7 @@ void TowerDefenceScene::update(const float& dt) {
         _waveText.setString("All waves complete");
     }
 }
+
 
 
 void TowerDefenceScene::render(sf::RenderWindow& window) {

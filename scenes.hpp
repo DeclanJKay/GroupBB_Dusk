@@ -51,6 +51,9 @@ public:
     // Called when enemies escape from TD
     void spawn_invaders(const std::vector<int>& enemyTypes);
 
+    // TD is allowed to tell the shop to reroll
+    void rerollShop();
+
 private:
     struct Invader {
         sf::CircleShape shape;
@@ -155,6 +158,8 @@ private:
     bool _initialised = false;
 
     WaveManager _waveManager;
+
+    bool _wasWaitingForPlayer = true;
 
     void build_enemy_path();
     void update_enemies(float dt);
