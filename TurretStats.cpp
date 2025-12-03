@@ -128,6 +128,9 @@ TurretStats get_turret_stats(TurretType type)
 
         stats.bulletSpeed = 300.f;
         stats.bulletTtl = 1.8f;
+
+        stats.pelletCount = 5;   // 5 pellets per shot
+        stats.spreadAngleDeg = 40.f; // 40° wide cone
         break;
 
         // -------- AOE aura around turret --------

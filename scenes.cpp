@@ -817,7 +817,6 @@ void TowerDefenceScene::place_turret(TurretType type) {
 
 
 // Ask each turret if it wants to fire this frame and spawn bullets
-// Ask each turret if it wants to fire this frame and spawn bullets
 void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
@@ -873,6 +872,7 @@ void TowerDefenceScene::update_turrets(float dt) {
     for (size_t i = 0; i < count; ++i) {
         auto& t = _turrets[i];
         const TurretStats& stats = t.getStats();
+        TurretType type = t.getType();
 
         float dmgM = damageMult[i];
         if (dmgM < 0.f) dmgM = 0.f;
@@ -888,34 +888,67 @@ void TowerDefenceScene::update_turrets(float dt) {
         float dtForTurret = dt * frM;
 
         // TDTurret handles range, cooldown, target selection.
-        if (t.update(dtForTurret, _enemies, bulletPos, bulletDir)) {
+        if (!t.update(dtForTurret, _enemies, bulletPos, bulletDir)) {
+            continue;
+        }
 
-            // Buff turrets themselves don't shoot bullets, they’re just auras.
-            if (stats.isBuff) {
-                continue;
+        // Buff turrets themselves don't shoot bullets, they’re just auras.
+        if (stats.isBuff) {
+            continue;
+        }
+
+        // Bullet damage comes from TurretStats AND buff multipliers
+        int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
+        if (bulletDamage < 0) bulletDamage = 0;
+
+        // Helper to spawn a single bullet with all status effects applied
+        auto spawnBullet = [&](const sf::Vector2f& dir)
+            {
+                _bullets.emplace_back(
+                    bulletPos,
+                    dir,
+                    stats.bulletSpeed,        // turret-specific bullet speed
+                    bulletDamage,             // buffed damage
+                    stats.bulletTtl,          // turret-specific lifetime
+                    stats.explosionRadius,    // AoE radius (Bomb, AOE, Slow, etc.)
+                    stats.dotDuration,        // Fire DoT duration
+                    stats.damageOverTime,     // Fire DoT DPS
+                    stats.slowDownTime,       // Freeze/Slow duration
+                    stats.slowDownPercent,    // Freeze/Slow percent
+                    stats.stunTime            // Lightning stun duration
+                );
+            };
+
+        // -------- Scatter turret: multiple pellets in a cone --------
+        if (type == TurretType::Scatter &&
+            stats.pelletCount > 1 &&
+            stats.spreadAngleDeg > 0.f)
+        {
+            const int   pellets = stats.pelletCount;
+            const float totalSpreadRad = stats.spreadAngleDeg * 3.14159265f / 180.f;
+
+            // Base angle from main direction
+            float baseAngle = std::atan2(bulletDir.y, bulletDir.x);
+
+            for (int p = 0; p < pellets; ++p) {
+                // Normalised offset in [-0.5, +0.5]
+                float tNorm = (pellets == 1)
+                    ? 0.f
+                    : (static_cast<float>(p) / (pellets - 1) - 0.5f);
+
+                float angle = baseAngle + tNorm * totalSpreadRad;
+
+                sf::Vector2f dir(std::cos(angle), std::sin(angle));
+                spawnBullet(dir);
             }
-
-            // Bullet damage comes from TurretStats AND buff multipliers
-            int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
-            if (bulletDamage < 0) bulletDamage = 0;
-
-            _bullets.emplace_back(
-                bulletPos,
-                bulletDir,
-                stats.bulletSpeed,        // now turret-specific
-                bulletDamage,             // buffed damage
-                stats.bulletTtl,          // turret-specific lifetime
-                stats.explosionRadius,    // AoE radius (Bomb, AOE, Slow, etc.)
-                stats.dotDuration,        // Fire DoT duration
-                stats.damageOverTime,     // Fire DoT DPS
-                stats.slowDownTime,       // Freeze/Slow duration
-                stats.slowDownPercent,    // Freeze/Slow percent
-                stats.stunTime            // Lightning stun duration
-            );
+        }
+        else {
+            // All other turrets: single straight bullet
+            spawnBullet(bulletDir);
         }
     }
 
-    // Clean out enemies that died from turret/bullet damage
+    // Clean out any enemies that died from turret/bullet damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
@@ -924,6 +957,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
 
 
 

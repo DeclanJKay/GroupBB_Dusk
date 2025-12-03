@@ -30,6 +30,10 @@ struct TurretStats
     int       incomePerTick = 0;            // how much per tick (per fireInterval)
 
     int       cost = 0;            // purchase cost
+
+    // scatter/shotgun behaviour
+    int       pelletCount = 1;    // 1 = normal turret
+    float     spreadAngleDeg = 0.f;  // total cone angle in degrees
 };
 
 // Look up stats for a given turret type
