@@ -8,6 +8,7 @@ using param = Parameters;
 int main() {
     // Shared run state for this playthrough (e.g. wave number, player stats)
     Scenes::runContext = std::make_shared<RunContext>();
+    Scenes::runContext->currency = 5;
 
     // Core Dusk scenes
     Scenes::safehouse = std::make_shared<SafehouseScene>();

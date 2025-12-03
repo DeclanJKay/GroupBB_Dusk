@@ -13,5 +13,6 @@ void reset_run_context()
     RunContext& ctx = get_run_context();
     ctx = RunContext{};        // reset to default values
     ctx.waveNumber = 1;
+
     // you can also set starting currency here if you like
 }

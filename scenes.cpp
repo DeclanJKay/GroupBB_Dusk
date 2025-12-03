@@ -499,6 +499,14 @@ void SafehouseScene::update(const float& dt) {
                         _damageCooldown = 1.0f; // reuse same i-frames as contact
                     }
                 }
+
+                if (inv.hp <= 0 && Scenes::runContext) {
+                    EnemyStats stats = get_enemy_stats(inv.type);
+                    int reward = std::max(stats.cost / 2, 1); // or any value you prefer
+                    Scenes::runContext->currency += reward;
+                    std::cout << "Safehouse kill: +" << reward
+                        << " gold (total " << Scenes::runContext->currency << ")\n";
+                }
             }
 
             if (inv.hp > 0) {
@@ -1079,7 +1087,24 @@ void TowerDefenceScene::update_turrets(float dt) {
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
-            [](const TDEnemy& e) { return e.isDead(); }
+            [](const TDEnemy& e)
+            {
+                if (e.isDead())
+                {
+                    // Lookup enemy stats to get reward value
+                    EnemyStats stats = get_enemy_stats(e.getType());
+                    int reward = std::max(stats.cost / 2, 1); // reward = half cost minimum 1
+
+                    if (Scenes::runContext) {
+                        Scenes::runContext->currency += reward;
+                        std::cout << "Earned " << reward << " gold! Total: "
+                            << Scenes::runContext->currency << "\n";
+                    }
+
+                    return true; // remove dead enemy
+                }
+                return false;
+            }
         ),
         _enemies.end()
     );
@@ -1111,7 +1136,24 @@ void TowerDefenceScene::update_bullets(float dt) {
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
-            [](const TDEnemy& e) { return e.isDead(); }
+            [](const TDEnemy& e)
+            {
+                if (e.isDead())
+                {
+                    // Lookup enemy stats to get reward value
+                    EnemyStats stats = get_enemy_stats(e.getType());
+                    int reward = std::max(stats.cost / 2, 1); // reward = half cost minimum 1
+
+                    if (Scenes::runContext) {
+                        Scenes::runContext->currency += reward;
+                        std::cout << "Earned " << reward << " gold! Total: "
+                            << Scenes::runContext->currency << "\n";
+                    }
+
+                    return true; // remove dead enemy
+                }
+                return false;
+            }
         ),
         _enemies.end()
     );
@@ -1141,6 +1183,13 @@ void TowerDefenceScene::update(const float& dt) {
     // Handle starting the next wave with E
     if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::E)) {
         _waveManager.startNextWave();
+    }
+
+    // --- Update money UI every frame ---
+    if (Scenes::runContext) {
+        _moneyText.setString(
+            "Money: $" + std::to_string(Scenes::runContext->currency)
+        );
     }
 
     // Swap back to Safehouse with Shift (LShift or RShift)
@@ -1291,6 +1340,7 @@ void EndScene::update(const float& dt) {
         GameSystem::set_active_scene(Scenes::safehouse);
     }
 }
+
 
 void EndScene::render(sf::RenderWindow& window) {
     // Only draw if we have text set up
