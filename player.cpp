@@ -166,3 +166,16 @@ void Player::take_damage(int amount) {
 
     _flashTimer = 0.2f;
 }
+
+void Player::heal(int amount)
+{
+    if (amount <= 0) return;
+
+    // Use your real internal HP variables here
+    // Example if you have: int _health; int _maxHealth;
+    _health += amount;
+    if (_health > _maxHealth) {
+        _health = _maxHealth;
+    }
+}
+

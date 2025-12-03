@@ -585,7 +585,7 @@ void SafehouseScene::update(const float& dt) {
     // --- Shop interaction (buy with E) ---
     if (_canUseShop && _player && Scenes::runContext && keyPressedOnce(sf::Keyboard::E)) {
         sf::Vector2f playerPos = _player->get_position();
-        bool bought = _shop.tryPurchaseAt(playerPos, *Scenes::runContext);
+        bool bought = _shop.tryPurchaseAt(playerPos, *Scenes::runContext, *_player);
         if (bought) {
             // no reroll here – wave end handles rerolls
         }
@@ -904,7 +904,43 @@ void TowerDefenceScene::update_enemies(float dt) {
 void TowerDefenceScene::place_turret(TurretType type) {
     if (!_player || !Scenes::runContext) return;
 
-    // --- 1) Must have one copy in inventory ---
+    const float tileSize = 50.f;
+
+    // --- 1) Snap player position to a tile ---
+    sf::Vector2f pos = _player->get_position();
+    sf::Vector2i grid(
+        static_cast<int>(pos.x / tileSize),
+        static_cast<int>(pos.y / tileSize)
+    );
+
+    // --- 2) Check tile is valid and EMPTY ---
+    LevelSystem::Tile tile;
+    try {
+        tile = ls::get_tile(grid);
+    }
+    catch (...) {
+        std::cout << "Cannot place turret: grid out of bounds at ("
+            << grid.x << ", " << grid.y << ")\n";
+        return;
+    }
+
+    if (tile != ls::EMPTY) {
+        std::cout << "Cannot place turret: tile not EMPTY at ("
+            << grid.x << ", " << grid.y << ")\n";
+        return;
+    }
+
+    // --- 3) Prevent stacking: check if any turret already occupies this grid ---
+    for (const auto& t : _turrets) {
+        sf::Vector2i existing = t.getGrid();
+        if (existing == grid) {
+            std::cout << "Cannot place turret: tile already occupied at ("
+                << grid.x << ", " << grid.y << ")\n";
+            return;
+        }
+    }
+
+    // --- 4) Must have one copy in inventory ---
     auto& inv = Scenes::runContext->turretInventory;
     auto it = std::find(inv.begin(), inv.end(), type);
 
@@ -913,46 +949,18 @@ void TowerDefenceScene::place_turret(TurretType type) {
         return;
     }
 
-    // Consume ONE copy from the inventory
+    // Only now do we consume ONE copy from inventory
     inv.erase(it);
 
-    const float tileSize = 50.f;
-
-    // --- 2) Snap player position to a tile ---
-    sf::Vector2f pos = _player->get_position();
-    sf::Vector2i grid(
-        static_cast<int>(pos.x / tileSize),
-        static_cast<int>(pos.y / tileSize)
-    );
-
-    LevelSystem::Tile tile;
-    try {
-        tile = ls::get_tile(grid);
-    }
-    catch (...) {
-        return;
-    }
-
-    // Only allow placing on EMPTY tiles
-    if (tile != ls::EMPTY) {
-        return;
-    }
-
-    // Don’t double-place a turret on the same tile
-    for (const auto& t : _turrets) {
-        if (t.getGrid() == grid) {
-            return;
-        }
-    }
-
-    // World position of this tile
+    // --- 5) World position for this tile ---
     sf::Vector2f worldPos = ls::get_tile_position(grid);
 
-    // Create a new turret instance of the chosen type
+    // --- 6) Create the turret ---
     _turrets.emplace_back(grid, worldPos, tileSize, type);
-
-    // Keep income timers aligned with turrets
     _turretIncomeTimers.push_back(0.f);
+
+    std::cout << "Placed turret " << static_cast<int>(type)
+        << " at grid (" << grid.x << ", " << grid.y << ")\n";
 }
 
 

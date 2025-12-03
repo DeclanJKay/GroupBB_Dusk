@@ -31,6 +31,7 @@ public:
     int  get_health() const { return _health; }
     int  get_max_health() const { return _maxHealth; }
     bool is_dead() const { return _health <= 0; }
+    void heal(int amount);
 
     // Damage + flash effect
     void take_damage(int amount);
