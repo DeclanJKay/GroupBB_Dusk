@@ -931,17 +931,20 @@ void TowerDefenceScene::update_turrets(float dt) {
         float frM = fireRateMult[i];
         if (frM <= 0.f) frM = 0.01f; // avoid zero/negative
 
-        // ---------------------------
-        // Income turrets (e.g. Banana Farm)
-        // ---------------------------
+        // --- Income turrets (e.g. Banana Farm)
         if (stats.generatesIncome) {
-            // Use fireInterval as the "tick" period
-            _turretIncomeTimers[i] += dt * frM;
-            if (_turretIncomeTimers[i] >= stats.fireInterval) {
-                _turretIncomeTimers[i] = 0.f;
+            // ONLY earn money when there are enemies on the map
+            if (!_enemies.empty()) {
+                // Use fireInterval as the "tick" period
+                _turretIncomeTimers[i] += dt * frM;
+                if (_turretIncomeTimers[i] >= stats.fireInterval) {
+                    _turretIncomeTimers[i] = 0.f;
 
-                if (Scenes::runContext) {
-                    Scenes::runContext->currency += stats.incomePerTick;
+                    if (Scenes::runContext) {
+                        Scenes::runContext->currency += stats.incomePerTick;
+                        std::cout << "Banana Farm income: +" << stats.incomePerTick
+                            << " (total " << Scenes::runContext->currency << ")\n";
+                    }
                 }
             }
 
