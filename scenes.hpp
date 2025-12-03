@@ -106,8 +106,11 @@ private:
     float _attackEffectTimer = 0.f;
     float _damageCooldown = 0.f;
 
+    bool _canUseShop = true;
+
     void update_invaders(float dt);
     void update_enemy_bullets(float dt);
+    //void rerollShop();
 };
 
 

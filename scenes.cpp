@@ -394,6 +394,18 @@ void SafehouseScene::update(const float& dt) {
             _waveText.setString("All waves complete");
         }
 
+        // --- Decide if the shop should be available this frame ---
+        _canUseShop = _invaders.empty();   // must have no enemies in safehouse
+
+        if (Scenes::tower_defence) {
+            auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
+            if (!td->isWaitingForPlayer()) {
+                // TD wave is actively running -> hide/lock the shop
+                _canUseShop = false;
+            }
+        }
+
+
         // --- Debug / testing: spawn specific invader types with number keys ---
         auto spawnTestEnemy = [this](EnemyType type)
             {
@@ -548,7 +560,7 @@ void SafehouseScene::update(const float& dt) {
     }
 
     // --- Shop interaction (buy with E) ---
-    if (_player && Scenes::runContext && keyPressedOnce(sf::Keyboard::E)) {
+    if (_canUseShop && _player && Scenes::runContext && keyPressedOnce(sf::Keyboard::E)) {
         sf::Vector2f playerPos = _player->get_position();
         bool bought = _shop.tryPurchaseAt(playerPos, *Scenes::runContext);
         if (bought) {
@@ -613,9 +625,10 @@ void SafehouseScene::render(sf::RenderWindow& window) {
     }
 
     // --- Shop UI ---
-    if (!tdIsActive) {
+    if (_canUseShop) {
         _shop.render(window);
     }
+
     // --- Inventory UI ---
     if (_showInventory && Scenes::runContext) {
         std::string invText = "Inventory:\n";
