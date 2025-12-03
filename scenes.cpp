@@ -821,7 +821,6 @@ void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
     const float tileSize = 50.f;
-
     const size_t count = _turrets.size();
 
     // Per-turret multipliers, start at 1.0 (no buff)
@@ -843,18 +842,18 @@ void TowerDefenceScene::update_turrets(float dt) {
         float buffRadius = buffStats.rangeTiles * tileSize;
         float buffRadiusSq = buffRadius * buffRadius;
 
-        // Centre position of this buff turret (use tile centre)
+        // Centre position of this buff turret (tile centre)
         sf::Vector2i buffGrid = buffTurret.getGrid();
-        sf::Vector2f buffPos = ls::get_tile_position(buffGrid) +
-            sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+        sf::Vector2f buffPos = ls::get_tile_position(buffGrid)
+            + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
         for (size_t j = 0; j < count; ++j) {
-            // If you DON'T want the buff turret to buff itself, uncomment this:
+            // If you DON'T want the buff turret to buff itself, uncomment:
             // if (i == j) continue;
 
             sf::Vector2i otherGrid = _turrets[j].getGrid();
-            sf::Vector2f otherPos = ls::get_tile_position(otherGrid) +
-                sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+            sf::Vector2f otherPos = ls::get_tile_position(otherGrid)
+                + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
             sf::Vector2f d = otherPos - buffPos;
             float distSq = d.x * d.x + d.y * d.y;
@@ -872,7 +871,6 @@ void TowerDefenceScene::update_turrets(float dt) {
     for (size_t i = 0; i < count; ++i) {
         auto& t = _turrets[i];
         const TurretStats& stats = t.getStats();
-        TurretType type = t.getType();
 
         float dmgM = damageMult[i];
         if (dmgM < 0.f) dmgM = 0.f;
@@ -883,8 +881,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         sf::Vector2f bulletPos;
         sf::Vector2f bulletDir;
 
-        // Trick: scale dt to speed up / slow down fire rate.
-        // frM > 1 => fires more often, frM < 1 => slower.
+        // Scale dt to speed up / slow down fire rate via buff
         float dtForTurret = dt * frM;
 
         // TDTurret handles range, cooldown, target selection.
@@ -892,63 +889,132 @@ void TowerDefenceScene::update_turrets(float dt) {
             continue;
         }
 
+        TurretType type = t.getType();
+
         // Buff turrets themselves don't shoot bullets, they’re just auras.
         if (stats.isBuff) {
             continue;
         }
 
-        // Bullet damage comes from TurretStats AND buff multipliers
+        // Base damage from stats * buff multiplier
         int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
         if (bulletDamage < 0) bulletDamage = 0;
 
-        // Helper to spawn a single bullet with all status effects applied
-        auto spawnBullet = [&](const sf::Vector2f& dir)
-            {
+        // ---------------------------
+        // AOE turret: pulse around itself
+        // ---------------------------
+        if (type == TurretType::AOE) {
+            // Explosion centre = turret tile centre
+            sf::Vector2i grid = t.getGrid();
+            sf::Vector2f centre = ls::get_tile_position(grid)
+                + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+            float radius = stats.explosionRadius;
+            float radiusSq = radius * radius;
+
+            for (auto& e : _enemies) {
+                if (e.isDead()) continue;
+
+                sf::Vector2f enemyPos = e.getPosition();
+                float        enemyRad = e.getRadius();
+
+                sf::Vector2f d = enemyPos - centre;
+                float distSq = d.x * d.x + d.y * d.y;
+                float r = radius + enemyRad;
+
+                if (distSq <= r * r) {
+                    if (bulletDamage > 0) {
+                        e.applyDamage(bulletDamage);
+                    }
+                    if (stats.dotDuration > 0.f && stats.damageOverTime > 0.f) {
+                        e.applyDot(stats.dotDuration, stats.damageOverTime);
+                    }
+                    if (stats.slowDownTime > 0.f && stats.slowDownPercent > 0.f) {
+                        e.applySlow(stats.slowDownTime, stats.slowDownPercent);
+                    }
+                    if (stats.stunTime > 0.f) {
+                        e.applyStun(stats.stunTime);
+                    }
+                }
+            }
+
+            // Optional: visual flash using a bullet in "explosion only" mode
+            if (stats.explosionRadius > 0.f) {
+                TDBullet visual(
+                    centre,
+                    sf::Vector2f(0.f, 0.f),
+                    0.f,                 // no movement
+                    0,                   // no extra damage
+                    stats.bulletTtl,     // ttl not really used in explosion phase
+                    stats.explosionRadius,
+                    0.f, 0.f,            // no DoT
+                    0.f, 0.f,            // no slow
+                    0.f                  // no stun
+                );
+                visual.startExplosionVisual();
+                _bullets.push_back(visual);
+            }
+
+            continue; // skip normal bullet creation
+        }
+
+        // ---------------------------
+        // Scatter turret: multiple pellets
+        // ---------------------------
+        if (type == TurretType::Scatter) {
+            int   pelletCount = stats.pelletCount;
+            if (pelletCount <= 0) pelletCount = 1;
+
+            float spreadDegrees = stats.spreadAngleDeg;
+            if (spreadDegrees < 0.f) spreadDegrees = 0.f;
+            const float halfSpreadRad = (spreadDegrees * 3.14159265f / 180.f) * 0.5f;
+
+            float baseAngle = std::atan2(bulletDir.y, bulletDir.x);
+            float startAngle = baseAngle - halfSpreadRad;
+            float step = (pelletCount > 1)
+                ? (2.f * halfSpreadRad) / static_cast<float>(pelletCount - 1)
+                : 0.f;
+
+            for (int p = 0; p < pelletCount; ++p) {
+                float angle = startAngle + step * static_cast<float>(p);
+                sf::Vector2f dir(std::cos(angle), std::sin(angle));
+
                 _bullets.emplace_back(
                     bulletPos,
                     dir,
-                    stats.bulletSpeed,        // turret-specific bullet speed
-                    bulletDamage,             // buffed damage
-                    stats.bulletTtl,          // turret-specific lifetime
-                    stats.explosionRadius,    // AoE radius (Bomb, AOE, Slow, etc.)
-                    stats.dotDuration,        // Fire DoT duration
-                    stats.damageOverTime,     // Fire DoT DPS
-                    stats.slowDownTime,       // Freeze/Slow duration
-                    stats.slowDownPercent,    // Freeze/Slow percent
-                    stats.stunTime            // Lightning stun duration
+                    stats.bulletSpeed,
+                    bulletDamage,
+                    stats.bulletTtl,
+                    stats.explosionRadius,
+                    stats.dotDuration,
+                    stats.damageOverTime,
+                    stats.slowDownTime,
+                    stats.slowDownPercent,
+                    stats.stunTime
                 );
-            };
-
-        // -------- Scatter turret: multiple pellets in a cone --------
-        if (type == TurretType::Scatter &&
-            stats.pelletCount > 1 &&
-            stats.spreadAngleDeg > 0.f)
-        {
-            const int   pellets = stats.pelletCount;
-            const float totalSpreadRad = stats.spreadAngleDeg * 3.14159265f / 180.f;
-
-            // Base angle from main direction
-            float baseAngle = std::atan2(bulletDir.y, bulletDir.x);
-
-            for (int p = 0; p < pellets; ++p) {
-                // Normalised offset in [-0.5, +0.5]
-                float tNorm = (pellets == 1)
-                    ? 0.f
-                    : (static_cast<float>(p) / (pellets - 1) - 0.5f);
-
-                float angle = baseAngle + tNorm * totalSpreadRad;
-
-                sf::Vector2f dir(std::cos(angle), std::sin(angle));
-                spawnBullet(dir);
             }
         }
         else {
-            // All other turrets: single straight bullet
-            spawnBullet(bulletDir);
+            // ---------------------------
+            // All other turrets: one bullet
+            // ---------------------------
+            _bullets.emplace_back(
+                bulletPos,
+                bulletDir,
+                stats.bulletSpeed,
+                bulletDamage,
+                stats.bulletTtl,
+                stats.explosionRadius,
+                stats.dotDuration,
+                stats.damageOverTime,
+                stats.slowDownTime,
+                stats.slowDownPercent,
+                stats.stunTime
+            );
         }
     }
 
-    // Clean out any enemies that died from turret/bullet damage
+    // Clean out enemies that died from turret/bullet damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
@@ -957,6 +1023,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         _enemies.end()
     );
 }
+
 
 
 

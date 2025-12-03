@@ -180,3 +180,15 @@ bool TDBullet::update(float dt, std::vector<TDEnemy>& enemies)
     // Keep this "bullet" around as a visual effect until explosionTimer runs out
     return true;
 }
+
+void TDBullet::startExplosionVisual()
+{
+    // We only want a visual flash, no damage here.
+    _inExplosion = true;
+    _hasDealtDamage = true;                    // so update() never tries to damage
+    _explosionTimer = _explosionDuration;
+
+    _shape.setRadius(_explosionRadius);
+    _shape.setOrigin(_explosionRadius, _explosionRadius);
+    _shape.setFillColor(sf::Color(255, 200, 100, 200));
+}

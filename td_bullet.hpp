@@ -29,6 +29,8 @@ public:
 
     const sf::CircleShape& getShape() const { return _shape; }
 
+    // This will turn this bullet into an immediate explosion visual
+    void startExplosionVisual();
 private:
     sf::Vector2f   _pos;
     sf::Vector2f   _vel;               // assumed normalised
