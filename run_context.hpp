@@ -23,6 +23,11 @@ struct RunContext {
 
     std::vector<TurretType> turretInventory;
 
+    // --- Level-up upgrades ---
+    float turretDamageMult = 1.0f;  // >1 = turrets deal more damage
+    float turretFireRateMult = 1.0f;  // >1 = turrets fire more often
+    float turretCostMult = 1.0f;  // <1 = turrets cheaper 
+
     // later:
     // std::vector<std::shared_ptr<Turret>> turrets;
     // std::vector<std::shared_ptr<Enemy>>  enemies;

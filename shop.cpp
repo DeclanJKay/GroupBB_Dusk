@@ -101,7 +101,7 @@ void Shop::regenerateItems() {
 
     // --- Health item (extra slot on the right) ---
     const int healAmount = 2;   // how much HP to restore per buy
-    const int healCost = 30;  // currency cost
+    const int healCost = 10;  // currency cost
 
     Item healItem;
     healItem.isHeal = true;

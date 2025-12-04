@@ -14,6 +14,8 @@
 #include <iostream>
 #include <cmath>
 #include <algorithm>
+#include <random>
+
 
 using ls = LevelSystem;
 using param = Parameters;
@@ -740,6 +742,8 @@ void TowerDefenceScene::load() {
 
         // Reset wave manager at the start of a new run / level
         _waveManager.reset();
+        _lastLevelIndex = _waveManager.getCurrentLevelIndex();
+
 
         // Create the shared player for TD mode
         _entities.clear();
@@ -1016,6 +1020,18 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
     }
 
+    // 1.5) Apply global upgrades from RunContext (level rewards)
+    if (Scenes::runContext) {
+        float gDmg = Scenes::runContext->turretDamageMult;
+        float gRate = Scenes::runContext->turretFireRateMult;
+
+        for (size_t i = 0; i < count; ++i) {
+            damageMult[i] *= gDmg;
+            fireRateMult[i] *= gRate;
+        }
+    }
+
+
     // ---------------------------
 // 2) Second pass: update turrets & spawn bullets
 // ---------------------------
@@ -1216,6 +1232,89 @@ void TowerDefenceScene::update_turrets(float dt) {
     );
 }
 
+void TowerDefenceScene::generateUpgradeChoices() {
+    _upgradeChoices.clear();
+
+    // Pool of possible upgrades
+    std::vector<UpgradeType> pool = {
+        UpgradeType::TurretDamage,
+        UpgradeType::FireRate,
+        UpgradeType::TurretCost
+    };
+
+    std::random_device rd;
+    std::mt19937 rng(rd());
+    std::shuffle(pool.begin(), pool.end(), rng);
+
+    const float startY = 220.f;
+    const float lineSpacing = 40.f;
+    const float x = 80.f;
+
+    for (int i = 0; i < 3 && i < static_cast<int>(pool.size()); ++i) {
+        UpgradeChoice choice;
+        choice.type = pool[i];
+
+        choice.text.setFont(_font);
+        choice.text.setCharacterSize(22);
+        choice.text.setFillColor(sf::Color::White);
+
+        std::string label;
+
+        switch (i) {
+        case 0: label = "1) "; break;
+        case 1: label = "2) "; break;
+        case 2: label = "3) "; break;
+        default: label = "-) "; break;
+        }
+
+        switch (choice.type) {
+        case UpgradeType::TurretDamage:
+            label += "Turret Damage +20%";
+            break;
+        case UpgradeType::FireRate:
+            label += "Fire Rate +20%";
+            break;
+        case UpgradeType::TurretCost:
+            label += "Turret cost -20%";
+            break;
+        }
+
+        choice.text.setString(label);
+        choice.text.setPosition(x, startY + i * lineSpacing);
+
+        _upgradeChoices.push_back(choice);
+    }
+
+    _showUpgradeChoices = true;
+}
+
+void TowerDefenceScene::applyUpgrade(UpgradeType type) {
+    if (!Scenes::runContext) return;
+
+    switch (type) {
+    case UpgradeType::TurretDamage:
+        Scenes::runContext->turretDamageMult *= 1.2f;   // +20%
+        std::cout << "Upgrade: turret damage -> x"
+            << Scenes::runContext->turretDamageMult << "\n";
+        break;
+
+    case UpgradeType::FireRate:
+        Scenes::runContext->turretFireRateMult *= 1.2f; // +20%
+        std::cout << "Upgrade: fire rate -> x"
+            << Scenes::runContext->turretFireRateMult << "\n";
+        break;
+
+    case UpgradeType::TurretCost:
+        Scenes::runContext->turretCostMult *= 0.8f;     // -20% cost
+        if (Scenes::runContext->turretCostMult < 0.3f)
+            Scenes::runContext->turretCostMult = 0.3f;
+        std::cout << "Upgrade: turret cost -> "
+            << static_cast<int>(Scenes::runContext->turretCostMult * 100.f)
+            << "% of base\n";
+        break;
+    }
+}
+
 
 
 
@@ -1285,6 +1384,41 @@ void TowerDefenceScene::update(const float& dt) {
         auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
         sh->tick_simulation(dt);
     }
+
+    // ============================================================
+    // 1) If the upgrade panel is showing, ONLY handle 1–3 here
+    //    and then early-return so TD controls don't run.
+    // ============================================================
+    if (_showUpgradeChoices && !_upgradeChoices.empty()) {
+        int chosenIndex = -1;
+
+        if (keyPressedOnce(sf::Keyboard::Num1) ||
+            keyPressedOnce(sf::Keyboard::Numpad1)) {
+            chosenIndex = 0;
+        }
+        else if (keyPressedOnce(sf::Keyboard::Num2) ||
+            keyPressedOnce(sf::Keyboard::Numpad2)) {
+            chosenIndex = 1;
+        }
+        else if (keyPressedOnce(sf::Keyboard::Num3) ||
+            keyPressedOnce(sf::Keyboard::Numpad3)) {
+            chosenIndex = 2;
+        }
+
+        if (chosenIndex >= 0 &&
+            chosenIndex < static_cast<int>(_upgradeChoices.size())) {
+            applyUpgrade(_upgradeChoices[chosenIndex].type);
+            _upgradeChosenThisRun = true;   // picked for this level
+            _showUpgradeChoices = false;
+        }
+
+        // While the reward screen is up, ignore all other TD input
+        return;
+    }
+
+    // ============================================================
+    // 2) Normal TD controls
+    // ============================================================
 
     // Handle starting the next wave with E
     if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::E)) {
@@ -1364,16 +1498,34 @@ void TowerDefenceScene::update(const float& dt) {
     // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
 
-    // --- Wave-end detection: reroll shop when a wave finishes ---
+    if (Scenes::safehouse) {
+        auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
+        sh->tick_simulation(dt);
+    }
+
+    // ============================================================
+    // 3) Detect when a *level* has just finished
+    //    (wave->waiting transition AND level index changed)
+    // ============================================================
+    int currentLevel = _waveManager.getCurrentLevelIndex();
     bool nowWaiting = _waveManager.isWaitingForPlayer();
+
     if (nowWaiting && !_wasWaitingForPlayer) {
         // We have just transitioned from "wave running" -> "waiting"
         if (Scenes::safehouse) {
             auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
             sh->rerollShop();
         }
+
+        // Level index changed -> we just finished a whole LEVEL
+        if (currentLevel != _lastLevelIndex) {
+            _upgradeChosenThisRun = false;   // new level, new upgrade
+            generateUpgradeChoices();
+        }
     }
+
     _wasWaitingForPlayer = nowWaiting;
+    _lastLevelIndex = currentLevel;
 
     // --- Update wave UI text ---
     if (!_waveManager.hasFinishedAllWaves()) {
@@ -1400,6 +1552,7 @@ void TowerDefenceScene::update(const float& dt) {
 
 
 
+
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Background colour for TD scene
     window.draw(_background);
@@ -1419,6 +1572,31 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     window.draw(_label);
     window.draw(_waveText);
     window.draw(_moneyText);
+
+    // Upgrade choice overlay when level is beaten
+    if (_showUpgradeChoices && !_upgradeChoices.empty()) {
+        sf::RectangleShape panel;
+        panel.setSize(sf::Vector2f(
+            static_cast<float>(param::game_width) - 120.f,
+            160.f
+        ));
+        panel.setFillColor(sf::Color(0, 0, 0, 190));
+        panel.setPosition(60.f, 180.f);
+        window.draw(panel);
+
+        sf::Text heading;
+        heading.setFont(_font);
+        heading.setCharacterSize(24);
+        heading.setFillColor(sf::Color::White);
+        heading.setString("Level complete! Choose one upgrade (1-3):");
+        heading.setPosition(80.f, 190.f);
+        window.draw(heading);
+
+        for (const auto& choice : _upgradeChoices) {
+            window.draw(choice.text);
+        }
+    }
+
 
 }
 

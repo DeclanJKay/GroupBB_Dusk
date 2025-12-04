@@ -173,7 +173,26 @@ private:
     void update_turrets(float dt);
     void update_bullets(float dt);
     void place_turret(TurretType type);
+
+    enum class UpgradeType { TurretDamage, FireRate, TurretCost };
+
+    struct UpgradeChoice {
+        UpgradeType type;
+        sf::Text    text;
+    };
+
+    bool _showUpgradeChoices = false;  // currently showing the reward screen
+    bool _upgradeChosenThisRun = false;  // already picked one for this run
+    std::vector<UpgradeChoice> _upgradeChoices;
+
+    int _lastLevelIndex = 0;               // track when level change
+
+    void generateUpgradeChoices();
+    void applyUpgrade(UpgradeType type);
+
 };
+
+
 
 
 // ---------------------------------
