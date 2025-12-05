@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.11)
 project(tile_engine)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # ==== Output dirs (bin/Debug, bin/Release, etc.) ====
@@ -23,37 +23,25 @@ link_directories("${CMAKE_BINARY_DIR}/lib/box2d/lib")
 
 # ==== Level system library (build FIRST) ====
 add_library(tile_level STATIC
-  tile_level_loader/level_system.cpp
-  EnemyStats.cpp
-  td_turret.cpp 
-  td_bullet.cpp "WaveGeneration.cpp" "TurretStats.cpp" "shop.cpp")
+  tile_level_loader/level_system.cpp)
 target_include_directories(tile_level INTERFACE tile_level)
 target_link_libraries(tile_level sfml-graphics)
 
 # ==== Game executable ====
 add_executable(tile_engine
   main.cpp
-  game_systems.cpp
-  entity.cpp
-  player.cpp
-  scenes.cpp
-  EnemyStats.cpp
-  TDEnemy.cpp
-  td_turret.cpp
-  td_bullet.cpp
-  WaveGeneration.cpp
-  TurretStats.cpp
-  run_context.cpp
-  shop.cpp
+  gameSys.cpp
+  MouseHelper.cpp
+  Scenes.cpp
 
   # headers optional (for VS visibility)
-  game_systems.hpp
-  entity.hpp
-  player.hpp
-  scenes.hpp
-  game_parameters.hpp
-  tile_level_loader/level_system.hpp
-
+  Scenes.hpp
+  MouseHelper.hpp
+  Comps.hpp
+  gameParams.hpp
+  gameSys.hpp
+  Reg.hpp
+  Systems.hpp
     )
 
 # Link SFML + our library
