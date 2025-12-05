@@ -206,38 +206,87 @@ bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx, Player&
             }
         }
 
-        // Check money
-        if (ctx.currency < slot.cost) {
-            if (slot.isHeal) {
-                std::cout << "Not enough money for Heal (cost "
-                    << slot.cost << ", have " << ctx.currency << ")\n";
+        // --------------------------------------------------------------------
+        // Decide how we pay:
+        //   - If we have freeShopItemsPending, consume 1 and pay 0 gold.
+        //   - Otherwise, pay gold (turret cost scaled by turretCostMult).
+        // --------------------------------------------------------------------
+        bool usedFreeCharge = false;
+        int  effectiveCost = slot.cost; // default: base cost
+
+        if (ctx.freeShopItemsPending > 0) {
+            // Use a free shop charge instead of gold
+            ctx.freeShopItemsPending -= 1;
+            usedFreeCharge = true;
+
+            std::cout << "Used free shop charge. Remaining: "
+                << ctx.freeShopItemsPending << "\n";
+        }
+        else {
+            // No free charges: must pay gold.
+
+            // For turret items, apply turretCostMult discount.
+            if (!slot.isHeal) {
+                float scaled = static_cast<float>(slot.cost) * ctx.turretCostMult;
+                effectiveCost = static_cast<int>(scaled + 0.5f); // round to nearest
+
+                // Never let a positive-cost turret become free
+                if (effectiveCost < 1 && slot.cost > 0) {
+                    effectiveCost = 1;
+                }
             }
-            else {
-                std::cout << "Not enough money for " << turretName(slot.type)
-                    << " (cost " << slot.cost << ", have " << ctx.currency << ")\n";
+
+            // Check money
+            if (ctx.currency < effectiveCost) {
+                if (slot.isHeal) {
+                    std::cout << "Not enough money for Heal (cost "
+                        << effectiveCost << ", have " << ctx.currency << ")\n";
+                }
+                else {
+                    std::cout << "Not enough money for " << turretName(slot.type)
+                        << " (cost " << effectiveCost << ", have "
+                        << ctx.currency << ")\n";
+                }
+                return false;
             }
-            return false;
+
+            // Spend money
+            ctx.currency -= effectiveCost;
         }
 
-        // Spend money
-        ctx.currency -= slot.cost;
-
+        // --------------------------------------------------------------------
+        // Apply the purchase effect
+        // --------------------------------------------------------------------
         if (slot.isHeal) {
             // Heal the player
             player.heal(slot.healAmount);
             slot.active = false;
 
-            std::cout << "Bought heal (+" << slot.healAmount
-                << " HP). Remaining money: " << ctx.currency << "\n";
+            if (usedFreeCharge) {
+                std::cout << "Used free shop charge for Heal (+"
+                    << slot.healAmount << " HP).\n";
+            }
+            else {
+                std::cout << "Bought heal (+" << slot.healAmount
+                    << " HP). Remaining money: " << ctx.currency << "\n";
+            }
         }
         else {
             // Turret purchase: add to inventory
             ctx.turretInventory.push_back(slot.type);
             slot.active = false;
 
-            std::cout << "Bought " << turretName(slot.type)
-                << " for " << slot.cost
-                << ". Remaining money: " << ctx.currency << "\n";
+            if (usedFreeCharge) {
+                std::cout << "Used free shop charge to get "
+                    << turretName(slot.type)
+                    << ". Remaining free charges: "
+                    << ctx.freeShopItemsPending << "\n";
+            }
+            else {
+                std::cout << "Bought " << turretName(slot.type)
+                    << " for " << effectiveCost
+                    << ". Remaining money: " << ctx.currency << "\n";
+            }
         }
 
         return true; // purchased one item
@@ -245,6 +294,7 @@ bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx, Player&
 
     return false; // no slot in range
 }
+
 
 bool Shop::hasItemNear(const sf::Vector2f& playerPos) const
 {

@@ -45,13 +45,14 @@ private:
     // -----------------------------------------
     static constexpr float kRadius = 25.f;   // collision & clamping radius
     static constexpr float kSpeed = 200.f;  // movement speed
+    static constexpr int   kBaseMaxHealth = 5; // base max HP before upgrades
     bool _use_tile_collision = false;
 
     // -----------------------------------------
     // Health system
     // -----------------------------------------
-    int _maxHealth = 5;
-    int _health = _maxHealth;
+    int _maxHealth = kBaseMaxHealth;
+    int _health = kBaseMaxHealth;
     float _flashTimer = 0.f;
 
     // -----------------------------------------

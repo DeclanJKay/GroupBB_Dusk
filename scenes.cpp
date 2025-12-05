@@ -44,6 +44,29 @@ bool keyPressedOnce(sf::Keyboard::Key key) {
     return (isPressed && !wasPressed);
 }
 
+// Simple helper to choose a random turret type for "free turret" upgrades.
+static TurretType randomFreeTurretType()
+{
+    // Adjust this list to match the turret types you actually want to give.
+    static const std::vector<TurretType> pool = {
+        TurretType::Basic,
+		TurretType::SMG,
+		TurretType::Sniper,
+        TurretType::Bomb,
+		TurretType::Fire,
+		TurretType::Lightening,
+		TurretType::Freeze,
+        TurretType::Slow,
+        TurretType::Scatter,
+        TurretType::Buff,
+        TurretType::AOE
+    };
+
+    static std::mt19937 rng(std::random_device{}());
+    std::uniform_int_distribution<std::size_t> dist(0, pool.size() - 1);
+    return pool[dist(rng)];
+}
+
 
 // ============================================================================
 // SafehouseScene (roguelite side)
@@ -888,6 +911,11 @@ void TowerDefenceScene::updateRangePreview()
     TurretStats stats = get_turret_stats(_pendingTurretType);
     float radius = stats.rangeTiles * tileSize;
 
+    // Global range upgrade
+    if (Scenes::runContext) {
+        radius *= Scenes::runContext->turretRangeMult;
+    }
+
     _rangePreview.setRadius(radius);
     _rangePreview.setOrigin(radius, radius);
     _rangePreview.setPosition(tileWorld);
@@ -1089,14 +1117,12 @@ void TowerDefenceScene::place_turret(TurretType type) {
 void TowerDefenceScene::update_turrets(float dt) {
     if (_turrets.empty()) return;
 
-    float _incomeTimer = 0.f;
     const float tileSize = 50.f;
     const size_t count = _turrets.size();
 
     // Per-turret multipliers, start at 1.0 (no buff)
     std::vector<float> damageMult(count, 1.f);
     std::vector<float> fireRateMult(count, 1.f);
-
 
     // ---------------------------
     // 1) First pass: apply Buff turret auras
@@ -1127,7 +1153,7 @@ void TowerDefenceScene::update_turrets(float dt) {
                 + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
             sf::Vector2f d = otherPos - buffPos;
-            float distSq = d.x * d.x + d.y * d.y;
+            float        distSq = d.x * d.x + d.y * d.y;
 
             if (distSq <= buffRadiusSq) {
                 damageMult[j] *= buffStats.buffDamageMult;
@@ -1136,7 +1162,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
     }
 
-    // 1.5) Apply global upgrades from RunContext (level rewards)
+    // 1.5) Apply global damage / fire-rate upgrades from RunContext
     if (Scenes::runContext) {
         float gDmg = Scenes::runContext->turretDamageMult;
         float gRate = Scenes::runContext->turretFireRateMult;
@@ -1147,18 +1173,31 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
     }
 
-
     // ---------------------------
-// 2) Second pass: update turrets & spawn bullets
-// ---------------------------
-// Make sure our income timer vector matches the number of turrets
+    // 2) Second pass: update turrets & spawn bullets
+    // ---------------------------
+
+    // Make sure our income timer vector matches the number of turrets
     if (_turretIncomeTimers.size() < _turrets.size()) {
         _turretIncomeTimers.resize(_turrets.size(), 0.f);
     }
 
     for (size_t i = 0; i < count; ++i) {
         auto& t = _turrets[i];
-        const TurretStats& stats = t.getStats();
+
+        // COPY of stats so we can tweak them with global multipliers
+        TurretStats stats = t.getStats();
+
+        // Apply the new global turret upgrades (if any)
+        if (Scenes::runContext) {
+            auto& ctx = *Scenes::runContext;
+
+            stats.rangeTiles *= ctx.turretRangeMult;       // range upgrade
+            stats.bulletSpeed *= ctx.bulletSpeedMult;       // bullet speed
+            stats.explosionRadius *= ctx.explosionRadiusMult;   // splash radius
+            stats.damageOverTime *= ctx.dotDamageMult;         // burn / DoT
+            stats.slowDownPercent *= ctx.slowPercentMult;       // slow strength
+        }
 
         float dmgM = damageMult[i];
         if (dmgM < 0.f) dmgM = 0.f;
@@ -1176,10 +1215,20 @@ void TowerDefenceScene::update_turrets(float dt) {
                     _turretIncomeTimers[i] = 0.f;
 
                     if (Scenes::runContext) {
-                        Scenes::runContext->currency += stats.incomePerTick;
-                        std::cout << "Banana Farm income: +" << stats.incomePerTick
-                            << " (total " << Scenes::runContext->currency << ")\n";
+                        auto& ctx = *Scenes::runContext;
+
+                        int income = static_cast<int>(
+                            stats.incomePerTick * ctx.incomeMult + 0.5f
+                            );
+                        if (income < 1 && stats.incomePerTick > 0) {
+                            income = 1;
+                        }
+
+                        ctx.currency += income;
+                        std::cout << "Banana Farm income: +" << income
+                            << " (total " << ctx.currency << ")\n";
                     }
+
                 }
             }
 
@@ -1199,6 +1248,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         }
 
         TurretType type = t.getType();
+
         // Buff turrets themselves don't shoot bullets, they’re just auras.
         if (stats.isBuff) {
             continue;
@@ -1207,6 +1257,21 @@ void TowerDefenceScene::update_turrets(float dt) {
         // Base damage from stats * buff multiplier
         int bulletDamage = static_cast<int>(stats.damage * dmgM + 0.5f);
         if (bulletDamage < 0) bulletDamage = 0;
+
+        // Global bullet-related upgrades
+        float bulletSpeed = stats.bulletSpeed;
+        float explosionRadius = stats.explosionRadius;
+        float dotDamage = stats.damageOverTime;
+        float slowPercent = stats.slowDownPercent;
+
+        if (Scenes::runContext) {
+            auto& ctx = *Scenes::runContext;
+            bulletSpeed *= ctx.bulletSpeedMult;
+            explosionRadius *= ctx.explosionRadiusMult;
+            dotDamage *= ctx.dotDamageMult;
+            slowPercent *= ctx.slowPercentMult;
+        }
+
 
         // ---------------------------
         // AOE turret: pulse around itself
@@ -1217,6 +1282,16 @@ void TowerDefenceScene::update_turrets(float dt) {
                 + sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
 
             float radius = stats.explosionRadius;
+            float dotDamage = stats.damageOverTime;
+            float slowPercent = stats.slowDownPercent;
+
+            if (Scenes::runContext) {
+                auto& ctx = *Scenes::runContext;
+                radius *= ctx.explosionRadiusMult;  // Splash Radius Up
+                dotDamage *= ctx.dotDamageMult;        // Burn Potency Up
+                slowPercent *= ctx.slowPercentMult;      // Slow Potency Up
+            }
+
             float radiusSq = radius * radius;
 
             for (auto& e : _enemies) {
@@ -1226,34 +1301,35 @@ void TowerDefenceScene::update_turrets(float dt) {
                 float        enemyRad = e.getRadius();
 
                 sf::Vector2f d = enemyPos - centre;
-                float distSq = d.x * d.x + d.y * d.y;
-                float r = radius + enemyRad;
+                float        distSq = d.x * d.x + d.y * d.y;
+                float        r = radius + enemyRad;
 
                 if (distSq <= r * r) {
                     if (bulletDamage > 0) {
                         e.applyDamage(bulletDamage);
                     }
-                    if (stats.dotDuration > 0.f && stats.damageOverTime > 0.f) {
-                        e.applyDot(stats.dotDuration, stats.damageOverTime);
+                    if (stats.dotDuration > 0.f && dotDamage > 0.f) {
+                        e.applyDot(stats.dotDuration, dotDamage);
                     }
-                    if (stats.slowDownTime > 0.f && stats.slowDownPercent > 0.f) {
-                        e.applySlow(stats.slowDownTime, stats.slowDownPercent);
+                    if (stats.slowDownTime > 0.f && slowPercent > 0.f) {
+                        e.applySlow(stats.slowDownTime, slowPercent);
                     }
                     if (stats.stunTime > 0.f) {
                         e.applyStun(stats.stunTime);
                     }
                 }
+
             }
 
             // Optional: visual flash using a bullet in "explosion only" mode
-            if (stats.explosionRadius > 0.f) {
+            if (radius > 0.f) {
                 TDBullet visual(
                     centre,
                     sf::Vector2f(0.f, 0.f),
                     0.f,                 // no movement
                     0,                   // no extra damage
                     stats.bulletTtl,     // ttl not really used in explosion phase
-                    stats.explosionRadius,
+                    radius,
                     0.f, 0.f,            // no DoT
                     0.f, 0.f,            // no slow
                     0.f                  // no stun
@@ -1269,7 +1345,7 @@ void TowerDefenceScene::update_turrets(float dt) {
         // Scatter turret: multiple pellets
         // ---------------------------
         if (type == TurretType::Scatter) {
-            int   pelletCount = stats.pelletCount;
+            int pelletCount = stats.pelletCount;
             if (pelletCount <= 0) pelletCount = 1;
 
             float spreadDegrees = stats.spreadAngleDeg;
@@ -1300,6 +1376,7 @@ void TowerDefenceScene::update_turrets(float dt) {
                     stats.stunTime
                 );
             }
+
         }
         else {
             // ---------------------------
@@ -1308,45 +1385,21 @@ void TowerDefenceScene::update_turrets(float dt) {
             _bullets.emplace_back(
                 bulletPos,
                 bulletDir,
-                stats.bulletSpeed,
+                bulletSpeed,
                 bulletDamage,
                 stats.bulletTtl,
-                stats.explosionRadius,
+                explosionRadius,
                 stats.dotDuration,
-                stats.damageOverTime,
+                dotDamage,
                 stats.slowDownTime,
-                stats.slowDownPercent,
+                slowPercent,
                 stats.stunTime
             );
         }
     }
 
-    // Clean out enemies that died from turret/bullet damage
-    _enemies.erase(
-        std::remove_if(
-            _enemies.begin(), _enemies.end(),
-            [](const TDEnemy& e)
-            {
-                if (e.isDead())
-                {
-                    // Lookup enemy stats to get reward value
-                    EnemyStats stats = get_enemy_stats(e.getType());
-                    int reward = std::max(stats.cost / 2, 1); // reward = half cost minimum 1
-
-                    if (Scenes::runContext) {
-                        Scenes::runContext->currency += reward;
-                        std::cout << "Earned " << reward << " gold! Total: "
-                            << Scenes::runContext->currency << "\n";
-                    }
-
-                    return true; // remove dead enemy
-                }
-                return false;
-            }
-        ),
-        _enemies.end()
-    );
 }
+
 
 void TowerDefenceScene::generateUpgradeChoices() {
     _upgradeChoices.clear();
@@ -1355,7 +1408,24 @@ void TowerDefenceScene::generateUpgradeChoices() {
     std::vector<UpgradeType> pool = {
         UpgradeType::TurretDamage,
         UpgradeType::FireRate,
-        UpgradeType::TurretCost
+        UpgradeType::TurretCost,
+
+        UpgradeType::TurretRange,
+        UpgradeType::BulletSpeed,
+        UpgradeType::ExplosionRadius,
+        UpgradeType::BurnPotency,
+        UpgradeType::SlowPotency,
+
+        UpgradeType::GoldPerKill,
+        UpgradeType::WaveBonusGold,
+        UpgradeType::BananaFarmBoost,
+
+        UpgradeType::PlayerArmour,
+        UpgradeType::PlayerMoveSpeed,
+        UpgradeType::PlayerMaxHp,
+
+        UpgradeType::FreeShopItemPerLevel,
+        UpgradeType::FreeTurretPerLevel
     };
 
     std::random_device rd;
@@ -1375,7 +1445,6 @@ void TowerDefenceScene::generateUpgradeChoices() {
         choice.text.setFillColor(sf::Color::White);
 
         std::string label;
-
         switch (i) {
         case 0: label = "1) "; break;
         case 1: label = "2) "; break;
@@ -1393,6 +1462,49 @@ void TowerDefenceScene::generateUpgradeChoices() {
         case UpgradeType::TurretCost:
             label += "Turret cost -20%";
             break;
+
+        case UpgradeType::TurretRange:
+            label += "Turret range +20%";
+            break;
+        case UpgradeType::BulletSpeed:
+            label += "Bullet speed +20%";
+            break;
+        case UpgradeType::ExplosionRadius:
+            label += "Explosion radius +20%";
+            break;
+        case UpgradeType::BurnPotency:
+            label += "Burn/DoT damage +20%";
+            break;
+        case UpgradeType::SlowPotency:
+            label += "Slow strength +20%";
+            break;
+
+        case UpgradeType::GoldPerKill:
+            label += "Gold per kill +20%";
+            break;
+        case UpgradeType::WaveBonusGold:
+            label += "+5 gold at end of each wave";
+            break;
+        case UpgradeType::BananaFarmBoost:
+            label += "Banana Farms generate +30% income";
+            break;
+
+        case UpgradeType::PlayerArmour:
+            label += "Player takes 10% less damage";
+            break;
+        case UpgradeType::PlayerMoveSpeed:
+            label += "Player move speed +10%";
+            break;
+        case UpgradeType::PlayerMaxHp:
+            label += "Max HP +2 (heal to full)";
+            break;
+
+        case UpgradeType::FreeShopItemPerLevel:
+            label += "Gain 1 free shop item per level";
+            break;
+        case UpgradeType::FreeTurretPerLevel:
+            label += "Gain 1 free random turret per level";
+            break;
         }
 
         choice.text.setString(label);
@@ -1404,29 +1516,98 @@ void TowerDefenceScene::generateUpgradeChoices() {
     _showUpgradeChoices = true;
 }
 
+
 void TowerDefenceScene::applyUpgrade(UpgradeType type) {
     if (!Scenes::runContext) return;
 
+    auto& ctx = *Scenes::runContext;
+
     switch (type) {
     case UpgradeType::TurretDamage:
-        Scenes::runContext->turretDamageMult *= 1.2f;   // +20%
-        std::cout << "Upgrade: turret damage -> x"
-            << Scenes::runContext->turretDamageMult << "\n";
+        ctx.turretDamageMult *= 1.2f;
+        std::cout << "Upgrade: turret damage -> x" << ctx.turretDamageMult << "\n";
         break;
 
     case UpgradeType::FireRate:
-        Scenes::runContext->turretFireRateMult *= 1.2f; // +20%
-        std::cout << "Upgrade: fire rate -> x"
-            << Scenes::runContext->turretFireRateMult << "\n";
+        ctx.turretFireRateMult *= 1.2f;
+        std::cout << "Upgrade: fire rate -> x" << ctx.turretFireRateMult << "\n";
         break;
 
     case UpgradeType::TurretCost:
-        Scenes::runContext->turretCostMult *= 0.8f;     // -20% cost
-        if (Scenes::runContext->turretCostMult < 0.3f)
-            Scenes::runContext->turretCostMult = 0.3f;
+        ctx.turretCostMult *= 0.8f;
+        if (ctx.turretCostMult < 0.3f) ctx.turretCostMult = 0.3f;
         std::cout << "Upgrade: turret cost -> "
-            << static_cast<int>(Scenes::runContext->turretCostMult * 100.f)
-            << "% of base\n";
+            << static_cast<int>(ctx.turretCostMult * 100.f) << "% of base\n";
+        break;
+
+    case UpgradeType::TurretRange:
+        ctx.turretRangeMult *= 1.2f;
+        std::cout << "Upgrade: turret range -> x" << ctx.turretRangeMult << "\n";
+        break;
+
+    case UpgradeType::BulletSpeed:
+        ctx.bulletSpeedMult *= 1.2f;
+        std::cout << "Upgrade: bullet speed -> x" << ctx.bulletSpeedMult << "\n";
+        break;
+
+    case UpgradeType::ExplosionRadius:
+        ctx.explosionRadiusMult *= 1.2f;
+        std::cout << "Upgrade: explosion radius -> x" << ctx.explosionRadiusMult << "\n";
+        break;
+
+    case UpgradeType::BurnPotency:
+        ctx.dotDamageMult *= 1.2f;
+        std::cout << "Upgrade: DoT damage -> x" << ctx.dotDamageMult << "\n";
+        break;
+
+    case UpgradeType::SlowPotency:
+        ctx.slowPercentMult *= 1.2f;
+        std::cout << "Upgrade: slow strength -> x" << ctx.slowPercentMult << "\n";
+        break;
+
+    case UpgradeType::GoldPerKill:
+        ctx.goldPerKillMult *= 1.2f;
+        std::cout << "Upgrade: gold per kill -> x" << ctx.goldPerKillMult << "\n";
+        break;
+
+    case UpgradeType::WaveBonusGold:
+        ctx.waveBonusGold += 5;
+        std::cout << "Upgrade: wave bonus gold -> +" << ctx.waveBonusGold
+            << " per wave\n";
+        break;
+
+    case UpgradeType::BananaFarmBoost:
+        ctx.incomeMult *= 1.3f;
+        std::cout << "Upgrade: banana farm income -> x" << ctx.incomeMult << "\n";
+        break;
+
+    case UpgradeType::PlayerArmour:
+        ctx.damageTakenMult *= 0.9f;
+        if (ctx.damageTakenMult < 0.3f) ctx.damageTakenMult = 0.3f;
+        std::cout << "Upgrade: damage taken -> x" << ctx.damageTakenMult << "\n";
+        break;
+
+    case UpgradeType::PlayerMoveSpeed:
+        ctx.playerMoveSpeedMult *= 1.1f;
+        std::cout << "Upgrade: player move speed -> x" << ctx.playerMoveSpeedMult << "\n";
+        break;
+
+    case UpgradeType::PlayerMaxHp:
+        ctx.playerMaxHpBonus += 2;
+        std::cout << "Upgrade: max HP bonus -> +" << ctx.playerMaxHpBonus << "\n";
+        // You’ll wire this into Player in a moment (see below).
+        break;
+
+    case UpgradeType::FreeShopItemPerLevel:
+        ctx.freeShopItemsPerLevel += 1;
+        std::cout << "Upgrade: free shop items per level -> "
+            << ctx.freeShopItemsPerLevel << "\n";
+        break;
+
+    case UpgradeType::FreeTurretPerLevel:
+        ctx.freeTurretsPerLevel += 1;
+        std::cout << "Upgrade: free turrets per level -> "
+            << ctx.freeTurretsPerLevel << "\n";
         break;
     }
 }
@@ -1453,7 +1634,7 @@ void TowerDefenceScene::update_bullets(float dt) {
     }
     _bullets.swap(alive);
 
-    // Clean out enemies that died from bullet damage
+    // Clean out enemies that died from bullet / turret damage
     _enemies.erase(
         std::remove_if(
             _enemies.begin(), _enemies.end(),
@@ -1461,14 +1642,21 @@ void TowerDefenceScene::update_bullets(float dt) {
             {
                 if (e.isDead())
                 {
-                    // Lookup enemy stats to get reward value
                     EnemyStats stats = get_enemy_stats(e.getType());
-                    int reward = std::max(stats.cost / 2, 1); // reward = half cost minimum 1
+                    int baseReward = std::max(stats.cost / 2, 1); // base gold
 
                     if (Scenes::runContext) {
-                        Scenes::runContext->currency += reward;
+                        auto& ctx = *Scenes::runContext;
+
+                        float scaled = baseReward * ctx.goldPerKillMult;
+                        int reward = static_cast<int>(scaled + 0.5f);
+                        if (reward < 1 && baseReward > 0) {
+                            reward = 1;
+                        }
+
+                        ctx.currency += reward;
                         std::cout << "Earned " << reward << " gold! Total: "
-                            << Scenes::runContext->currency << "\n";
+                            << ctx.currency << "\n";
                     }
 
                     return true; // remove dead enemy
@@ -1478,6 +1666,7 @@ void TowerDefenceScene::update_bullets(float dt) {
         ),
         _enemies.end()
     );
+
 }
 
 
@@ -1650,15 +1839,37 @@ void TowerDefenceScene::update(const float& dt) {
             sh->rerollShop();
         }
 
+        // --- Wave clear bonus gold (every wave) ---
+        if (Scenes::runContext && Scenes::runContext->waveBonusGold > 0) {
+            auto& ctx = *Scenes::runContext;
+            ctx.currency += ctx.waveBonusGold;
+            std::cout << "Wave clear bonus: +" << ctx.waveBonusGold
+                << " gold (total " << ctx.currency << ")\n";
+        }
+
         // Level index changed -> finished a whole LEVEL
         if (currentLevel != _lastLevelIndex) {
             _upgradeChosenThisRun = false;
             generateUpgradeChoices();
+
+            // --- Per-level freebies ---
+            if (Scenes::runContext) {
+                auto& ctx = *Scenes::runContext;
+
+                // 1) Free shop items per level
+                ctx.freeShopItemsPending += ctx.freeShopItemsPerLevel;
+
+                // 2) Free random turrets per level (straight into inventory)
+                for (int i = 0; i < ctx.freeTurretsPerLevel; ++i) {
+                    ctx.turretInventory.push_back(randomFreeTurretType());
+                }
+            }
         }
     }
 
     _wasWaitingForPlayer = nowWaiting;
     _lastLevelIndex = currentLevel;
+
 
     // --- Update wave UI text ---
     if (!_waveManager.hasFinishedAllWaves()) {

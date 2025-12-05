@@ -1,6 +1,7 @@
 #include "player.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "game_parameters.hpp"
+#include "scenes.hpp"
 
 #include <SFML/Window/Keyboard.hpp>
 #include <SFML/Graphics/Sprite.hpp>
@@ -88,6 +89,33 @@ void Player::update_animation(float dt) {
 // Update logic
 // ------------------------------------------------------
 void Player::update(const float& dt) {
+    // -----------------------------------------
+    // Sync with RunContext player upgrades
+    // -----------------------------------------
+    if (Scenes::runContext) {
+        auto& ctx = *Scenes::runContext;
+
+        // 1) Max HP bonus
+        //    Effective max HP = base + bonus
+        int newMax = kBaseMaxHealth + ctx.playerMaxHpBonus;
+        if (newMax < 1) newMax = 1;
+
+        if (newMax != _maxHealth) {
+            bool increased = (newMax > _maxHealth);
+
+            _maxHealth = newMax;
+
+            if (increased) {
+                // Heal to full whenever max HP goes up
+                _health = _maxHealth;
+            }
+            else if (_health > _maxHealth) {
+                // Clamp current HP if max somehow decreased
+                _health = _maxHealth;
+            }
+        }
+    }
+
     sf::Vector2f dir{ 0.f, 0.f };
 
     // WASD + arrows
@@ -105,7 +133,13 @@ void Player::update(const float& dt) {
         const float len = std::sqrt(dir.x * dir.x + dir.y * dir.y);
         sf::Vector2f norm = dir / len;
 
-        const sf::Vector2f target = get_position() + norm * kSpeed * dt;
+        // Base speed, scaled by upgrades
+        float speed = kSpeed;
+        if (Scenes::runContext) {
+            speed *= Scenes::runContext->playerMoveSpeedMult;
+        }
+
+        const sf::Vector2f target = get_position() + norm * speed * dt;
 
         if (!_use_tile_collision) {
             set_position(target);
@@ -160,12 +194,29 @@ void Player::render(sf::RenderWindow& window) const {
 // ------------------------------------------------------
 void Player::take_damage(int amount) {
     if (_health <= 0) return;
+    if (amount <= 0)  return;
 
-    _health -= amount;
+    int finalDamage = amount;
+
+    if (Scenes::runContext) {
+        auto& ctx = *Scenes::runContext;
+
+        float scaled = static_cast<float>(amount) * ctx.damageTakenMult;
+        // Round to nearest int
+        finalDamage = static_cast<int>(std::round(scaled));
+
+        // Make sure we still take damage if original amount > 0
+        if (finalDamage < 1) {
+            finalDamage = 1;
+        }
+    }
+
+    _health -= finalDamage;
     if (_health < 0) _health = 0;
 
     _flashTimer = 0.2f;
 }
+
 
 void Player::heal(int amount)
 {

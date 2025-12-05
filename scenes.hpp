@@ -63,7 +63,7 @@ private:
         float flashTimer = 0.f;
         sf::Color baseColor = sf::Color::White;
 
-        // NEW: behaviour flags copied from EnemyStats
+        // behaviour flags copied from EnemyStats
         EnemyType type = EnemyType::Basic;
         bool  isRanged = false;
         float rangeLimit = 0.f;
@@ -176,7 +176,29 @@ private:
     void openPlacementInventory();
     void updateRangePreview();
 
-    enum class UpgradeType { TurretDamage, FireRate, TurretCost };
+    enum class UpgradeType {
+        TurretDamage,
+        FireRate,
+        TurretCost,
+
+        TurretRange,
+        BulletSpeed,
+        ExplosionRadius,
+        BurnPotency,
+        SlowPotency,
+
+        GoldPerKill,
+        WaveBonusGold,
+        BananaFarmBoost,
+
+        PlayerArmour,
+        PlayerMoveSpeed,
+        PlayerMaxHp,
+
+        FreeShopItemPerLevel,
+        FreeTurretPerLevel
+    };
+
 
     struct UpgradeChoice {
         UpgradeType type;
