@@ -399,6 +399,10 @@ void SafehouseScene::update(const float& dt) {
     // Update money display
     _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
 
+    // Update visible shop prices based on discounts / free charges
+    if (Scenes::runContext) {
+        _shop.refreshDisplayCosts(*Scenes::runContext);
+    }
 
     // --- Wave / Level UI (TowerDefenceScene) ---
     if (Scenes::tower_defence) {
@@ -1766,6 +1770,38 @@ void TowerDefenceScene::update(const float& dt) {
     // ============================================================
     // 2) Normal TD controls
     // ============================================================
+
+        // DEBUG: press L to instantly trigger level-complete rewards + upgrade screen
+    if (keyPressedOnce(sf::Keyboard::L) && Scenes::runContext) {
+        std::cout << "[DEBUG] Forcing level-complete rewards and upgrade screen.\n";
+
+        // Reroll shop like normal level end
+        if (Scenes::safehouse) {
+            auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
+            sh->rerollShop();
+        }
+
+        auto& ctx = *Scenes::runContext;
+
+        // Simulate wave clear bonus once
+        if (ctx.waveBonusGold > 0) {
+            ctx.currency += ctx.waveBonusGold;
+            std::cout << "[DEBUG] Wave clear bonus: +" << ctx.waveBonusGold
+                << " gold (total " << ctx.currency << ")\n";
+        }
+
+        // Per-level freebies (same logic as real level completion)
+        ctx.freeShopItemsPending += ctx.freeShopItemsPerLevel;
+        for (int i = 0; i < ctx.freeTurretsPerLevel; ++i) {
+            ctx.turretInventory.push_back(randomFreeTurretType());
+        }
+
+        // Open upgrade choices UI
+        _upgradeChosenThisRun = false;
+        generateUpgradeChoices();
+        _showUpgradeChoices = true;
+    }
+
 
     // Handle starting the next wave with F (only while waiting)
     if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::F)) {

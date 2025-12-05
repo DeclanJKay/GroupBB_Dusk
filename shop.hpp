@@ -37,6 +37,10 @@ public:
     static std::string turretName(TurretType type);
 
     static std::string turretDescription(TurretType t);
+
+    // Recalculate the visible cost text based on run upgrades (free charges, discounts)
+    void refreshDisplayCosts(const RunContext& ctx);
+
 private:
     struct Item {
         bool           isHeal = false;              // true = heal box

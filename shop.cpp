@@ -176,6 +176,42 @@ void Shop::render(sf::RenderWindow& window) const {
     }
 }
 
+void Shop::refreshDisplayCosts(const RunContext& ctx)
+{
+    if (!_font) return;
+
+    for (auto& slot : _items) {
+        if (!slot.active) {
+            // You don't draw inactive items anyway, so we can skip them.
+            continue;
+        }
+
+        // If we have at least one free charge, every active slot is effectively FREE.
+        if (ctx.freeShopItemsPending > 0) {
+            slot.costText.setFillColor(sf::Color::Green);
+            slot.costText.setString("Cost: FREE");
+            continue;
+        }
+
+        // Otherwise we show the real, effective cost
+        int effectiveCost = slot.cost;
+
+        // Turrets get discounted by turretCostMult
+        if (!slot.isHeal) {
+            float scaled = static_cast<float>(slot.cost) * ctx.turretCostMult;
+            effectiveCost = static_cast<int>(scaled + 0.5f); // round nicely
+
+            if (effectiveCost < 1 && slot.cost > 0) {
+                effectiveCost = 1;
+            }
+        }
+
+        slot.costText.setFillColor(sf::Color::Yellow);
+        slot.costText.setString("Cost: " + std::to_string(effectiveCost));
+    }
+}
+
+
 bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx, Player& player)
 {
     const float interactRadius = 48.f;
@@ -294,6 +330,7 @@ bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx, Player&
 
     return false; // no slot in range
 }
+
 
 
 bool Shop::hasItemNear(const sf::Vector2f& playerPos) const
