@@ -72,10 +72,10 @@ void GameSystem::start(unsigned int width,
         }
 
         // Quick exit during development
-        if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
-            window.close();
-            break;
-        }
+        //if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
+        //    window.close();
+        //    break;
+        //}
 
         // Time since last frame
         const float dt = clock.restart().asSeconds();
@@ -91,7 +91,7 @@ void GameSystem::start(unsigned int width,
         window.display();
     }
 
-    window.close();
+    //window.close();
     clean();
 }
 

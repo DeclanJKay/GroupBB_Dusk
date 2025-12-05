@@ -388,7 +388,7 @@ void SafehouseScene::update(const float& dt) {
 
             std::string extra;
             if (td->isWaitingForPlayer()) {
-                extra = "  (Press E in TD to start)";
+                extra = "  (Press F in TD to start)";
             }
 
             _waveText.setString(
@@ -717,6 +717,12 @@ void TowerDefenceScene::load() {
     _moneyText.setPosition(param::game_width - 200.f, 20.f);
     _moneyText.setString("Money: $" + std::to_string(Scenes::runContext->currency));
 
+    // === Controls hint ===
+    _controlsText.setFont(_font);
+    _controlsText.setCharacterSize(18);
+    _controlsText.setFillColor(sf::Color(200, 200, 200));
+    _controlsText.setPosition(20.f, 90.f);
+    _controlsText.setString("I: Inventory (Safehouse)   E: Place turret   Esc: Cancel");
 
     const float tileSize = 50.f;
 
@@ -763,6 +769,17 @@ void TowerDefenceScene::load() {
         }
         std::cout << "[TD] Resumed with existing state.\n";
     }
+
+    // Placement inventory heading
+    _placementHeading.setFont(_font);
+    _placementHeading.setCharacterSize(24);
+    _placementHeading.setFillColor(sf::Color::White);
+    _placementHeading.setString("Choose a turret to place: Space to place turret. Esc to cancel");
+
+    // Range preview default style (transparent circle with outline)
+    _rangePreview.setFillColor(sf::Color(0, 0, 0, 0));
+    _rangePreview.setOutlineThickness(2.f);
+    _rangePreview.setOutlineColor(sf::Color(0, 255, 0, 160));
 }
 void TowerDefenceScene::tick_simulation(float dt) {
     if (_enemyPath.empty()) return;
@@ -785,6 +802,105 @@ void TowerDefenceScene::tick_simulation(float dt) {
     update_bullets(dt);
 }
 
+// Open the "place turret" inventory overlay in TD.
+// We snapshot the current turretInventory and show up to 9 entries.
+void TowerDefenceScene::openPlacementInventory()
+{
+    _placementInvLines.clear();
+    _placementInvTypes.clear();
+    _choosingTurret = false;
+
+    if (!Scenes::runContext) return;
+
+    const auto& inv = Scenes::runContext->turretInventory;
+    if (inv.empty()) {
+        std::cout << "No turrets in inventory to place.\n";
+        return;
+    }
+
+    const float startY = 230.f;
+    const float lineSpacing = 30.f;
+    const float x = 90.f;
+
+    std::size_t maxSlots = std::min<std::size_t>(9, inv.size());
+
+    for (std::size_t i = 0; i < maxSlots; ++i) {
+        TurretType type = inv[i];
+        _placementInvTypes.push_back(type);
+
+        sf::Text line;
+        line.setFont(_font);
+        line.setCharacterSize(22);
+        line.setFillColor(sf::Color::White);
+
+        std::string label =
+            std::to_string(i + 1) + ") " + Shop::turretName(type);
+
+        line.setString(label);
+        line.setPosition(x, startY + static_cast<float>(i) * lineSpacing);
+
+        _placementInvLines.push_back(line);
+    }
+
+    _choosingTurret = !_placementInvTypes.empty();
+}
+
+// Update the range preview circle for the currently pending turret.
+void TowerDefenceScene::updateRangePreview()
+{
+    _rangeTileIsValid = false;
+
+    if (!_player || !_hasPendingTurret) return;
+
+    const float tileSize = 50.f;
+
+    sf::Vector2f pos = _player->get_position();
+    sf::Vector2i grid(
+        static_cast<int>(pos.x / tileSize),
+        static_cast<int>(pos.y / tileSize)
+    );
+
+    // Centre of this tile in world space
+    sf::Vector2f tileWorld =
+        ls::get_tile_position(grid) +
+        sf::Vector2f(tileSize * 0.5f, tileSize * 0.5f);
+
+    // Is the tile EMPTY and not already occupied by a turret?
+    LevelSystem::Tile tileType;
+    try {
+        tileType = ls::get_tile(grid);
+    }
+    catch (...) {
+        tileType = ls::WALL; // treat as invalid
+    }
+
+    bool canPlace = (tileType == ls::EMPTY);
+    if (canPlace) {
+        for (const auto& t : _turrets) {
+            if (t.getGrid() == grid) {
+                canPlace = false;
+                break;
+            }
+        }
+    }
+
+    // Get range from turret stats
+    TurretStats stats = get_turret_stats(_pendingTurretType);
+    float radius = stats.rangeTiles * tileSize;
+
+    _rangePreview.setRadius(radius);
+    _rangePreview.setOrigin(radius, radius);
+    _rangePreview.setPosition(tileWorld);
+
+    if (canPlace) {
+        _rangePreview.setOutlineColor(sf::Color(0, 255, 0, 160)); // green
+        _rangeTileIsValid = true;
+    }
+    else {
+        _rangePreview.setOutlineColor(sf::Color(255, 0, 0, 160)); // red
+        _rangeTileIsValid = false;
+    }
+}
 
 
 // Build list of world-space positions enemies move through (from + tiles)
@@ -1386,8 +1502,7 @@ void TowerDefenceScene::update(const float& dt) {
     }
 
     // ============================================================
-    // 1) If the upgrade panel is showing, ONLY handle 1–3 here
-    //    and then early-return so TD controls don't run.
+    // 1) Level-up upgrade panel: ONLY handle 1–3, then early-return
     // ============================================================
     if (_showUpgradeChoices && !_upgradeChoices.empty()) {
         int chosenIndex = -1;
@@ -1408,7 +1523,7 @@ void TowerDefenceScene::update(const float& dt) {
         if (chosenIndex >= 0 &&
             chosenIndex < static_cast<int>(_upgradeChoices.size())) {
             applyUpgrade(_upgradeChoices[chosenIndex].type);
-            _upgradeChosenThisRun = true;   // picked for this level
+            _upgradeChosenThisRun = true;
             _showUpgradeChoices = false;
         }
 
@@ -1417,11 +1532,54 @@ void TowerDefenceScene::update(const float& dt) {
     }
 
     // ============================================================
+    // 1.5) Turret placement inventory overlay
+    //      (E already pressed, we are choosing which turret)
+    // ============================================================
+    if (_choosingTurret && !_placementInvTypes.empty()) {
+        int chosenIndex = -1;
+
+        if (keyPressedOnce(sf::Keyboard::Num1) ||
+            keyPressedOnce(sf::Keyboard::Numpad1)) chosenIndex = 0;
+        else if (keyPressedOnce(sf::Keyboard::Num2) ||
+            keyPressedOnce(sf::Keyboard::Numpad2)) chosenIndex = 1;
+        else if (keyPressedOnce(sf::Keyboard::Num3) ||
+            keyPressedOnce(sf::Keyboard::Numpad3)) chosenIndex = 2;
+        else if (keyPressedOnce(sf::Keyboard::Num4) ||
+            keyPressedOnce(sf::Keyboard::Numpad4)) chosenIndex = 3;
+        else if (keyPressedOnce(sf::Keyboard::Num5) ||
+            keyPressedOnce(sf::Keyboard::Numpad5)) chosenIndex = 4;
+        else if (keyPressedOnce(sf::Keyboard::Num6) ||
+            keyPressedOnce(sf::Keyboard::Numpad6)) chosenIndex = 5;
+        else if (keyPressedOnce(sf::Keyboard::Num7) ||
+            keyPressedOnce(sf::Keyboard::Numpad7)) chosenIndex = 6;
+        else if (keyPressedOnce(sf::Keyboard::Num8) ||
+            keyPressedOnce(sf::Keyboard::Numpad8)) chosenIndex = 7;
+        else if (keyPressedOnce(sf::Keyboard::Num9) ||
+            keyPressedOnce(sf::Keyboard::Numpad9)) chosenIndex = 8;
+
+        if (chosenIndex >= 0 &&
+            chosenIndex < static_cast<int>(_placementInvTypes.size())) {
+
+            _pendingTurretType = _placementInvTypes[chosenIndex];
+            _hasPendingTurret = true;
+            _choosingTurret = false;
+        }
+
+        // Cancel with Esc
+        if (keyPressedOnce(sf::Keyboard::Escape)) {
+            _choosingTurret = false;
+        }
+
+        // While the placement inventory is up, pause other TD controls
+        return;
+    }
+
+    // ============================================================
     // 2) Normal TD controls
     // ============================================================
 
-    // Handle starting the next wave with E
-    if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::E)) {
+    // Handle starting the next wave with F (only while waiting)
+    if (_waveManager.isWaitingForPlayer() && keyPressedOnce(sf::Keyboard::F)) {
         _waveManager.startNextWave();
     }
 
@@ -1433,66 +1591,42 @@ void TowerDefenceScene::update(const float& dt) {
     }
 
     // Swap back to Safehouse with Shift (LShift or RShift)
-    if (keyPressedOnce(sf::Keyboard::LShift) || keyPressedOnce(sf::Keyboard::RShift)) {
+    if (keyPressedOnce(sf::Keyboard::LShift) ||
+        keyPressedOnce(sf::Keyboard::RShift)) {
         GameSystem::set_active_scene(Scenes::safehouse);
         return;
     }
 
-    // Place turrets using number keys (top row or numpad)
-    TurretType typeToPlace;
-    bool wantPlace = false;
-
-    if (keyPressedOnce(sf::Keyboard::Num1) || keyPressedOnce(sf::Keyboard::Numpad1)) {
-        typeToPlace = TurretType::Basic;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num2) || keyPressedOnce(sf::Keyboard::Numpad2)) {
-        typeToPlace = TurretType::SMG;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num3) || keyPressedOnce(sf::Keyboard::Numpad3)) {
-        typeToPlace = TurretType::Sniper;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num4) || keyPressedOnce(sf::Keyboard::Numpad4)) {
-        typeToPlace = TurretType::Bomb;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num5) || keyPressedOnce(sf::Keyboard::Numpad5)) {
-        typeToPlace = TurretType::Fire;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num6) || keyPressedOnce(sf::Keyboard::Numpad6)) {
-        typeToPlace = TurretType::Lightening;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num7) || keyPressedOnce(sf::Keyboard::Numpad7)) {
-        typeToPlace = TurretType::Freeze;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num8) || keyPressedOnce(sf::Keyboard::Numpad8)) {
-        typeToPlace = TurretType::Buff;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num9) || keyPressedOnce(sf::Keyboard::Numpad9)) {
-        typeToPlace = TurretType::Scatter;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::Num0) || keyPressedOnce(sf::Keyboard::Numpad0)) {
-        typeToPlace = TurretType::BananaFarm;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::O)) {
-        typeToPlace = TurretType::AOE;
-        wantPlace = true;
-    }
-    else if (keyPressedOnce(sf::Keyboard::P)) {
-        typeToPlace = TurretType::Slow;
-        wantPlace = true;
+    // ------------------------------------------------------------
+    // Open turret placement inventory:
+    //   - Press E while a wave is RUNNING
+    // ------------------------------------------------------------
+    if (!_hasPendingTurret &&
+        keyPressedOnce(sf::Keyboard::E)) {
+        openPlacementInventory();
     }
 
-    if (wantPlace) {
-        place_turret(typeToPlace);
+    // ------------------------------------------------------------
+    // Pending turret: show range preview + confirm / cancel
+    // ------------------------------------------------------------
+    if (_hasPendingTurret) {
+        updateRangePreview();
+
+        bool confirm =
+            keyPressedOnce(sf::Keyboard::Enter) ||
+            keyPressedOnce(sf::Keyboard::Space);
+
+        bool cancel = keyPressedOnce(sf::Keyboard::Escape);
+
+        if (confirm) {
+            if (_rangeTileIsValid) {
+                place_turret(_pendingTurretType);
+                _hasPendingTurret = false;
+            }
+        }
+        else if (cancel) {
+            _hasPendingTurret = false;
+        }
     }
 
     // Run full TD sim (spawning, movement, turrets, bullets)
@@ -1504,8 +1638,7 @@ void TowerDefenceScene::update(const float& dt) {
     }
 
     // ============================================================
-    // 3) Detect when a *level* has just finished
-    //    (wave->waiting transition AND level index changed)
+    // 3) Wave-end / level-end detection + shop reroll + upgrades
     // ============================================================
     int currentLevel = _waveManager.getCurrentLevelIndex();
     bool nowWaiting = _waveManager.isWaitingForPlayer();
@@ -1517,9 +1650,9 @@ void TowerDefenceScene::update(const float& dt) {
             sh->rerollShop();
         }
 
-        // Level index changed -> we just finished a whole LEVEL
+        // Level index changed -> finished a whole LEVEL
         if (currentLevel != _lastLevelIndex) {
-            _upgradeChosenThisRun = false;   // new level, new upgrade
+            _upgradeChosenThisRun = false;
             generateUpgradeChoices();
         }
     }
@@ -1535,7 +1668,7 @@ void TowerDefenceScene::update(const float& dt) {
 
         std::string extra;
         if (_waveManager.isWaitingForPlayer()) {
-            extra = "  (Press E to start)";
+            extra = "  (Press F to start)";
         }
 
         _waveText.setString(
@@ -1549,9 +1682,6 @@ void TowerDefenceScene::update(const float& dt) {
         _waveText.setString("All waves complete");
     }
 }
-
-
-
 
 void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Background colour for TD scene
@@ -1568,12 +1698,40 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     for (const auto& b : _bullets)      b.render(window);
     for (const auto& enemy : _enemies)  window.draw(enemy.getShape());
 
-    // Scene label at top-left
+    // Range preview (drawn on top of path but under UI)
+    if (_hasPendingTurret) {
+        window.draw(_rangePreview);
+    }
+
+    // Scene label + basic UI
     window.draw(_label);
     window.draw(_waveText);
     window.draw(_moneyText);
+    window.draw(_controlsText);
 
-    // Upgrade choice overlay when level is beaten
+    // --------------------------------------------------------
+    // Turret placement inventory overlay
+    // --------------------------------------------------------
+    if (_choosingTurret && !_placementInvLines.empty()) {
+        sf::RectangleShape panel;
+        panel.setSize(sf::Vector2f(
+            static_cast<float>(param::game_width) - 120.f,
+            220.f
+        ));
+        panel.setFillColor(sf::Color(0, 0, 0, 190));
+        panel.setPosition(60.f, 150.f);
+        window.draw(panel);
+
+        window.draw(_placementHeading);
+
+        for (const auto& line : _placementInvLines) {
+            window.draw(line);
+        }
+    }
+
+    // --------------------------------------------------------
+    // Upgrade choice overlay when a level is beaten
+    // --------------------------------------------------------
     if (_showUpgradeChoices && !_upgradeChoices.empty()) {
         sf::RectangleShape panel;
         panel.setSize(sf::Vector2f(
@@ -1596,9 +1754,8 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
             window.draw(choice.text);
         }
     }
-
-
 }
+
 
 // ============================================================================
 // EndScene (simple game-over screen)

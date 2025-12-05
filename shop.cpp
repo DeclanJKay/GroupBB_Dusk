@@ -9,6 +9,7 @@
 
 Shop::Shop() = default;
 
+
 // Name helper for turrets
 std::string Shop::turretName(TurretType type) {
     switch (type) {
@@ -86,6 +87,29 @@ void Shop::regenerateItems() {
             item.box.getPosition().y + 8.f
         );
 
+        // Description text (one line, under the name)
+        item.descText.setFont(*_font);
+        item.descText.setCharacterSize(12);
+        item.descText.setFillColor(sf::Color(200, 200, 200));
+        item.descText.setString(turretDescription(t));
+
+        {
+            sf::Vector2f namePos = item.nameText.getPosition();
+            item.descText.setPosition(namePos.x, namePos.y + 20.f);
+        }
+
+        // Cost text
+        item.costText.setFont(*_font);
+        item.costText.setCharacterSize(14);
+        item.costText.setFillColor(sf::Color::Yellow);
+        item.costText.setString("Cost: " + std::to_string(stats.cost)
+
+
+        );
+
+        sf::Vector2f namePos = item.nameText.getPosition();
+        item.descText.setPosition(namePos.x, namePos.y + 20.f);
+
         // Cost text
         item.costText.setFont(*_font);
         item.costText.setCharacterSize(14);
@@ -148,6 +172,7 @@ void Shop::render(sf::RenderWindow& window) const {
         window.draw(item.box);
         window.draw(item.nameText);
         window.draw(item.costText);
+        window.draw(item.descText);
     }
 }
 
@@ -242,4 +267,23 @@ bool Shop::hasItemNear(const sf::Vector2f& playerPos) const
     }
 
     return false;
+}
+
+std::string Shop::turretDescription(TurretType t)
+{
+    switch (t) {
+    case TurretType::Basic:       return "Cheap all-round turret.";
+    case TurretType::SMG:         return "Fast firing, short range.";
+    case TurretType::Sniper:      return "Slow but high damage, long range.";
+    case TurretType::Bomb:        return "Fires shells that explode in an area.";
+    case TurretType::Fire:        return "Applies burning damage over time.";
+    case TurretType::Lightening:  return "Stuns nearby enemies.";
+    case TurretType::Freeze:      return "Greatly slows enemies.";
+    case TurretType::Buff:        return "Doesn't shoot; buffs nearby turrets.";
+    case TurretType::Scatter:     return "Shotgun cone of pellets.";
+    case TurretType::BananaFarm:  return "Generates extra money during waves.";
+    case TurretType::AOE:         return "Periodically blasts all nearby enemies.";
+    case TurretType::Slow:        return "Large slow exploding shells.";
+    default:                      return "Turret.";
+    }
 }

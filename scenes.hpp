@@ -148,7 +148,7 @@ private:
     sf::Text           _label;
     sf::Text           _waveText;
     sf::Text           _moneyText;
-
+    sf::Text           _controlsText;
 
     std::shared_ptr<Player> _player;
 
@@ -173,6 +173,8 @@ private:
     void update_turrets(float dt);
     void update_bullets(float dt);
     void place_turret(TurretType type);
+    void openPlacementInventory();
+    void updateRangePreview();
 
     enum class UpgradeType { TurretDamage, FireRate, TurretCost };
 
@@ -189,6 +191,18 @@ private:
 
     void generateUpgradeChoices();
     void applyUpgrade(UpgradeType type);
+
+    // turret placement inventory overlay 
+    bool _choosingTurret = false;                    // true while the turret inventory panel is open
+    std::vector<sf::Text>     _placementInvLines;    // "1) Basic", "2) Sniper", ...
+    std::vector<TurretType>   _placementInvTypes;    // index -> turret type
+    sf::Text                  _placementHeading;     // "Choose a turret to place"
+
+    // pending placement + range preview
+    bool         _hasPendingTurret = false;     // true after choosing a turret, before confirming
+    TurretType   _pendingTurretType = TurretType::Basic;
+    sf::CircleShape _rangePreview;                  // circle showing turret range
+    bool         _rangeTileIsValid = false;     // is the current tile valid for placement?
 
 };
 

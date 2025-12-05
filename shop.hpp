@@ -36,6 +36,7 @@ public:
     // Helper for displaying turret names in other places (inventory, etc.)
     static std::string turretName(TurretType type);
 
+    static std::string turretDescription(TurretType t);
 private:
     struct Item {
         bool           isHeal = false;              // true = heal box
@@ -45,8 +46,10 @@ private:
         sf::RectangleShape box;
         sf::Text       nameText;
         sf::Text       costText;
+        sf::Text       descText;
         bool           active = true;               // false once bought
     };
+
 
     const sf::Font* _font = nullptr;
     sf::Vector2f      _basePos{ 0.f, 0.f };
