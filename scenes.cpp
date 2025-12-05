@@ -655,8 +655,8 @@ void SafehouseScene::rerollShop() {
 
 void SafehouseScene::render(sf::RenderWindow& window) {
     window.draw(_background);
-    Scene::render(window); // player
 
+    // World stuff UNDER the player
     for (const auto& inv : _invaders) {
         window.draw(inv.shape);
     }
@@ -665,49 +665,84 @@ void SafehouseScene::render(sf::RenderWindow& window) {
         window.draw(b.shape);
     }
 
-    if (_attackEffectTimer > 0.f) {
-        window.draw(_attackArcShape);
-    }
-
-    bool tdIsActive = false;
-    if (Scenes::tower_defence) {
-        auto td = std::static_pointer_cast<TowerDefenceScene>(Scenes::tower_defence);
-        tdIsActive = !td->isWaitingForPlayer(); // wave currently running
-    }
-
-    // --- Shop UI ---
+    // Shop cards under the player as well
     if (_canUseShop) {
         _shop.render(window);
     }
 
-    // --- Inventory UI ---
-    if (_showInventory && Scenes::runContext) {
-        std::string invText = "Inventory:\n";
+    // Player ON TOP of shop + enemies
+    Scene::render(window);
 
-        int index = 1;
+    // Attack arc on top of player
+    if (_attackEffectTimer > 0.f) {
+        window.draw(_attackArcShape);
+    }
+
+    // --- Inventory overlay (new TD-style panel) ---
+    if (_showInventory && Scenes::runContext) {
+        // Panel background
+        sf::RectangleShape panel;
+        panel.setSize(sf::Vector2f(
+            static_cast<float>(param::game_width) - 120.f,
+            220.f
+        ));
+        panel.setFillColor(sf::Color(0, 0, 0, 190));
+        panel.setPosition(60.f, 150.f);
+        window.draw(panel);
+
+        // Heading text
+        sf::Text heading;
+        heading.setFont(_font);
+        heading.setCharacterSize(24);
+        heading.setFillColor(sf::Color::White);
+        heading.setString("Inventory (turrets you own):");
+        heading.setPosition(80.f, 160.f);
+        window.draw(heading);
+
+        // Turret list – same vibe as TD inventory
+        const float startY = 200.f;
+        const float lineSpacing = 28.f;
+        int index = 0;
+
         for (auto t : Scenes::runContext->turretInventory) {
-            invText += std::to_string(index) + ") "
-                + Shop::turretName(t) + "\n";
+            sf::Text line;
+            line.setFont(_font);
+            line.setCharacterSize(22);
+            line.setFillColor(sf::Color::White);
+
+            std::string label =
+                std::to_string(index + 1) + ") " + Shop::turretName(t);
+
+            line.setString(label);
+            line.setPosition(90.f, startY + index * lineSpacing);
+            window.draw(line);
+
             ++index;
         }
 
-        _inventoryText.setString(invText);
-        _inventoryText.setPosition(50.f, 150.f);
-        window.draw(_inventoryText);
+        if (index == 0) {
+            sf::Text empty;
+            empty.setFont(_font);
+            empty.setCharacterSize(22);
+            empty.setFillColor(sf::Color(200, 200, 200));
+            empty.setString("(No turrets owned yet)");
+            empty.setPosition(90.f, startY);
+            window.draw(empty);
+        }
     }
 
-    // --- Shop hint ("Press E to buy") ---
+    // Shop hint "Press E to buy"
     if (_showShopHint) {
         window.draw(_shopHintText);
     }
 
-
+    // Top-level UI
     window.draw(_label);
-    window.draw(_hpText);   // show HP of player 
+    window.draw(_hpText);
     window.draw(_waveText);
     window.draw(_moneyText);
-
 }
+
 
 // ============================================================================
 // TowerDefenceScene
@@ -1941,13 +1976,15 @@ void TowerDefenceScene::render(sf::RenderWindow& window) {
     // Draw the tile grid (walls, path, etc.)
     ls::render(window);
 
-    // Draw the player (from Scene base class)
-    Scene::render(window);
+
 
     // Draw turrets, bullets, and enemies
     for (const auto& turret : _turrets) turret.render(window);
     for (const auto& b : _bullets)      b.render(window);
     for (const auto& enemy : _enemies)  window.draw(enemy.getShape());
+
+    // Draw the player (from Scene base class)
+    Scene::render(window);
 
     // Range preview (drawn on top of path but under UI)
     if (_hasPendingTurret) {
