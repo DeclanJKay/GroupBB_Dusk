@@ -114,6 +114,9 @@ void Player::update(const float& dt) {
                 _health = _maxHealth;
             }
         }
+
+        ctx.playerStats.maxHealth = _maxHealth;
+        ctx.playerStats.currentHealth = _health;
     }
 
     sf::Vector2f dir{ 0.f, 0.f };

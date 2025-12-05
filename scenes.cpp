@@ -1603,10 +1603,18 @@ void TowerDefenceScene::applyUpgrade(UpgradeType type) {
         break;
 
     case UpgradeType::FreeShopItemPerLevel:
+    {
+        // Increase how many free shop items you earn each LEVEL
         ctx.freeShopItemsPerLevel += 1;
+
+        // Also grant 1 immediate free purchase so the upgrade feels impactful now
+        ctx.freeShopItemsPending += 1;
+
         std::cout << "Upgrade: free shop items per level -> "
-            << ctx.freeShopItemsPerLevel << "\n";
+            << ctx.freeShopItemsPerLevel
+            << " (free uses pending: " << ctx.freeShopItemsPending << ")\n";
         break;
+    }
 
     case UpgradeType::FreeTurretPerLevel:
         ctx.freeTurretsPerLevel += 1;
@@ -1857,10 +1865,6 @@ void TowerDefenceScene::update(const float& dt) {
     // Run full TD sim (spawning, movement, turrets, bullets)
     tick_simulation(dt);
 
-    if (Scenes::safehouse) {
-        auto sh = std::static_pointer_cast<SafehouseScene>(Scenes::safehouse);
-        sh->tick_simulation(dt);
-    }
 
     // ============================================================
     // 3) Wave-end / level-end detection + shop reroll + upgrades
@@ -2022,20 +2026,20 @@ void EndScene::load() {
 }
 
 void EndScene::update(const float& dt) {
-    // No entities to update, so just handle input
-    (void)dt; // silence unused warning if any
+    (void)dt;
 
-    // Press R to restart a fresh run
     if (sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
-        // Recreate the core scenes from scratch.
-        // we go straight back to Safehouse + TowerDefence.
+        // Reset all run data (gold, upgrades, inventory, etc.)
+        Scenes::runContext = std::make_shared<RunContext>();
+
+        // Fresh scenes for the new run
         Scenes::safehouse = std::make_shared<SafehouseScene>();
         Scenes::tower_defence = std::make_shared<TowerDefenceScene>();
 
-        // Jump back to the start of the run (Safehouse)
         GameSystem::set_active_scene(Scenes::safehouse);
     }
 }
+
 
 
 void EndScene::render(sf::RenderWindow& window) {

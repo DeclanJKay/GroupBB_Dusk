@@ -20,6 +20,7 @@ std::string Shop::turretName(TurretType type) {
     case TurretType::Fire:       return "Fire";
     case TurretType::Lightening: return "Lightning";
     case TurretType::Freeze:     return "Freeze";
+    case TurretType::Slow:       return "Slow";
     case TurretType::Buff:       return "Buff";
     case TurretType::Scatter:    return "Scatter";
     case TurretType::AOE:        return "AOE";

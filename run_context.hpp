@@ -7,15 +7,15 @@
 
 // Basic player stats that can be tweaked during the run
 struct PlayerStats {
-    int maxHealth = 3;
-    int currentHealth = 3;
+    int maxHealth = 5;
+    int currentHealth = 5;
     // later: movementSpeed, damage, reloadSpeed, etc.
 };
 
 // Global-ish context for the current run (wave, currency, player stats, etc.)
 struct RunContext {
     int  waveNumber = 1;   // current wave in the tower defence
-    int  currency = 0;   // money earned this run
+    int  currency = 5;   // money earned this run
     bool runOver = false;
     // Inventory of purchased turrets
 
