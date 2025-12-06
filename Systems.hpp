@@ -27,6 +27,7 @@ class EntityManager : public Registry
                 HandleEnemySafeMove(curEnt);
                 HandleEnemyShooting(curEnt, dt);
                 MoveAlongPath(curEnt, dt);
+                SpawnEnemies(curEnt, dt);
             }
             HandleCreationAndDestruction();
         }
@@ -298,5 +299,26 @@ class EntityManager : public Registry
             }
             dir /= dist;
             pos->pos += dir*(float)pathMove->moveSpd/100.f;
+        }
+    
+        void SpawnEnemies(Entity ent, const float& dt)
+        {
+            if (!has<WaveSpawner>(ent)){return;}
+
+            auto spawner = get<WaveSpawner>(ent);
+            
+            //count down timer for enemies to spawn
+            if (spawner->spawnTimer > 0) { spawner->spawnTimer -= dt; return; }
+
+            if (spawner->pointBudget > 0)
+            {
+                auto enemy = CreateEntity();
+                add<Position>(enemy, {spawner->path[0]});
+                add<Health>(enemy, {5, damageGroup::enemy});
+                add<TDPathMove>(enemy, {false, 300, 1, spawner->path});
+                add<CircleCollider>(enemy, {30});
+                add<RenderHitboxes>(enemy, {sf::Color::White}); 
+                spawner->spawnTimer = spawner->spawnInterval;
+            }
         }
     };

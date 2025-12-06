@@ -43,7 +43,13 @@ TowerDefence::TowerDefence()
     ls::set_color(ls::END, sf::Color(255, 80, 80));
 
     //sort path
-    Prefabs::CreateTDEnemy(&_entMan, SortPath(ls::load_level("res/levels/td_1.txt", 50)));
+    auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
+
+    //test enemy
+    Prefabs::CreateTDEnemy(&_entMan, sorted);
+
+    auto spawner = _entMan.CreateEntity();
+    _entMan.add<WaveSpawner>(spawner, WaveSpawner{0,0, 50, 1, 1, sorted});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)

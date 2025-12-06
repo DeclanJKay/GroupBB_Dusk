@@ -15,6 +15,24 @@ enum damageGroup //to specify who the bullet hits
     both
 };
 
+enum class EnemyTypes {
+    Basic,
+    Fast,
+    Tank,
+	shortRanged,
+	Exploder,
+    Medium,
+	RangedMelee,
+	FastExploder,
+	LongRange,
+	HeavyTank,
+	Boss1,
+	Boss2,
+	Boss3,
+	Boss4,
+	Boss5
+};
+
 struct Weapon
 {
     float fireRate = 0; //bullets per second
@@ -109,10 +127,26 @@ struct TDPathMove
     std::vector<sf::Vector2f> path;
 };
 
+struct EnemyType
+{
+    EnemyTypes type = EnemyTypes::Basic;
+    bool boss = false;
+};
+
+struct WaveSpawner
+{
+    int lvlIndex = 0;
+    int waveIndex = 0;
+    int pointBudget = 0;
+    float spawnInterval = 1;
+    float spawnTimer = 0;
+    std::vector<sf::Vector2f> path;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
-    TDPathMove
+    TDPathMove, EnemyType, WaveSpawner
 >;
