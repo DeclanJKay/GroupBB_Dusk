@@ -101,9 +101,18 @@ struct EnemyShootingLogic
     float moveTimer = 0;
 };
 
+struct TDPathMove
+{
+    bool reachedEnd = false;
+    int moveSpd;
+    int target = 1;
+    std::vector<sf::Vector2f> path;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
-    Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic
+    Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
+    TDPathMove
 >;

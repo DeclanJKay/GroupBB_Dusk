@@ -24,6 +24,17 @@ protected:
         std::vector<Entity> indexToEntity; //for comp removal
     };
 
+    template <typename Tuple>
+    struct StorageTupleConverter;
+
+    template <typename... Types>
+    struct StorageTupleConverter<std::tuple<Types...>> {
+        // This creates a new tuple type containing ComponentStorage for every type in the original tuple
+        using type = std::tuple<ComponentStorage<Types>...>;
+    };
+
+    typename StorageTupleConverter<AllComponents>::type m_allStorages;
+
     //sourced from https://stackoverflow.com/questions/18063451/get-index-of-a-tuple-elements-type
     template <class T, class Tuple>
     struct Index;
@@ -42,9 +53,11 @@ protected:
 
     template<typename C>
     ComponentStorage<C>& storage() {
-        // One instance per component type C
-        static ComponentStorage<C> s;
-        return s;
+        // get the index of c
+        constexpr size_t typeIndex = Index<C, AllComponents>::value;
+        
+        // Return the specific storage from the tuple
+        return std::get<typeIndex>(m_allStorages);
     }
 
     template<std::size_t... I>

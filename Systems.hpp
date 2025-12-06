@@ -26,6 +26,7 @@ class EntityManager : public Registry
                 HandleBulletColls(curEnt);
                 HandleEnemySafeMove(curEnt);
                 HandleEnemyShooting(curEnt, dt);
+                MoveAlongPath(curEnt, dt);
             }
             HandleCreationAndDestruction();
         }
@@ -277,5 +278,24 @@ class EntityManager : public Registry
                 shootLog->moveTimer = shootLog->moveDelay;
             }
             
+        }
+    
+        void MoveAlongPath(Entity ent, const float& dt)
+        {
+            if (!has<Position, TDPathMove>(ent)){return;}
+            auto pos = get<Position>(ent);
+            auto pathMove = get<TDPathMove>(ent);
+            if (pathMove->reachedEnd == true){Destroy(ent); return;}
+            if (pathMove->target == pathMove->path.size()){pathMove->reachedEnd=true; return;}
+            auto dir = pathMove->path[pathMove->target] - pos->pos;
+            auto dist = std::sqrt(dir.x * dir.x + dir.y * dir.y);
+            if (dist <= pathMove->moveSpd/100.f)
+            {
+                pos->pos = pathMove->path[pathMove->target];
+                pathMove->target++;
+                return;
+            }
+            dir /= dist;
+            pos->pos += dir*(float)pathMove->moveSpd/100.f;
         }
     };

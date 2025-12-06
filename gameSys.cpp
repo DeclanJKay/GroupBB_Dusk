@@ -8,52 +8,63 @@
 #include "gameSys.hpp"
 #include "gameParams.hpp"
 #include "Systems.hpp"
-#include "Scenes.hpp"
 #include "tile_level_loader/level_system.hpp"
+#include "Scenes.hpp"
 
 using ls = LevelSystem;
 
 enum Screen
 {
-    other,
-    ts  
+    safeHouse,
+    towerDefence 
 };
 
-SafeHouse sfScene;
+SafeHouse shScene;
+TowerDefence tdScene;
 
 Screen curScreen;
 
 void GameSys::init()
 {
-    sfScene = SafeHouse();
-    curScreen = ts;
-    ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));
-    ls::set_color(ls::WALL, sf::Color(60, 60, 80));
-    ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));
-    ls::set_color(ls::START, sf::Color(80, 255, 80));
-    ls::set_color(ls::END, sf::Color(255, 80, 80));
-    ls::get_height();
-    ls::get_width();
-    ls::load_level("res/levels/td_1.txt", 50);
+    shScene = SafeHouse();
+    tdScene = TowerDefence();
+    
+    curScreen = safeHouse;
 }
 
 void GameSys::update(const float &dt) 
 {
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
+    {
+        curScreen = towerDefence;
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
+    {
+        curScreen = safeHouse;
+    }
     switch (curScreen)
     {
-        case ts:
-            sfScene.Update(dt);
+        case towerDefence:
+            shScene.Update(dt, tdScene.GetTransfers());
+            tdScene.Update(dt);
+            break;
+        case safeHouse:
+            shScene.Update(dt, tdScene.GetTransfers());
+            tdScene.Update(dt);
             break;
     }
 }
 
 void GameSys::render(sf::RenderWindow &window) 
 {
-    ls::render(window);
     switch (curScreen)
     {
-        case ts:
-            sfScene.Draw(window);
+        case safeHouse:
+            shScene.Draw(window);
+            break;
+        case towerDefence:
+            ls::render(window);
+            tdScene.Draw(window);
             break;
     }
 }

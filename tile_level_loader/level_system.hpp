@@ -5,13 +5,14 @@
 #include <string>
 #include <vector>
 
+
 class LevelSystem {
 public:
     // Types of tiles we support in the level file
     enum Tile { EMPTY, START, END, WALL, ENEMY, WAYPOINT };
 
     // Load a level text file and build tiles/sprites
-    static void load_level(const std::string& path, float tile_size = 100.f);
+    static std::vector<sf::Vector2f> load_level(const std::string& path, float tile_size = 100.f);
 
     // Draw all level tiles
     static void render(sf::RenderWindow& window);

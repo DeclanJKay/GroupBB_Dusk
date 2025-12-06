@@ -16,6 +16,19 @@ class Scene
 
 class SafeHouse : public Scene
 {
+    private:
+        Entity player;
     public:
         SafeHouse();
+        void Update(const float&dt, std::vector<Entity> toSpawn);
+};
+
+class TowerDefence : public Scene
+{
+    std::vector<Entity> toTransfer;
+    public:
+        TowerDefence();
+        void Update(const float& dt) override;
+        std::vector<Entity> GetTransfers();
+        std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
 };
