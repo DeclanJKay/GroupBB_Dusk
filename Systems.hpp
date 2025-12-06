@@ -223,6 +223,7 @@ class EntityManager : public Registry
     
         void HandleEnemySafeMove(Entity ent)
         {
+            std::cout<<has<EnemySafeMove, Velocity, Position>(ent)<<"\n";
             if (!has<EnemySafeMove, WeaponArsenal, Velocity, Position>(ent)){return;}
             if (has<EnemyShootingLogic>(ent))
             {

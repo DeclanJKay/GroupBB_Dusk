@@ -20,14 +20,14 @@ struct Weapon
     float fireRate = 0; //bullets per second
     float fireDelay = 0;
     int bulletSpeed = 0;
-    int bulletSpread = 0; //degrees of offset
+    int bulletSpread = 0; //degrees total, not per side (e.g. 30 will get a 30 degree cone)
     int bulletsShot = 0;
-    int speedVariation = 0;
+    int speedVariation = 0; //random + or - to the velocity
     float bulletLifetime = 0;
     int damage = 0;
     int bulletRadius = 0;
-    int pierce = 0;
-    damageGroup dGroup = both;
+    int pierce = 0; //currenly doesn't do anything
+    damageGroup dGroup = both; //determines who gets hurt by the bullet
 };
 
 //can be added to entities
@@ -43,7 +43,8 @@ struct Velocity
 
 struct Health
 {
-    int hp = 3;
+    int maxHealth;
+    int hp;
     damageGroup dGroup;
 };
 
@@ -70,42 +71,41 @@ struct CircleCollider
 
 struct PlayerWeaponLogic
 {
-    
+    int maxWapons = 4;
 };
 
 struct Bullet
 {
     int damage = 1;
-    int pierce = 0;
-    damageGroup dGroup;
+    int pierce = 0; //doesn't do anything currently
+    damageGroup dGroup; //the damage group to hurt
     float lifeTime;
 };
 
 struct Friction
 {
-    float friction;
+    float friction = 20; //lower number means more floaty (20 friction seems to work well)
 };
 
 struct EnemySafeMove
 {
     Entity target;
-    bool walkAndShoot;
     int moveSpd;
-    std::vector<int> range;
+    std::vector<int> range; //range per weapon
 };
 
 struct EnemyShootingLogic
 {
     float moveDelay; //amount of time to stand still after a shot
     Entity target;
-    float moveTimer = 0;
+    float moveTimer = 0; //linked to moveDelay
 };
 
 struct TDPathMove
 {
     bool reachedEnd = false;
     int moveSpd;
-    int target = 1;
+    int target = 1; //this is the index of the first path position they will head towards
     std::vector<sf::Vector2f> path;
 };
 

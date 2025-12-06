@@ -21,15 +21,7 @@ SafeHouse::SafeHouse()
     player = Prefabs::CreatePlayer(&_entMan);
 
     //test enemy
-    auto enemy = _entMan.CreateEntity();
-    _entMan.add<RenderHitboxes>(enemy, RenderHitboxes{sf::Color::White});
-    _entMan.add<Position>(enemy, Position{sf::Vector2f(300, 100)});
-    _entMan.add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
-    _entMan.add<Friction>(enemy, Friction{20});
-    _entMan.add<CircleCollider>(enemy, CircleCollider{30});
-    _entMan.add<Health>(enemy, {10, damageGroup::enemy});
-    _entMan.add<EnemySafeMove>(enemy, EnemySafeMove{player, true, 50, {100, 400}});
-    _entMan.add<EnemyShootingLogic>(enemy, EnemyShootingLogic{0.5f, player});
+    Prefabs::CreateSHEnemy(&_entMan, &player);
 }
 
 void SafeHouse::Update(const float& dt, std::vector<Entity> toSpawn)
@@ -37,42 +29,7 @@ void SafeHouse::Update(const float& dt, std::vector<Entity> toSpawn)
     Scene::Update(dt);
     for (int i = 0; i < toSpawn.size(); i++)
     {
-        WeaponArsenal playerArsenal;
-
-        playerArsenal.weapons.push_back(Weapon{});
-        playerArsenal.weapons[0].bulletRadius = 10;
-        playerArsenal.weapons[0].bulletSpeed = 200;
-        playerArsenal.weapons[0].bulletsShot = 5;
-        playerArsenal.weapons[0].speedVariation = 100;
-        playerArsenal.weapons[0].bulletLifetime = 5;
-        playerArsenal.weapons[0].bulletSpread = 45;
-        playerArsenal.weapons[0].damage = 1;
-        playerArsenal.weapons[0].dGroup = damageGroup::enemy;
-        playerArsenal.weapons[0].fireRate = 2;
-        playerArsenal.weapons[0].pierce = 0;
-
-        playerArsenal.weapons.push_back(Weapon{});
-        playerArsenal.weapons[1].bulletRadius = 20;
-        playerArsenal.weapons[1].bulletSpeed = 5;
-        playerArsenal.weapons[1].bulletsShot = 1;
-        playerArsenal.weapons[1].bulletLifetime = 1;
-        playerArsenal.weapons[1].damage = 1;
-        playerArsenal.weapons[1].dGroup = damageGroup::enemy;
-        playerArsenal.weapons[1].fireRate = 10;
-        playerArsenal.weapons[1].pierce = 0;
-
-        auto enemy = _entMan.CreateEntity();
-        _entMan.add<RenderHitboxes>(enemy, RenderHitboxes{sf::Color::White});
-        _entMan.add<Position>(enemy, Position{sf::Vector2f(300, 100)});
-        _entMan.add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
-        _entMan.add<Friction>(enemy, Friction{20});
-        _entMan.add<CircleCollider>(enemy, CircleCollider{30});
-        _entMan.add<Health>(enemy, {10, damageGroup::enemy});
-        _entMan.add<EnemySafeMove>(enemy, EnemySafeMove{player, true, 50, {100, 400}});
-        playerArsenal.weapons[0].dGroup = damageGroup::friendly;
-        playerArsenal.weapons[1].dGroup = damageGroup::friendly;
-        _entMan.add<WeaponArsenal>(enemy, playerArsenal);
-        _entMan.add<EnemyShootingLogic>(enemy, EnemyShootingLogic{0.5f, player});
+        Prefabs::CreateSHEnemy(&_entMan, &player);
     }
 }
 
@@ -84,18 +41,9 @@ TowerDefence::TowerDefence()
     ls::set_color(ls::WAYPOINT, sf::Color(120, 120, 120));
     ls::set_color(ls::START, sf::Color(120, 120, 120));
     ls::set_color(ls::END, sf::Color(255, 80, 80));
-    ls::get_height();
-    ls::get_width();
 
     //sort path
-    auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
-
-    auto enemy = _entMan.CreateEntity();
-    _entMan.add<Position>(enemy, {sorted[0]});
-    _entMan.add<Health>(enemy, {5, damageGroup::enemy});
-    _entMan.add<TDPathMove>(enemy, {false, 300, 1, sorted});
-    _entMan.add<CircleCollider>(enemy, {30});
-    _entMan.add<RenderHitboxes>(enemy, {sf::Color::White});
+    Prefabs::CreateTDEnemy(&_entMan, SortPath(ls::load_level("res/levels/td_1.txt", 50)));
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)

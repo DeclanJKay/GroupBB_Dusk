@@ -26,9 +26,6 @@ Screen curScreen;
 
 void GameSys::init()
 {
-    shScene = SafeHouse();
-    tdScene = TowerDefence();
-    
     curScreen = safeHouse;
 }
 
