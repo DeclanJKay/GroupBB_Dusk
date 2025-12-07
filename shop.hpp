@@ -23,6 +23,9 @@ public:
     // Draw the shop UI (boxes + labels).
     void render(sf::RenderWindow& window) const;
 
+    // Recalculate the visible cost text based on run upgrades (free charges, discounts)
+    void refreshDisplayCosts(const RunContext& ctx);
+
     // Try to buy the item the player is standing on.
     // playerPos: world position of player
     // ctx: shared run context (money + inventory)
@@ -38,8 +41,7 @@ public:
 
     static std::string turretDescription(TurretType t);
 
-    // Recalculate the visible cost text based on run upgrades (free charges, discounts)
-    void refreshDisplayCosts(const RunContext& ctx);
+
 
 private:
     struct Item {
@@ -58,4 +60,5 @@ private:
     const sf::Font* _font = nullptr;
     sf::Vector2f      _basePos{ 0.f, 0.f };
     std::vector<Item> _items;
+
 };

@@ -9,6 +9,9 @@
 
 Shop::Shop() = default;
 
+// Forward declaration so we can use it in regenerateItems
+static void wrapText(sf::Text& text, float maxWidth);
+
 
 // Name helper for turrets
 std::string Shop::turretName(TurretType type) {
@@ -58,7 +61,10 @@ void Shop::regenerateItems() {
     std::mt19937 rng(rd());
     std::shuffle(all.begin(), all.end(), rng);
 
-    const float spacing = 150.f;
+    // Box for the items
+    const float boxWidth = 130.f;
+    const float boxHeight = 100.f;    
+    const float boxSpacing = 150.f;  
 
     // --- Turret items ---
     for (int i = 0; i < 3 && i < static_cast<int>(all.size()); ++i) {
@@ -72,61 +78,49 @@ void Shop::regenerateItems() {
         item.cost = stats.cost;
 
         // Box
-        item.box.setSize({ 120.f, 120.f });
+        item.box.setSize({ boxWidth, boxHeight });
         item.box.setFillColor(sf::Color(50, 50, 100));
         item.box.setOutlineThickness(2.f);
         item.box.setOutlineColor(sf::Color::White);
-        item.box.setPosition(_basePos.x + i * spacing, _basePos.y);
+        item.box.setPosition(_basePos.x + i * boxSpacing, _basePos.y);
 
         // Name text
         item.nameText.setFont(*_font);
-        item.nameText.setCharacterSize(16);
+        item.nameText.setCharacterSize(20); 
         item.nameText.setFillColor(sf::Color::White);
         item.nameText.setString(turretName(t));
         item.nameText.setPosition(
             item.box.getPosition().x + 8.f,
-            item.box.getPosition().y + 8.f
+            item.box.getPosition().y + 6.f
         );
 
-        // Description text (one line, under the name)
+        // Description text (wrapped to fit in box)
         item.descText.setFont(*_font);
-        item.descText.setCharacterSize(12);
+        item.descText.setCharacterSize(13);
         item.descText.setFillColor(sf::Color(200, 200, 200));
         item.descText.setString(turretDescription(t));
-
-        {
-            sf::Vector2f namePos = item.nameText.getPosition();
-            item.descText.setPosition(namePos.x, namePos.y + 20.f);
-        }
-
-        // Cost text
-        item.costText.setFont(*_font);
-        item.costText.setCharacterSize(14);
-        item.costText.setFillColor(sf::Color::Yellow);
-        item.costText.setString("Cost: " + std::to_string(stats.cost)
-
-
+        item.descText.setPosition(
+            item.box.getPosition().x + 8.f,
+            item.box.getPosition().y + 30.f
         );
+        wrapText(item.descText, boxWidth - 16.f); // leave 8px padding each side
 
-        sf::Vector2f namePos = item.nameText.getPosition();
-        item.descText.setPosition(namePos.x, namePos.y + 20.f);
-
-        // Cost text
+        // Cost text near the bottom of the box
         item.costText.setFont(*_font);
-        item.costText.setCharacterSize(14);
+        item.costText.setCharacterSize(15);
         item.costText.setFillColor(sf::Color::Yellow);
         item.costText.setString("Cost: " + std::to_string(stats.cost));
         item.costText.setPosition(
             item.box.getPosition().x + 8.f,
-            item.box.getPosition().y + 40.f
+            item.box.getPosition().y + boxHeight - 22.f
         );
 
         _items.push_back(item);
     }
 
     // --- Health item (extra slot on the right) ---
-    const int healAmount = 2;   // how much HP to restore per buy
-    const int healCost = 10;  // currency cost
+    const int healAmount = 2;
+    const int healCost = 10;
 
     Item healItem;
     healItem.isHeal = true;
@@ -134,83 +128,37 @@ void Shop::regenerateItems() {
     healItem.healAmount = healAmount;
     healItem.cost = healCost;
 
-    healItem.box.setSize({ 120.f, 120.f });
-    healItem.box.setFillColor(sf::Color(50, 100, 50)); // green-ish
+    healItem.box.setSize({ boxWidth, boxHeight });
+    healItem.box.setFillColor(sf::Color(50, 100, 50));
     healItem.box.setOutlineThickness(2.f);
     healItem.box.setOutlineColor(sf::Color::White);
 
-    // place after current items
     healItem.box.setPosition(
-        _basePos.x + static_cast<float>(_items.size()) * spacing,
+        _basePos.x + static_cast<float>(_items.size()) * boxSpacing,
         _basePos.y
     );
 
     healItem.nameText.setFont(*_font);
-    healItem.nameText.setCharacterSize(16);
+    healItem.nameText.setCharacterSize(20);
     healItem.nameText.setFillColor(sf::Color::White);
     healItem.nameText.setString("Heal +" + std::to_string(healAmount));
     healItem.nameText.setPosition(
         healItem.box.getPosition().x + 8.f,
-        healItem.box.getPosition().y + 8.f
+        healItem.box.getPosition().y + 6.f
     );
 
     healItem.costText.setFont(*_font);
-    healItem.costText.setCharacterSize(14);
+    healItem.costText.setCharacterSize(15);
     healItem.costText.setFillColor(sf::Color::Yellow);
     healItem.costText.setString("Cost: " + std::to_string(healCost));
     healItem.costText.setPosition(
         healItem.box.getPosition().x + 8.f,
-        healItem.box.getPosition().y + 40.f
+        healItem.box.getPosition().y + boxHeight - 22.f
     );
 
     _items.push_back(healItem);
 }
 
-void Shop::render(sf::RenderWindow& window) const {
-    for (const auto& item : _items) {
-        if (!item.active) continue;
-
-        window.draw(item.box);
-        window.draw(item.nameText);
-        window.draw(item.costText);
-        window.draw(item.descText);
-    }
-}
-
-void Shop::refreshDisplayCosts(const RunContext& ctx)
-{
-    if (!_font) return;
-
-    for (auto& slot : _items) {
-        if (!slot.active) {
-            // You don't draw inactive items anyway, so we can skip them.
-            continue;
-        }
-
-        // If we have at least one free charge, every active slot is effectively FREE.
-        if (ctx.freeShopItemsPending > 0) {
-            slot.costText.setFillColor(sf::Color::Green);
-            slot.costText.setString("Cost: FREE");
-            continue;
-        }
-
-        // Otherwise we show the real, effective cost
-        int effectiveCost = slot.cost;
-
-        // Turrets get discounted by turretCostMult
-        if (!slot.isHeal) {
-            float scaled = static_cast<float>(slot.cost) * ctx.turretCostMult;
-            effectiveCost = static_cast<int>(scaled + 0.5f); // round nicely
-
-            if (effectiveCost < 1 && slot.cost > 0) {
-                effectiveCost = 1;
-            }
-        }
-
-        slot.costText.setFillColor(sf::Color::Yellow);
-        slot.costText.setString("Cost: " + std::to_string(effectiveCost));
-    }
-}
 
 
 bool Shop::tryPurchaseAt(const sf::Vector2f& playerPos, RunContext& ctx, Player& player)
@@ -375,3 +323,121 @@ std::string Shop::turretDescription(TurretType t)
     default:                      return "Turret.";
     }
 }
+
+// Word-wrap for  text.
+// Simple word-wrap helper: wraps text to maxWidth in pixels
+static void wrapText(sf::Text& text, float maxWidth)
+{
+    const std::string original = text.getString();
+    std::string wrapped;
+    std::string line;
+    std::string word;
+
+    auto appendLine = [&](const std::string& l)
+        {
+            if (!wrapped.empty())
+                wrapped += '\n';
+            wrapped += l;
+        };
+
+    auto commitWord = [&]()
+        {
+            if (word.empty())
+                return;
+
+            // Try adding this word to the current line
+            std::string candidate = line;
+            if (!candidate.empty())
+                candidate += ' ';
+            candidate += word;
+
+            // Measure candidate width
+            text.setString(candidate);
+            if (text.getLocalBounds().width <= maxWidth || line.empty())
+            {
+                // Fits on this line (or this is the first word on the line)
+                line = candidate;
+            }
+            else
+            {
+                // Current line is full: push it and start a new line with this word
+                appendLine(line);
+                line = word;
+            }
+
+            word.clear();
+        };
+
+    for (char c : original)
+    {
+        if (c == ' ')
+        {
+            commitWord();
+        }
+        else if (c == '\n')
+        {
+            commitWord();
+            if (!line.empty())
+            {
+                appendLine(line);
+                line.clear();
+            }
+        }
+        else
+        {
+            word += c;
+        }
+    }
+
+    // Last word + last line
+    commitWord();
+    if (!line.empty())
+        appendLine(line);
+
+    text.setString(wrapped);
+}
+
+
+void Shop::refreshDisplayCosts(const RunContext& ctx)
+{
+    if (!_font) return;
+
+    for (auto& slot : _items) {
+        if (!slot.active) continue;
+
+        // If we have at least one free charge, every active slot is FREE
+        if (ctx.freeShopItemsPending > 0) {
+            slot.costText.setFillColor(sf::Color::Green);
+            slot.costText.setString("Cost: FREE");
+            continue;
+        }
+
+        int effectiveCost = slot.cost;
+
+        // Turrets get discounted by turretCostMult
+        if (!slot.isHeal) {
+            float scaled = static_cast<float>(slot.cost) * ctx.turretCostMult;
+            effectiveCost = static_cast<int>(scaled + 0.5f);
+
+            if (effectiveCost < 1 && slot.cost > 0) {
+                effectiveCost = 1;
+            }
+        }
+
+        slot.costText.setFillColor(sf::Color::Yellow);
+        slot.costText.setString("Cost: " + std::to_string(effectiveCost));
+    }
+}
+
+void Shop::render(sf::RenderWindow& window) const
+{
+    for (const auto& item : _items) {
+        if (!item.active) continue;
+
+        window.draw(item.box);
+        window.draw(item.nameText);
+        window.draw(item.descText);
+        window.draw(item.costText);
+    }
+}
+
