@@ -1,7 +1,7 @@
-#include "Prefabs.hpp"
+#include "EnemyStats.hpp"
 #include "Comps.hpp"
 
-const std::map<int, std::vector<EnemyTypes>> Prefabs::enemiesPerLevel[] = 
+const std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::enemiesPerLevel[] = 
 {
     //level 1
     {
