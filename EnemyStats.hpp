@@ -1,6 +1,9 @@
 #pragma once
-#include "Systems.hpp"
+
 #include <map>
+#include <unordered_map>
+#include "Comps.hpp"
+#include <SFML/Graphics.hpp>
 
 //struct with all the variables necessary to spawn an enemy
 struct EnemyStats
@@ -15,12 +18,19 @@ struct EnemyStats
 };
 
 //class for defining all stats for each enemy type
+//MAKE IT A SINGLETON?
 class EnemyStatsManager
 {
-    //enemy types per level, sorted and grouped by cost
-    const static std::map<int, std::vector<EnemyTypes>> enemiesPerLevel[]; 
+    //prevent construction
     EnemyStatsManager() = delete;
     ~EnemyStatsManager() = delete;
+
+    private:
+        const static std::unordered_map<EnemyTypes, int> EnemyToCost; 
+        const static std::vector<EnemyTypes> enemiesPerLevel[]; 
+
     public:
         static EnemyStats GetStats(EnemyTypes type);
+        static int GetCost(EnemyTypes type);
+        static std::map<int, std::vector<EnemyTypes>> GetLevelCostMap(int levelInd);
 };

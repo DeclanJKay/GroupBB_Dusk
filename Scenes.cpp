@@ -2,7 +2,6 @@
 #include "tile_level_loader/level_system.hpp"
 #include "Comps.hpp"
 #include <math.h>
-#include "Prefabs.hpp"
 
 using ls = LevelSystem;
 
@@ -20,16 +19,17 @@ SafeHouse::SafeHouse()
 {
     player = _entMan.CreatePlayer();
 
+    auto type = EnemyTypes::Basic;
     //test enemy
-    _entMan.CreateSHEnemy(&player);
+    _entMan.CreateSHEnemy(&player, &type);
 }
 
-void SafeHouse::Update(const float& dt, std::vector<Entity> toSpawn)
+void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
 {
     Scene::Update(dt);
     for (int i = 0; i < toSpawn.size(); i++)
     {
-        _entMan.CreateSHEnemy(&player);
+        _entMan.CreateSHEnemy(&player, &toSpawn[i]);
     }
 }
 
@@ -44,9 +44,6 @@ TowerDefence::TowerDefence()
 
     //sort path
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
-
-    //test enemy
-    _entMan.CreateTDEnemy(sorted);
 
     auto spawner = _entMan.CreateEntity();
     _entMan.add<WaveSpawner>(spawner, WaveSpawner{0,0, 50, 1, 1, sorted});
@@ -89,12 +86,12 @@ void TowerDefence::Update(const float& dt)
     {
         if (_entMan.get<TDPathMove>(ent)->reachedEnd)
         {
-            toTransfer.push_back(ent);
+            toTransfer.push_back(_entMan.get<EnemyType>(ent)->type);
         }
     }
 }
 
-std::vector<Entity> TowerDefence::GetTransfers()
+std::vector<EnemyTypes> TowerDefence::GetTransfers()
 {
     auto returnable = toTransfer;
     toTransfer.clear();

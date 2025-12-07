@@ -20,15 +20,15 @@ class SafeHouse : public Scene
         Entity player;
     public:
         SafeHouse();
-        void Update(const float&dt, std::vector<Entity> toSpawn);
+        void Update(const float&dt, std::vector<EnemyTypes> toSpawn);
 };
 
 class TowerDefence : public Scene
 {
-    std::vector<Entity> toTransfer;
+    std::vector<EnemyTypes> toTransfer;
     public:
         TowerDefence();
         void Update(const float& dt) override;
-        std::vector<Entity> GetTransfers();
+        std::vector<EnemyTypes> GetTransfers();
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
 };

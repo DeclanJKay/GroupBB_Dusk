@@ -6,47 +6,40 @@
 #include <iostream>
 #include <cmath>
 #include "gameParams.hpp"
+#include "EnemyStats.hpp"
 
 class EntityManager : public Registry
 {
     public:
-        void CreateSHEnemy(Entity* player)
+        void CreateSHEnemy(Entity* player, EnemyTypes* type)
         {
+            auto stats = EnemyStatsManager::GetStats(*type);
+
             auto enemy = CreateEntity();
-            add<RenderHitboxes>(enemy, RenderHitboxes{sf::Color::White});
+            add<RenderHitboxes>(enemy, RenderHitboxes{stats.col});
             add<Position>(enemy, Position{sf::Vector2f(300, 100)});
             add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
-            add<Friction>(enemy, Friction{20});
-            add<CircleCollider>(enemy, CircleCollider{30});
-            add<Health>(enemy, {3, 3, damageGroup::enemy});
-            add<EnemySafeMove>(enemy, EnemySafeMove{*player, 50, {200}});
-            add<EnemyShootingLogic>(enemy, EnemyShootingLogic{0.5f, *player});
-
-            WeaponArsenal enemyArs;
-            enemyArs.selected = 0;
-            enemyArs.weapons.push_back(Weapon{});
-            enemyArs.weapons[0].bulletRadius = 10;
-            enemyArs.weapons[0].bulletSpeed = 200;
-            enemyArs.weapons[0].bulletsShot = 1;
-            enemyArs.weapons[0].speedVariation = 100;
             enemyArs.weapons[0].bulletLifetime = 5;
-            enemyArs.weapons[0].bulletSpread = 10;
-            enemyArs.weapons[0].damage = 1;
-            enemyArs.weapons[0].dGroup = damageGroup::friendly;
-            enemyArs.weapons[0].fireRate = 2;
-            enemyArs.weapons[0].pierce = 0;
+            add<Friction>(enemy, Friction{(float)stats.friction});
+            add<CircleCollider>(enemy, CircleCollider{stats.radius});
+            add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
+            add<EnemySafeMove>(enemy, EnemySafeMove{*player, stats.speed, {200}});
+            add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player});
 
-            add<WeaponArsenal>(enemy, enemyArs);
+            add<WeaponArsenal>(enemy, stats.weapons);
         }
 
-        void CreateTDEnemy(std::vector<sf::Vector2f> sorted)
+        void CreateTDEnemy(std::vector<sf::Vector2f> sorted, EnemyTypes* type)
         {
+            auto stats = EnemyStatsManager::GetStats(*type);
+
             auto enemy = CreateEntity();
             add<Position>(enemy, {sorted[0]});
-            add<Health>(enemy, {5, damageGroup::enemy});
-            add<TDPathMove>(enemy, {false, 300, 1, sorted});
-            add<CircleCollider>(enemy, {30});
-            add<RenderHitboxes>(enemy, {sf::Color::White}); 
+            add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
+            add<TDPathMove>(enemy, {false, stats.speed, 1, sorted});
+            add<CircleCollider>(enemy, {stats.radius});
+            add<RenderHitboxes>(enemy, {stats.col}); 
+            add<EnemyType>(enemy, EnemyType{*type, false});
         }
 
         Entity CreatePlayer()
@@ -380,14 +373,12 @@ class EntityManager : public Registry
             //count down timer for enemies to spawn
             if (spawner->spawnTimer > 0) { spawner->spawnTimer -= dt; return; }
 
+            //if has budget, spawn enemy
             if (spawner->pointBudget > 0)
             {
-                auto enemy = CreateEntity();
-                add<Position>(enemy, {spawner->path[0]});
-                add<Health>(enemy, {5, damageGroup::enemy});
-                add<TDPathMove>(enemy, {false, 300, 1, spawner->path});
-                add<CircleCollider>(enemy, {30});
-                add<RenderHitboxes>(enemy, {sf::Color::White}); 
+                auto type = EnemyTypes::Basic;
+                auto stats = EnemyStatsManager::GetStats(type);
+                CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
             }
         }

@@ -33,7 +33,7 @@ add_executable(tile_engine
   gameSys.cpp
   MouseHelper.cpp
   Scenes.cpp
-  Prefabs.cpp
+  EnemyStats.cpp
 
   # headers optional (for VS visibility)
   Scenes.hpp
@@ -43,7 +43,7 @@ add_executable(tile_engine
   gameSys.hpp
   Reg.hpp
   Systems.hpp
-  Prefabs.hpp
+  EnemyStats.hpp
     )
 
 # Link SFML + our library
