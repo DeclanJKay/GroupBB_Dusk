@@ -10,6 +10,76 @@
 class EntityManager : public Registry
 {
     public:
+        void CreateSHEnemy(Entity* player)
+        {
+            auto enemy = CreateEntity();
+            add<RenderHitboxes>(enemy, RenderHitboxes{sf::Color::White});
+            add<Position>(enemy, Position{sf::Vector2f(300, 100)});
+            add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
+            add<Friction>(enemy, Friction{20});
+            add<CircleCollider>(enemy, CircleCollider{30});
+            add<Health>(enemy, {3, 3, damageGroup::enemy});
+            add<EnemySafeMove>(enemy, EnemySafeMove{*player, 50, {200}});
+            add<EnemyShootingLogic>(enemy, EnemyShootingLogic{0.5f, *player});
+
+            WeaponArsenal enemyArs;
+            enemyArs.selected = 0;
+            enemyArs.weapons.push_back(Weapon{});
+            enemyArs.weapons[0].bulletRadius = 10;
+            enemyArs.weapons[0].bulletSpeed = 200;
+            enemyArs.weapons[0].bulletsShot = 1;
+            enemyArs.weapons[0].speedVariation = 100;
+            enemyArs.weapons[0].bulletLifetime = 5;
+            enemyArs.weapons[0].bulletSpread = 10;
+            enemyArs.weapons[0].damage = 1;
+            enemyArs.weapons[0].dGroup = damageGroup::friendly;
+            enemyArs.weapons[0].fireRate = 2;
+            enemyArs.weapons[0].pierce = 0;
+
+            add<WeaponArsenal>(enemy, enemyArs);
+        }
+
+        void CreateTDEnemy(std::vector<sf::Vector2f> sorted)
+        {
+            auto enemy = CreateEntity();
+            add<Position>(enemy, {sorted[0]});
+            add<Health>(enemy, {5, damageGroup::enemy});
+            add<TDPathMove>(enemy, {false, 300, 1, sorted});
+            add<CircleCollider>(enemy, {30});
+            add<RenderHitboxes>(enemy, {sf::Color::White}); 
+        }
+
+        Entity CreatePlayer()
+        {
+        //add other components to the player
+            auto player = CreateEntity();
+            add<RenderHitboxes>(player, RenderHitboxes{sf::Color::White});
+            add<PlayerMovement>(player, PlayerMovement{100});
+            add<Position>(player, Position{sf::Vector2f(300,300)});
+            add<Velocity>(player, Velocity{sf::Vector2f(0,0)});
+            add<Friction>(player, Friction{20});
+            add<Health>(player, {3, 3, friendly});
+            add<CircleCollider>(player, CircleCollider{30});
+
+            WeaponArsenal playerArs;
+
+            playerArs.weapons.push_back(Weapon{});
+            playerArs.weapons[0].bulletRadius = 10;
+            playerArs.weapons[0].bulletSpeed = 200;
+            playerArs.weapons[0].bulletsShot = 5;
+            playerArs.weapons[0].speedVariation = 100;
+            playerArs.weapons[0].bulletLifetime = 5;
+            playerArs.weapons[0].bulletSpread = 45;
+            playerArs.weapons[0].damage = 1;
+            playerArs.weapons[0].dGroup = damageGroup::enemy;
+            playerArs.weapons[0].fireRate = 2;
+            playerArs.weapons[0].pierce = 0;
+            add<WeaponArsenal>(player, playerArs);
+            add<PlayerWeaponLogic>(player,{4});
+
+            return player;
+        }
+
         void Update(const float &dt)
         {
             for (auto ent : entToBit)

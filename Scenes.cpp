@@ -18,10 +18,10 @@ void Scene::Draw(sf::RenderWindow& window)
 
 SafeHouse::SafeHouse()
 {
-    player = Prefabs::CreatePlayer(&_entMan);
+    player = _entMan.CreatePlayer();
 
     //test enemy
-    Prefabs::CreateSHEnemy(&_entMan, &player);
+    _entMan.CreateSHEnemy(&player);
 }
 
 void SafeHouse::Update(const float& dt, std::vector<Entity> toSpawn)
@@ -29,7 +29,7 @@ void SafeHouse::Update(const float& dt, std::vector<Entity> toSpawn)
     Scene::Update(dt);
     for (int i = 0; i < toSpawn.size(); i++)
     {
-        Prefabs::CreateSHEnemy(&_entMan, &player);
+        _entMan.CreateSHEnemy(&player);
     }
 }
 
@@ -46,7 +46,7 @@ TowerDefence::TowerDefence()
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
 
     //test enemy
-    Prefabs::CreateTDEnemy(&_entMan, sorted);
+    _entMan.CreateTDEnemy(sorted);
 
     auto spawner = _entMan.CreateEntity();
     _entMan.add<WaveSpawner>(spawner, WaveSpawner{0,0, 50, 1, 1, sorted});
