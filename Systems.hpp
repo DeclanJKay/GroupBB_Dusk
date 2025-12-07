@@ -19,7 +19,6 @@ class EntityManager : public Registry
             add<RenderHitboxes>(enemy, RenderHitboxes{stats.col});
             add<Position>(enemy, Position{sf::Vector2f(300, 100)});
             add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
-            enemyArs.weapons[0].bulletLifetime = 5;
             add<Friction>(enemy, Friction{(float)stats.friction});
             add<CircleCollider>(enemy, CircleCollider{stats.radius});
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
