@@ -79,7 +79,7 @@ sf::Vector2f LevelSystem::get_tile_position(sf::Vector2i p) {
 // Throws if the coordinates are out of range.
 LevelSystem::Tile LevelSystem::get_tile(sf::Vector2i p) {
     if (p.x < 0 || p.y < 0 || p.x >= _width || p.y >= _height) {
-        throw std::string("Tile out of range: ") + std::to_string(p.x) + "," + std::to_string(p.y);
+        return Tile::OUT_OF_RANGE;
     }
     return _tiles[(p.y * _width) + p.x];
 }
@@ -88,7 +88,7 @@ LevelSystem::Tile LevelSystem::get_tile(sf::Vector2i p) {
 // This does a simple floor(v / tile_size) to map back into grid space.
 LevelSystem::Tile LevelSystem::get_tile_at(sf::Vector2f v) {
     const sf::Vector2f a = v - _offset;
-    if (a.x < 0 || a.y < 0) throw std::string("Tile out of range");
+    //if (a.x < 0 || a.y < 0) throw std::string("Tile out of range");
     const sf::Vector2i grid = sf::Vector2i(a / _tile_size);
     return get_tile(grid);
 }

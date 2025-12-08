@@ -9,7 +9,7 @@
 class LevelSystem {
 public:
     // Types of tiles we support in the level file
-    enum Tile { EMPTY, START, END, WALL, ENEMY, WAYPOINT };
+    enum Tile { EMPTY, START, END, WALL, ENEMY, WAYPOINT, OUT_OF_RANGE };
 
     // Load a level text file and build tiles/sprites
     static std::vector<sf::Vector2f> load_level(const std::string& path, float tile_size = 100.f);

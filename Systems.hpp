@@ -7,17 +7,40 @@
 #include <cmath>
 #include "gameParams.hpp"
 #include "EnemyStats.hpp"
+#include "tile_level_loader/level_system.hpp"
+
+using ls = LevelSystem;
 
 class EntityManager : public Registry
 {
     public:
+        void CreateTurret(sf::Vector2i pos) //prefab for turret
+        {
+            auto testTur = CreateEntity();
+            add<Position>(testTur, {(sf::Vector2f)pos});
+            add<CircleCollider>(testTur, {20});
+            add<RenderHitboxes>(testTur, {sf::Color::Cyan});
+            add<TurretWeaponLogic>(testTur, {300});
+
+            WeaponArsenal weaponArs;
+            weaponArs.weapons.push_back(Weapon{});
+            weaponArs.weapons[0].bulletLifetime = 5;
+            weaponArs.weapons[0].bulletRadius = 10;
+            weaponArs.weapons[0].bulletSpeed = 200;
+            weaponArs.weapons[0].bulletsShot = 1;
+            weaponArs.weapons[0].damage = 1;
+            weaponArs.weapons[0].dGroup = damageGroup::enemy;
+            weaponArs.weapons[0].fireRate = 1;
+            add<WeaponArsenal>(testTur, weaponArs);
+        }
+
         void CreateSHEnemy(Entity* player, EnemyTypes* type) //prefab for sh enemy 
         {
             auto stats = EnemyStatsManager::GetStats(*type);
 
             auto enemy = CreateEntity();
             add<RenderHitboxes>(enemy, RenderHitboxes{stats.col});
-            add<Position>(enemy, Position{sf::Vector2f(300, 100)});
+            add<Position>(enemy, Position{sf::Vector2f(300, 100)}); //door location (todo: add multiple spawnpoint?)
             add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
             add<Friction>(enemy, Friction{(float)stats.friction});
             add<CircleCollider>(enemy, CircleCollider{stats.radius});
@@ -98,6 +121,8 @@ class EntityManager : public Registry
                 MoveAlongPath(curEnt, dt);
                 SpawnEnemies(curEnt, dt);
                 HandleTurretShooting(curEnt, dt);
+                HandleTurretCreation(curEnt);
+                HandleTurretDestruction(curEnt);
             }
             HandleCreationAndDestruction();
         }
@@ -408,7 +433,7 @@ class EntityManager : public Registry
             
             if (spawner->lvlIndex >= spawner->maxLvl){return;} //prevent going over max lvl
             if (!spawner->canStart){return;}
-            std::cout<<"Press space to start new wave\n";
+            //std::cout<<"Press space to start new wave\n";
             if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Space)){return;} //start new wave when space pressed
             spawner->lvlIndex++;
             spawner->pointBudget = spawner->iniPointBudget + spawner->pointIncrease*spawner->lvlIndex;
@@ -437,7 +462,8 @@ class EntityManager : public Registry
                 if (magnitude > get<TurretWeaponLogic>(ent)->range) {continue;}
                 inRange.push_back(enemy);
             }
-
+            if (inRange.size() == 0) {return; }
+            
             Entity target = inRange.front();
             int maxProgress = get<TDPathMove>(target)->target;
             for (int i = 1; i < inRange.size(); i++)
@@ -449,6 +475,42 @@ class EntityManager : public Registry
             }
             
             Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos);
+        }
+
+        void HandleTurretCreation(Entity ent)
+        {
+            //todo: store a variable for the grid size and replace all the hardcoded values
+            if (!has<TurretHandler>(ent)){return;}
+            if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {return;}
+            sf::Vector2i placePos = MouseHelper::GetMousePos()/50*50 + sf::Vector2i(25,25);
+            if (ls::get_tile_at((sf::Vector2f)placePos) != ls::EMPTY) {return;}
+            auto turrets = getAllEnt<TurretWeaponLogic>();
+            for (auto tur : turrets)
+            {
+                if (!has<Position>(tur)){return;}//failsafe
+                if ((sf::Vector2i)get<Position>(tur)->pos == placePos)
+                {
+                    return;
+                }
+            }
+            CreateTurret(placePos);
+        }
+
+        void HandleTurretDestruction(Entity ent)
+        {
+            if (!has<TurretHandler>(ent)){return;}
+            if (!sf::Mouse::isButtonPressed(sf::Mouse::Right)){return;}
+
+            sf::Vector2i selPos = MouseHelper::GetMousePos()/50*50 + sf::Vector2i(25,25);
+            auto allTurs = getAllEnt<TurretWeaponLogic>();
+            for (auto tur : allTurs)
+            {
+                if (!has<Position>(tur)){continue;} //failsafe
+                auto pos = (sf::Vector2i)get<Position>(tur)->pos;
+                if (selPos != pos){continue;}
+                Destroy(tur);
+                return;
+            }
         }
 
         //helper for spawner logic

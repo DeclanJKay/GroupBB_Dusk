@@ -60,6 +60,7 @@ protected:
         return std::get<typeIndex>(m_allStorages);
     }
 
+    
     template<std::size_t... I>
     void destroyComps(Entity e, std::index_sequence<I...>)
     {

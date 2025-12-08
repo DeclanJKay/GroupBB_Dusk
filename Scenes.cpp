@@ -49,6 +49,7 @@ TowerDefence::TowerDefence()
 
     //sort path
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
+    sorted[0].x -= 50; 
 
     auto spawner = _entMan.CreateEntity();
     WaveSpawner spawnDef;
@@ -62,33 +63,19 @@ TowerDefence::TowerDefence()
     spawnDef.waveIndex = 0; //im not really sure what this is even for
     _entMan.add<WaveSpawner>(spawner, spawnDef);
 
-    auto testTur = _entMan.CreateEntity();
-    _entMan.add<Position>(testTur, {{300,300}});
-    _entMan.add<CircleCollider>(testTur, {20});
-    _entMan.add<RenderHitboxes>(testTur, {sf::Color::Cyan});
-    _entMan.add<TurretWeaponLogic>(testTur, {300});
-
-    WeaponArsenal weaponArs;
-    weaponArs.weapons.push_back(Weapon{});
-    weaponArs.weapons[0].bulletLifetime = 5;
-    weaponArs.weapons[0].bulletRadius = 10;
-    weaponArs.weapons[0].bulletSpeed = 200;
-    weaponArs.weapons[0].bulletsShot = 1;
-    weaponArs.weapons[0].damage = 1;
-    weaponArs.weapons[0].dGroup = damageGroup::enemy;
-    weaponArs.weapons[0].fireRate = 1;
-    _entMan.add<WeaponArsenal>(testTur, weaponArs);
+    auto turHandle = _entMan.CreateEntity();
+    _entMan.add<TurretHandler>(turHandle, {});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)
 {
     std::vector<sf::Vector2f> sorted;
+    sorted.push_back(ls::get_start_position() + sf::Vector2f(25,25));
     int ogSize = path.size();
-    for (int i = 0; i < ogSize; i++)
+    for (int i = 1; i < ogSize; i++)
     {
         sf::Vector2f prevTile;
-        if (i == 0) {prevTile = ls::get_start_position() + sf::Vector2f(25,25); }
-        else { prevTile = sorted.back(); }
+        prevTile = sorted.back();
 
         int toRemove = -1;
         for (int x = 0; x < path.size(); x++)
