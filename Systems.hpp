@@ -361,6 +361,7 @@ class EntityManager : public Registry
     
         void HandleEnemyShooting(Entity ent, const float& dt)
         {
+            //todo: implement some sort of logic for switching weapons?
             if (!has<Position, EnemyShootingLogic, WeaponArsenal>(ent)){return;}
             auto shootLog = get<EnemyShootingLogic>(ent);
             if (shootLog->moveTimer > 0) {shootLog->moveTimer -= dt;}
@@ -506,6 +507,7 @@ class EntityManager : public Registry
             if (!sf::Mouse::isButtonPressed(sf::Mouse::Right)){return;}
 
             sf::Vector2i selPos = MouseHelper::GetMousePos()/50*50 + sf::Vector2i(25,25);
+            //todo: this wont work for any turrets that dont have shooting logic (e.g. legally distinct banana farms)
             auto allTurs = getAllEnt<TurretWeaponLogic>();
             for (auto tur : allTurs)
             {
