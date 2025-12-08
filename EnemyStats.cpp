@@ -251,3 +251,13 @@ std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int le
     }
     return returnable;
 }
+
+std::vector<int> EnemyStatsManager::GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap)
+{
+    std::vector<int> IndexToKey;
+    for (auto pair : *costMap)
+    {
+        IndexToKey.push_back(pair.first);
+    }
+    return IndexToKey;
+}

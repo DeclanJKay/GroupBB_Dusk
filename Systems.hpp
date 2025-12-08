@@ -22,7 +22,7 @@ class EntityManager : public Registry
             add<Friction>(enemy, Friction{(float)stats.friction});
             add<CircleCollider>(enemy, CircleCollider{stats.radius});
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
-            add<EnemySafeMove>(enemy, EnemySafeMove{*player, stats.speed, {200}});
+            add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed*0.3f), {200}});
             add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player});
 
             add<WeaponArsenal>(enemy, stats.weapons);
@@ -374,10 +374,47 @@ class EntityManager : public Registry
             //if has budget, spawn enemy
             if (spawner->pointBudget > 0)
             {
-                auto type = EnemyTypes::Basic;
-                auto stats = EnemyStatsManager::GetStats(type);
-                CreateTDEnemy(spawner->path, &type);
+                auto costMap = EnemyStatsManager::GetLevelCostMap(spawner->lvlIndex);
+
+                //todo: realistically these 2 variables should be stored and only recalculated when the lvl increases
+                //but it will do for now
+                auto costInd = GetWeightedIndex(costMap.size(), costMap.size()/2+spawner->lvlIndex, 4);
+                auto cost = EnemyStatsManager::GetSortedKeys(&costMap)[costInd];
+                auto enemiesAtCost = costMap.at(cost);
+
+                auto type = enemiesAtCost[rand()%enemiesAtCost.size()];
+
+                //auto stats = EnemyStatsManager::GetStats(type);
+                //CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
+                spawner->pointBudget -= cost;
             }
         }
+
+         int GetWeightedIndex(int size, float focalPoint, float spread)
+         {
+            std::vector<float> weights;
+            for (int i = 0; i < size; i++)
+            {
+                //gaussian function
+                float weight = (float)std::exp(-std::pow(i - focalPoint, 2) / (2 * std::pow(spread, 2)));
+
+                float prev = 0;
+                if (i > 0) {prev = weights[i-1];}
+                weights.push_back((float)weight + prev);
+            }
+
+            float rolled = (float)(rand()) / ((float)(RAND_MAX/weights.back()));
+
+            //todo: this can be found faster by splitting in half
+            for (int i = 0; i < weights.size(); i++)
+            {
+                if (rolled < weights[i])
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+         }
     };

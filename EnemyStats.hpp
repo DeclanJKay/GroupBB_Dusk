@@ -26,11 +26,12 @@ class EnemyStatsManager
     ~EnemyStatsManager() = delete;
 
     private:
-        const static std::unordered_map<EnemyTypes, int> EnemyToCost; 
+        const static std::unordered_map<EnemyTypes, int> EnemyToCost;
         const static std::vector<EnemyTypes> enemiesPerLevel[]; 
 
     public:
         static EnemyStats GetStats(EnemyTypes type);
         static int GetCost(EnemyTypes type);
         static std::map<int, std::vector<EnemyTypes>> GetLevelCostMap(int levelInd);
+        static std::vector<int> GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap);
 };
