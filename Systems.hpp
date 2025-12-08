@@ -175,6 +175,7 @@ class EntityManager : public Registry
 
         void HandlePlayerMovement(Entity ent)
         {
+            if(CheckIfPlayerRestrict()){return;}
             if (has<PlayerMovement, Velocity, Position>(ent))
             {
                 //clamp movement to screen
@@ -207,6 +208,7 @@ class EntityManager : public Registry
     
         void HandlePlayerWeapons(Entity ent)
         {
+            if(CheckIfPlayerRestrict()){return;}
             if (has<PlayerWeaponLogic, WeaponArsenal, Position>(ent))
             {
                 auto arsenal = get<WeaponArsenal>(ent);
@@ -479,6 +481,7 @@ class EntityManager : public Registry
 
         void HandleTurretCreation(Entity ent)
         {
+            if(CheckIfPlayerRestrict()){return;}
             //todo: store a variable for the grid size and replace all the hardcoded values
             if (!has<TurretHandler>(ent)){return;}
             if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {return;}
@@ -498,6 +501,7 @@ class EntityManager : public Registry
 
         void HandleTurretDestruction(Entity ent)
         {
+            if(CheckIfPlayerRestrict()){return;}
             if (!has<TurretHandler>(ent)){return;}
             if (!sf::Mouse::isButtonPressed(sf::Mouse::Right)){return;}
 
@@ -514,7 +518,7 @@ class EntityManager : public Registry
         }
 
         //helper for spawner logic
-         int GetWeightedIndex(int size, float focalPoint, float spread)
+        int GetWeightedIndex(int size, float focalPoint, float spread)
          {
             std::vector<float> weights;
             for (int i = 0; i < size; i++)
@@ -540,4 +544,14 @@ class EntityManager : public Registry
 
             return -1;
          }
+    
+        bool CheckIfPlayerRestrict()
+        {
+            auto allRestricts = getAllEnt<RestrictPlayerInput>();
+            if (allRestricts.size() > 0)
+            {
+                return get<RestrictPlayerInput>(allRestricts[0])->restrict;
+            }
+            return false;
+        } 
     };

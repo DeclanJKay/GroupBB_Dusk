@@ -15,13 +15,17 @@ void Scene::Draw(sf::RenderWindow& window)
     _entMan.Draw(window);
 }
 
-SafeHouse::SafeHouse()
+SafeHouse::SafeHouse(bool playerRestrict)
 {
     player = _entMan.CreatePlayer();
 
     auto type = EnemyTypes::Basic;
     //test enemy
     _entMan.CreateSHEnemy(&player, &type);
+
+    //player restriction
+    RestrictPlayerEnt = _entMan.CreateEntity();
+    _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
 }
 
 void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
@@ -38,8 +42,16 @@ bool SafeHouse::NoEnemies()
     return _entMan.getAllEnt<EnemyType>().size() == 0;
 }
 
+bool SafeHouse::SetRestrictPlayer(bool b)
+{
+    if (!_entMan.Exists(RestrictPlayerEnt)) {return false;}
+    _entMan.get<RestrictPlayerInput>(RestrictPlayerEnt)->restrict = b;
+    return true;
+}
+
+
 //TOWER DEFENCE
-TowerDefence::TowerDefence()
+TowerDefence::TowerDefence(bool playerRestrict)
 {
     ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));
     ls::set_color(ls::WALL, sf::Color(60, 60, 80));
@@ -65,6 +77,10 @@ TowerDefence::TowerDefence()
 
     auto turHandle = _entMan.CreateEntity();
     _entMan.add<TurretHandler>(turHandle, {});
+
+    //player restriction
+    RestrictPlayerEnt = _entMan.CreateEntity();
+    _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)
@@ -116,6 +132,13 @@ void TowerDefence::Update(const float& dt, bool allEnemiesDead)
     {
         _entMan.get<WaveSpawner>(spawner)->canStart = true;
     }
+}
+
+bool TowerDefence::SetRestrictPlayer(bool b)
+{
+    if (!_entMan.Exists(RestrictPlayerEnt)) {return false;}
+    _entMan.get<RestrictPlayerInput>(RestrictPlayerEnt)->restrict = b;
+    return true;
 }
 
 std::vector<EnemyTypes> TowerDefence::GetTransfers()

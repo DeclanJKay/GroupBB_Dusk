@@ -158,10 +158,16 @@ struct TurretHandler //for spawning turrets (SHOULD ONLY BE ONE ENTITY WITH THIS
     
 };
 
+struct RestrictPlayerInput
+{
+    bool restrict = false;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
-    TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler
+    TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput
+    
 >;

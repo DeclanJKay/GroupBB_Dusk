@@ -10,14 +10,9 @@
 #include "Systems.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "Scenes.hpp"
+#include "KeyboardHelper.hpp"
 
 using ls = LevelSystem;
-
-enum Screen
-{
-    safeHouse,
-    towerDefence 
-};
 
 SafeHouse shScene;
 TowerDefence tdScene;
@@ -27,27 +22,18 @@ Screen curScreen;
 void GameSys::init()
 {
     curScreen = safeHouse;
+    SwitchPlayerRestrict(curScreen);
 }
 
 void GameSys::update(const float &dt) 
 {
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num1))
-    {
-        curScreen = towerDefence;
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Num2))
-    {
-        curScreen = safeHouse;
-    }
     switch (curScreen)
     {
-        case towerDefence:
-            shScene.Update(dt, tdScene.GetTransfers());
-            tdScene.Update(dt, shScene.NoEnemies());
-            break;
+        case towerDefence: //implementation for 'case towerDefence || safeHouse:'
         case safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());
             tdScene.Update(dt, shScene.NoEnemies());
+            ToggleGameScreen();
             break;
     }
 }
@@ -69,4 +55,31 @@ void GameSys::render(sf::RenderWindow &window)
 void GameSys::clean()
 {
 	
+}
+
+void GameSys::ToggleGameScreen()
+{
+    if (KeyboardHelper::KeyPressed(sf::Keyboard::Tab))
+    {
+        if (curScreen == safeHouse)
+            curScreen = towerDefence;
+        else
+            curScreen = safeHouse;
+        SwitchPlayerRestrict(curScreen);
+    }
+}
+
+void GameSys::SwitchPlayerRestrict(Screen scrn)
+{
+    switch (scrn)
+    {
+        case Screen::safeHouse:
+            if (!shScene.SetRestrictPlayer(false)){ shScene = SafeHouse(false); }
+            if(!tdScene.SetRestrictPlayer(true)){ tdScene = TowerDefence(true); }
+            break;
+        case Screen::towerDefence:
+            if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(true); }
+            if(!tdScene.SetRestrictPlayer(false)){ tdScene = TowerDefence(false); }
+            break;
+    }
 }

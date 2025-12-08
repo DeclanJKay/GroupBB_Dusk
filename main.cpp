@@ -7,6 +7,7 @@
 #include "gameParams.hpp"
 #include <tuple>
 #include "MouseHelper.hpp"
+#include "KeyboardHelper.hpp"
 
 int test;
 
@@ -28,6 +29,7 @@ int main () {
       	sf::Event event;
       	while (window.pollEvent(event))
 	  	{
+			KeyboardHelper::AssembleKeysPressed(&event);
       		if (event.type == sf::Event::Closed)
 			{
         		window.close();
@@ -41,6 +43,8 @@ int main () {
 		GameSys::update(dt);
 		GameSys::render(window);
 		window.display();
+
+		KeyboardHelper::ClearKeys();
 	}
 
 	//Unload and shutdown

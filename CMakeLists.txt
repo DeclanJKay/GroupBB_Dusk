@@ -32,12 +32,14 @@ add_executable(tile_engine
   main.cpp
   gameSys.cpp
   MouseHelper.cpp
+  KeyboardHelper.cpp
   Scenes.cpp
   EnemyStats.cpp
 
   # headers optional (for VS visibility)
   Scenes.hpp
   MouseHelper.hpp
+  KeyboardHelper.hpp
   Comps.hpp
   gameParams.hpp
   gameSys.hpp
