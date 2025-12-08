@@ -4,6 +4,7 @@
 #include <vector>
 #include <bitset>
 #include <tuple>
+#include <unordered_set>
 
 #include "Comps.hpp"
 
@@ -14,7 +15,7 @@ protected:
     static const size_t maxComp = std::tuple_size_v<AllComponents>;
     std::unordered_map<Entity, std::bitset<maxComp>> entToBit; //mapping entities to what comps they have
     std::vector<Entity> removedEnt; //cached free id spots for createentity()
-    std::vector<Entity> toRemove; //to prevent errors with altering container size while looping through it
+    std::unordered_set<Entity> toRemove; //to prevent errors with altering container size while looping through it
     std::unordered_map<Entity, std::bitset<maxComp>> toAdd; //^same logic as above 
 
     template<typename C>
@@ -182,7 +183,7 @@ public:
 
     void Destroy(Entity e)
     {
-        toRemove.push_back(e);
+        toRemove.insert(e);
     }
 
     bool Exists(Entity e)

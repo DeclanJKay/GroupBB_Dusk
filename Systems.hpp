@@ -298,10 +298,12 @@ class EntityManager : public Registry
             {
                 if (!has<CircleCollider, Position>(curBul)){continue;}
                 auto bul = get<Bullet>(curBul);
+                if (bul->pierce < 0) {return;} 
                 if (bul->dGroup != eHP->dGroup){continue;}
                 auto dist = ePos->pos - get<Position>(curBul)->pos;
                 if (std::sqrt(dist.x * dist.x + dist.y * dist.y) > (eCol->radius + get<CircleCollider>(curBul)->radius)){continue;;}
                 eHP->hp -= bul->damage;
+                bul->pierce--; //this is to prevent bullets hitting multiple enemies when grouped up
                 Destroy(curBul);
                 
             }

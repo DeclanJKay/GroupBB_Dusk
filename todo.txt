@@ -15,6 +15,3 @@ Bonus:
 
 Bugs:
 - Movement is currently framerate independant. Either fix it, or just force lock the game to 60fps.
-- Sometime a bullet gets improperly deleted and crashes the game. From my experiecnce it seems pretty 
-  rare, and I haven't figured out a way to replicate it consistantly. Probably will have to leave 
-  this in, but comment on it for report?
