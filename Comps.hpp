@@ -35,6 +35,7 @@ enum class EnemyTypes {
 
 struct Weapon
 {
+    sf::Vector2f offset = {0,0}; //position offset based on direction (bullets already offset by collider radius by default)
     float fireRate = 0; //bullets per second
     float fireDelay = 0;
     int bulletSpeed = 0;

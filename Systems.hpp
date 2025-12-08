@@ -11,7 +11,7 @@
 class EntityManager : public Registry
 {
     public:
-        void CreateSHEnemy(Entity* player, EnemyTypes* type)
+        void CreateSHEnemy(Entity* player, EnemyTypes* type) //prefab for sh enemy 
         {
             auto stats = EnemyStatsManager::GetStats(*type);
 
@@ -22,13 +22,18 @@ class EntityManager : public Registry
             add<Friction>(enemy, Friction{(float)stats.friction});
             add<CircleCollider>(enemy, CircleCollider{stats.radius});
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
-            add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed*0.3f), {200}});
+            add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed*0.3f), stats.ranges});
             add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player});
 
+            //offset bullets based on radius
+            for (int i = 0; i < stats.weapons.weapons.size(); i++)
+            {
+                stats.weapons.weapons[i].offset.y += stats.radius + stats.weapons.weapons[i].bulletRadius;
+            }
             add<WeaponArsenal>(enemy, stats.weapons);
         }
 
-        void CreateTDEnemy(std::vector<sf::Vector2f> sorted, EnemyTypes* type)
+        void CreateTDEnemy(std::vector<sf::Vector2f> sorted, EnemyTypes* type) //prefab for td enemy
         {
             auto stats = EnemyStatsManager::GetStats(*type);
 
@@ -41,31 +46,32 @@ class EntityManager : public Registry
             add<EnemyType>(enemy, EnemyType{*type, false});
         }
 
-        Entity CreatePlayer()
+        Entity CreatePlayer() //prefab for player
         {
-        //add other components to the player
+            int radius = 15;
+            int hp = 3;
+
             auto player = CreateEntity();
             add<RenderHitboxes>(player, RenderHitboxes{sf::Color::White});
             add<PlayerMovement>(player, PlayerMovement{100});
             add<Position>(player, Position{sf::Vector2f(300,300)});
             add<Velocity>(player, Velocity{sf::Vector2f(0,0)});
             add<Friction>(player, Friction{20});
-            add<Health>(player, {3, 3, friendly});
-            add<CircleCollider>(player, CircleCollider{30});
+            add<Health>(player, {hp, hp, friendly});
+            add<CircleCollider>(player, CircleCollider{radius});
 
             WeaponArsenal playerArs;
 
             playerArs.weapons.push_back(Weapon{});
             playerArs.weapons[0].bulletRadius = 10;
             playerArs.weapons[0].bulletSpeed = 200;
-            playerArs.weapons[0].bulletsShot = 5;
-            playerArs.weapons[0].speedVariation = 100;
+            playerArs.weapons[0].bulletsShot = 1;
             playerArs.weapons[0].bulletLifetime = 5;
-            playerArs.weapons[0].bulletSpread = 45;
             playerArs.weapons[0].damage = 1;
             playerArs.weapons[0].dGroup = damageGroup::enemy;
             playerArs.weapons[0].fireRate = 2;
             playerArs.weapons[0].pierce = 0;
+            playerArs.weapons[0].offset = {0, (float)(radius + playerArs.weapons[0].bulletRadius)};
             add<WeaponArsenal>(player, playerArs);
             add<PlayerWeaponLogic>(player,{4});
 
@@ -203,10 +209,13 @@ class EntityManager : public Registry
             if (range >= 0 && magnitude > range) {return false;}
             dir /= magnitude;
 
+            sf::Vector2f bulPos = spawnPos;
+            bulPos += dir * weapon->offset.y;
+            bulPos += sf::Vector2f(-dir.y, dir.x) * weapon->offset.x; //moves position along perpendicular vector
             for (int i = 0; i < weapon->bulletsShot; i++)
             {
                 auto curBullet = CreateEntity();
-                add<Position>(curBullet, Position{spawnPos});
+                add<Position>(curBullet, Position{bulPos});
                 add<Bullet>(curBullet, Bullet{weapon->damage, weapon->pierce, weapon->dGroup, weapon->bulletLifetime});
                 auto newAngle = (std::atan2f(dir.y, dir.x)*180/M_PI + (rand() % (weapon->bulletSpread+1) - weapon->bulletSpread/2))*M_PI/180;
                 auto newDir = sf::Vector2f(std::cosf(newAngle), std::sinf(newAngle));
@@ -384,13 +393,14 @@ class EntityManager : public Registry
 
                 auto type = enemiesAtCost[rand()%enemiesAtCost.size()];
 
-                //auto stats = EnemyStatsManager::GetStats(type);
-                //CreateTDEnemy(spawner->path, &type);
+                auto stats = EnemyStatsManager::GetStats(type);
+                CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
                 spawner->pointBudget -= cost;
             }
         }
 
+        //helper for spawner logic
          int GetWeightedIndex(int size, float focalPoint, float spread)
          {
             std::vector<float> weights;

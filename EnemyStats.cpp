@@ -54,19 +54,21 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
         case EnemyTypes::Basic:
             //basic stats
             stats.hp = 3;
-            stats.speed = 300;//60.f;
+            stats.speed = 60.f;
             stats.radius = 15.f;
             stats.col = sf::Color::Red;
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
+            stats.ranges.push_back(120);
+
             //weapon
             stats.weapons = WeaponArsenal{};
             stats.weapons.weapons.push_back(Weapon{});
-            stats.weapons.weapons[0].fireRate = 2; //bullets per second
+            stats.weapons.weapons[0].fireRate = 1; //bullets per second
             stats.weapons.weapons[0].bulletSpeed = 100;
             stats.weapons.weapons[0].bulletsShot = 1;
-            stats.weapons.weapons[0].bulletLifetime = 3;
+            stats.weapons.weapons[0].bulletLifetime = 2;
             stats.weapons.weapons[0].damage = 1;
             stats.weapons.weapons[0].bulletRadius = 10;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
@@ -79,6 +81,19 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.col = sf::Color(255, 200, 0); // yellow/orange
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
+
+            stats.ranges.push_back(30);
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 1; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 0;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 0.5f;
+            stats.weapons.weapons[0].damage = 1;
+            stats.weapons.weapons[0].bulletRadius = 30;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
         break;
 
         case EnemyTypes::Tank:
@@ -88,6 +103,19 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.col = sf::Color(150, 0, 200); // purple
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
+
+            stats.ranges.push_back(150);
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 0.8f; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 70;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 3;
+            stats.weapons.weapons[0].damage = 2;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
             // ----------------- LEVEL 2 UNLOCKS -----------------
@@ -96,11 +124,22 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.speed = 70.f;
             stats.radius = 14.f;
             stats.col = sf::Color::Black;
-            //stats.isRanged = true;
-            //stats.rangeLimit = 120.f;
-            //stats.damage = 1;
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
+
+            stats.ranges.push_back(120);
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 0.5f; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletsShot = 3;
+            stats.weapons.weapons[0].bulletLifetime = 3;
+            stats.weapons.weapons[0].bulletSpread = 30;
+            stats.weapons.weapons[0].damage = 1;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::Exploder:
@@ -109,10 +148,21 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.radius = 14.f;
             stats.col = sf::Color::Blue;
             //stats.explodes = true;
-            //stats.explosionRadius = 80.f;
-            //stats.damage = 2;
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 3;
+
+            stats.ranges.push_back(50);
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 0.5f; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 0;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 0.5f;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 80;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
             // ----------------- LEVEL 3 UNLOCKS -----------------
@@ -121,9 +171,21 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.speed = 75.f;
             stats.radius = 14.f;
             stats.col = sf::Color::Green;
-            //stats.damage = 2;
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 0.8f;
+
+            stats.ranges.push_back(30);
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 1; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 30;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 0.5f;
+            stats.weapons.weapons[0].damage = 2;
+            stats.weapons.weapons[0].bulletRadius = 40;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::RangedMelee:
@@ -131,11 +193,31 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.speed = 70.f;
             stats.radius = 15.f;
             stats.col = sf::Color::Magenta;
-            //stats.isRanged = true;
-            //stats.rangeLimit = 150.f;
-            //stats.damage = 2;
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
+
+            stats.ranges = {150, 30};
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 2; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 3;
+            stats.weapons.weapons[0].damage = 1;
+            stats.weapons.weapons[0].bulletRadius = 10;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 30;
+            stats.weapons.weapons[1].bulletsShot = 1;
+            stats.weapons.weapons[1].bulletLifetime = 0.5f;
+            stats.weapons.weapons[1].damage = 2;
+            stats.weapons.weapons[1].bulletRadius = 30;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::FastExploder:
@@ -144,10 +226,21 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.radius = 13.f;
             stats.col = sf::Color::Cyan;
             //stats.explodes = true;
-            //stats.explosionRadius = 90.f;
-            //stats.damage = 3;
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 3;
+
+            stats.ranges = {50};
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 1; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 0;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 0.5f;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 90;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
             // ----------------- LEVEL 4 UNLOCKS -----------------
@@ -156,11 +249,23 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.speed = 65.f;
             stats.radius = 13.f;
             stats.col = sf::Color(100, 200, 255);
-            //stats.isRanged = true;
-            //stats.rangeLimit = 220.f;
             //stats.damage = 2;
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
+
+            stats.ranges = {220};
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 1.5f; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 150;
+            stats.weapons.weapons[0].bulletSpread = 10;
+            stats.weapons.weapons[0].bulletsShot = 1;
+            stats.weapons.weapons[0].bulletLifetime = 3;
+            stats.weapons.weapons[0].damage = 2;
+            stats.weapons.weapons[0].bulletRadius = 10;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::HeavyTank:
@@ -168,9 +273,23 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.speed = 35.f;
             stats.radius = 20.f;
             stats.col = sf::Color(80, 80, 80);
-            //stats.damage = 3;
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+
+            stats.ranges = {60};
+
+            //weapon
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 2; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 50;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].speedVariation = 30;
+            stats.weapons.weapons[0].bulletLifetime = 1.5f;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
             // ----------------- BOSSES (ONE PER LEVEL) -----------------

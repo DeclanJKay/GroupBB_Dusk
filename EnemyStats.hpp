@@ -14,7 +14,8 @@ struct EnemyStats
     float moveShootDelay;
     int friction;
     int radius;
-    WeaponArsenal weapons;
+    WeaponArsenal weapons; //THE RADIUS AND BULLET RADIUS GETS ADDED TO OFFSET.Y BY DEFAULT DURING CREATION (spawns in front of enemy)
+    std::vector<int> ranges;
 };
 
 //class for defining all stats for each enemy type
