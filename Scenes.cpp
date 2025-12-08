@@ -33,6 +33,11 @@ void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
     }
 }
 
+bool SafeHouse::NoEnemies()
+{
+    return _entMan.getAllEnt<EnemyShootingLogic>().size() == 0;
+}
+
 //TOWER DEFENCE
 TowerDefence::TowerDefence()
 {
@@ -46,7 +51,16 @@ TowerDefence::TowerDefence()
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
 
     auto spawner = _entMan.CreateEntity();
-    _entMan.add<WaveSpawner>(spawner, WaveSpawner{0, 5, 0, 50, 20, 50, 1, 1, sorted});
+    WaveSpawner spawnDef;
+    spawnDef.canStart = true;
+    spawnDef.iniPointBudget = 50;
+    spawnDef.lvlIndex = -1; //lvl index gets increased after player starts wave, so set to -1 to begin at 0
+    spawnDef.maxLvl = 5;
+    spawnDef.path = sorted;
+    spawnDef.pointIncrease = 20;
+    spawnDef.spawnInterval = 1;
+    spawnDef.waveIndex = 0; //im not really sure what this is even for
+    _entMan.add<WaveSpawner>(spawner, spawnDef);
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)
@@ -78,7 +92,7 @@ std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path
     return sorted;
 }
 
-void TowerDefence::Update(const float& dt)
+void TowerDefence::Update(const float& dt, bool allEnemiesDead)
 {
     Scene::Update(dt);
     auto pathEnts = _entMan.getAllEnt<TDPathMove>();
@@ -88,6 +102,15 @@ void TowerDefence::Update(const float& dt)
         {
             toTransfer.push_back(_entMan.get<EnemyType>(ent)->type);
         }
+    }
+
+    //enable spawner when all enemies are dead
+    if (!allEnemiesDead) {return;}
+    if (_entMan.getAllEnt<TDPathMove>().size() > 0) {return;}
+    auto spawners = _entMan.getAllEnt<WaveSpawner>();
+    for (auto spawner : spawners)
+    {
+        _entMan.get<WaveSpawner>(spawner)->canStart = true;
     }
 }
 

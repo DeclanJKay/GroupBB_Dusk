@@ -43,11 +43,11 @@ void GameSys::update(const float &dt)
     {
         case towerDefence:
             shScene.Update(dt, tdScene.GetTransfers());
-            tdScene.Update(dt);
+            tdScene.Update(dt, shScene.NoEnemies());
             break;
         case safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());
-            tdScene.Update(dt);
+            tdScene.Update(dt, shScene.NoEnemies());
             break;
     }
 }

@@ -397,10 +397,17 @@ class EntityManager : public Registry
                 CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
                 spawner->pointBudget -= cost;
+                if (spawner->pointBudget <= 0)
+                {
+                    spawner->canStart = false;
+                }
                 return;
             }
             
             if (spawner->lvlIndex >= spawner->maxLvl){return;} //prevent going over max lvl
+            if (!spawner->canStart){return;}
+            std::cout<<"Press space to start new wave\n";
+            if (!sf::Keyboard::isKeyPressed(sf::Keyboard::Space)){return;} //start new wave when space pressed
             spawner->lvlIndex++;
             spawner->pointBudget = spawner->iniPointBudget + spawner->pointIncrease*spawner->lvlIndex;
             std::cout<<"NEW WAVE\n";

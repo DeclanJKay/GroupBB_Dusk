@@ -21,6 +21,7 @@ class SafeHouse : public Scene
     public:
         SafeHouse();
         void Update(const float&dt, std::vector<EnemyTypes> toSpawn);
+        bool NoEnemies();
 };
 
 class TowerDefence : public Scene
@@ -28,7 +29,7 @@ class TowerDefence : public Scene
     std::vector<EnemyTypes> toTransfer;
     public:
         TowerDefence();
-        void Update(const float& dt) override;
+        void Update(const float& dt, bool allEnemiesDead);
         std::vector<EnemyTypes> GetTransfers();
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
 };
