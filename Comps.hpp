@@ -137,7 +137,10 @@ struct EnemyType
 struct WaveSpawner
 {
     int lvlIndex = 0;
+    const int maxLvl;
     int waveIndex = 0;
+    int iniPointBudget = 0;
+    int pointIncrease = 0; //point budget increase per level
     int pointBudget = 0;
     float spawnInterval = 1;
     float spawnTimer = 0;

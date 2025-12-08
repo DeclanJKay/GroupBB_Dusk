@@ -46,7 +46,7 @@ TowerDefence::TowerDefence()
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
 
     auto spawner = _entMan.CreateEntity();
-    _entMan.add<WaveSpawner>(spawner, WaveSpawner{0,0, 50, 1, 1, sorted});
+    _entMan.add<WaveSpawner>(spawner, WaveSpawner{0, 5, 0, 50, 20, 50, 1, 1, sorted});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)

@@ -355,7 +355,7 @@ int EnemyStatsManager::GetCost(EnemyTypes type)
 std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int levelInd)
 {
     std::map<int, std::vector<EnemyTypes>> returnable;
-    for (int i = 0; i <= levelInd; i++)
+    for (int i = 0; i <= std::min(levelInd, (int)enemiesPerLevel->size()-1); i++)
     {
         for (auto type : enemiesPerLevel[i])
         {

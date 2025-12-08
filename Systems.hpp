@@ -397,7 +397,13 @@ class EntityManager : public Registry
                 CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
                 spawner->pointBudget -= cost;
+                return;
             }
+            
+            if (spawner->lvlIndex >= spawner->maxLvl){return;} //prevent going over max lvl
+            spawner->lvlIndex++;
+            spawner->pointBudget = spawner->iniPointBudget + spawner->pointIncrease*spawner->lvlIndex;
+            std::cout<<"NEW WAVE\n";
         }
 
         //helper for spawner logic
