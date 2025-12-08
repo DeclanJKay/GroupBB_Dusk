@@ -148,10 +148,15 @@ struct WaveSpawner
     std::vector<sf::Vector2f> path;
 };
 
+struct TurretWeaponLogic
+{
+    int range;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
-    TDPathMove, EnemyType, WaveSpawner
+    TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic
 >;

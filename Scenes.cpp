@@ -35,7 +35,7 @@ void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
 
 bool SafeHouse::NoEnemies()
 {
-    return _entMan.getAllEnt<EnemyShootingLogic>().size() == 0;
+    return _entMan.getAllEnt<EnemyType>().size() == 0;
 }
 
 //TOWER DEFENCE
@@ -61,6 +61,23 @@ TowerDefence::TowerDefence()
     spawnDef.spawnInterval = 1;
     spawnDef.waveIndex = 0; //im not really sure what this is even for
     _entMan.add<WaveSpawner>(spawner, spawnDef);
+
+    auto testTur = _entMan.CreateEntity();
+    _entMan.add<Position>(testTur, {{300,300}});
+    _entMan.add<CircleCollider>(testTur, {20});
+    _entMan.add<RenderHitboxes>(testTur, {sf::Color::Cyan});
+    _entMan.add<TurretWeaponLogic>(testTur, {300});
+
+    WeaponArsenal weaponArs;
+    weaponArs.weapons.push_back(Weapon{});
+    weaponArs.weapons[0].bulletLifetime = 5;
+    weaponArs.weapons[0].bulletRadius = 10;
+    weaponArs.weapons[0].bulletSpeed = 200;
+    weaponArs.weapons[0].bulletsShot = 1;
+    weaponArs.weapons[0].damage = 1;
+    weaponArs.weapons[0].dGroup = damageGroup::enemy;
+    weaponArs.weapons[0].fireRate = 1;
+    _entMan.add<WeaponArsenal>(testTur, weaponArs);
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)

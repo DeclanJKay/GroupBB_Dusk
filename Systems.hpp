@@ -24,6 +24,7 @@ class EntityManager : public Registry
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
             add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed*0.3f), stats.ranges});
             add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player});
+            add<EnemyType>(enemy, EnemyType{*type, false});
 
             //offset bullets based on radius
             for (int i = 0; i < stats.weapons.weapons.size(); i++)
@@ -96,6 +97,7 @@ class EntityManager : public Registry
                 HandleEnemyShooting(curEnt, dt);
                 MoveAlongPath(curEnt, dt);
                 SpawnEnemies(curEnt, dt);
+                HandleTurretShooting(curEnt, dt);
             }
             HandleCreationAndDestruction();
         }
@@ -411,6 +413,42 @@ class EntityManager : public Registry
             spawner->lvlIndex++;
             spawner->pointBudget = spawner->iniPointBudget + spawner->pointIncrease*spawner->lvlIndex;
             std::cout<<"NEW WAVE\n";
+        }
+
+        void HandleTurretShooting(Entity ent, const float& dt)
+        {
+            if (!has<TurretWeaponLogic, WeaponArsenal, Position>(ent)){return;}
+
+            //get all enemies on the path, return if none present
+            auto allEnemies = getAllEnt<TDPathMove>();
+            if (allEnemies.size() == 0) {return;}
+
+            //get all enemies in range
+            auto turPos = get<Position>(ent)->pos;
+            std::vector<Entity> inRange;
+            for (auto enemy : allEnemies)   //todo: if we have any time left, get rid of elements from
+            {                               //      allenemies vector after they get checked for memory efficiency
+                if (!has<Position>(enemy)){continue;} //failsafe
+                auto pos = get<Position>(enemy)->pos;
+
+                auto dist = pos - turPos;
+                auto magnitude = std::sqrt(dist.x * dist.x + dist.y * dist.y);
+
+                if (magnitude > get<TurretWeaponLogic>(ent)->range) {continue;}
+                inRange.push_back(enemy);
+            }
+
+            Entity target = inRange.front();
+            int maxProgress = get<TDPathMove>(target)->target;
+            for (int i = 1; i < inRange.size(); i++)
+            {
+                auto curProgress = get<TDPathMove>(inRange[i])->target;
+                if (curProgress <= maxProgress) {continue;}
+                maxProgress = curProgress;
+                target = inRange[i];
+            }
+            
+            Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos);
         }
 
         //helper for spawner logic
