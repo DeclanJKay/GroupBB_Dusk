@@ -46,6 +46,7 @@ add_executable(tile_engine
   Reg.hpp
   Systems.hpp
   EnemyStats.hpp
+  GenericHelpers.hpp
     )
 
 # Link SFML + our library

@@ -60,6 +60,12 @@ struct Velocity
     sf::Vector2f vel;
 };
 
+struct Acceleration
+{
+    sf::Vector2f targetVel;
+    float maxChange;
+};
+
 struct Health
 {
     int maxHealth;
@@ -103,7 +109,7 @@ struct Bullet
 
 struct Friction
 {
-    float friction = 20; //lower number means more floaty (20 friction seems to work well)
+    float friction;
 };
 
 struct EnemySafeMove

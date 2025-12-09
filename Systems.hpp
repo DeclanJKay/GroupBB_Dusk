@@ -8,6 +8,7 @@
 #include "gameParams.hpp"
 #include "EnemyStats.hpp"
 #include "tile_level_loader/level_system.hpp"
+#include "GenericHelpers.hpp"
 
 using ls = LevelSystem;
 
@@ -42,7 +43,7 @@ class EntityManager : public Registry
             add<RenderHitboxes>(enemy, RenderHitboxes{stats.col});
             add<Position>(enemy, Position{sf::Vector2f(300, 100)}); //door location (todo: add multiple spawnpoint?)
             add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
-            add<Friction>(enemy, Friction{(float)stats.friction});
+            add<Friction>(enemy, Friction{20});
             add<CircleCollider>(enemy, CircleCollider{stats.radius});
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
             add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed*0.3f), stats.ranges});
@@ -77,7 +78,7 @@ class EntityManager : public Registry
 
             auto player = CreateEntity();
             add<RenderHitboxes>(player, RenderHitboxes{sf::Color::White});
-            add<PlayerMovement>(player, PlayerMovement{100});
+            add<PlayerMovement>(player, PlayerMovement{50});
             add<Position>(player, Position{sf::Vector2f(300,300)});
             add<Velocity>(player, Velocity{sf::Vector2f(0,0)});
             add<Friction>(player, Friction{20});
@@ -110,13 +111,13 @@ class EntityManager : public Registry
                 
                 HandleVelocity(curEnt, dt);
                 HandleFriction(curEnt, dt);
-                HandlePlayerMovement(curEnt);
+                HandlePlayerMovement(curEnt, dt);
                 HandlePlayerWeapons(curEnt);
                 ShootDelay(curEnt, dt);
                 BulletLifeTime(curEnt, dt);
                 HandleHealth(curEnt);
                 HandleBulletColls(curEnt);
-                HandleEnemySafeMove(curEnt);
+                HandleEnemySafeMove(curEnt, dt);
                 HandleEnemyShooting(curEnt, dt);
                 MoveAlongPath(curEnt, dt);
                 SpawnEnemies(curEnt, dt);
@@ -147,11 +148,9 @@ class EntityManager : public Registry
 
         void HandleFriction(Entity ent, const float &dt)
         {
-            if (has<Velocity, Friction>(ent))
-            {
-                auto vel = get<Velocity>(ent);
-                vel->vel -= (get<Friction>(ent)->friction*vel->vel)*dt;
-            }
+            if (!has<Friction, Velocity>(ent)){return;}
+            auto vel = get<Velocity>(ent);
+            vel->vel -= vel->vel * get<Friction>(ent)->friction * dt;
         }
 
         void DrawHitboxes(sf::RenderWindow &window, Entity ent)
@@ -173,10 +172,10 @@ class EntityManager : public Registry
             }
         }
 
-        void HandlePlayerMovement(Entity ent)
+        void HandlePlayerMovement(Entity ent, const float& dt)
         {
             if(CheckIfPlayerRestrict()){return;}
-            if (has<PlayerMovement, Velocity, Position>(ent))
+            if (has<PlayerMovement, Velocity, Position, Friction>(ent))
             {
                 //clamp movement to screen
                 ClampToScreen(ent);
@@ -200,8 +199,9 @@ class EntityManager : public Registry
 
                     //multiply by movespd
                     auto spd = get<PlayerMovement>(ent)->moveSpd;
-                    auto vel = &get<Velocity>(ent)->vel;
-                    *vel += dir*(float)spd;
+                    auto vel = get<Velocity>(ent);
+                    
+                    vel->vel += dir*(float)spd*Params::SpeedMult*dt;
                 }
             }
         }
@@ -324,7 +324,7 @@ class EntityManager : public Registry
             }
         }
     
-        void HandleEnemySafeMove(Entity ent)
+        void HandleEnemySafeMove(Entity ent, const float& dt)
         {
             if (!has<EnemySafeMove, WeaponArsenal, Velocity, Position>(ent)){return;}
             if (has<EnemyShootingLogic>(ent))
@@ -343,7 +343,7 @@ class EntityManager : public Registry
 
             if (dist <= enemyMove->range[get<WeaponArsenal>(ent)->selected]) {return;}
             dir /= dist;
-            vel->vel += dir * (float)enemyMove->moveSpd;
+            vel->vel += dir * (float)enemyMove->moveSpd * dt * Params::SpeedMult;
         }
 
         void ClampToScreen(Entity ent)
@@ -387,20 +387,22 @@ class EntityManager : public Registry
         void MoveAlongPath(Entity ent, const float& dt)
         {
             if (!has<Position, TDPathMove>(ent)){return;}
+
+            //todo: this is fairly sloppy, comeback to it if have time 
             auto pos = get<Position>(ent);
             auto pathMove = get<TDPathMove>(ent);
             if (pathMove->reachedEnd == true){Destroy(ent); return;}
             if (pathMove->target == pathMove->path.size()){pathMove->reachedEnd=true; return;}
             auto dir = pathMove->path[pathMove->target] - pos->pos;
             auto dist = std::sqrt(dir.x * dir.x + dir.y * dir.y);
-            if (dist <= pathMove->moveSpd/100.f)
-            {
-                pos->pos = pathMove->path[pathMove->target];
-                pathMove->target++;
-                return;
-            }
             dir /= dist;
-            pos->pos += dir*(float)pathMove->moveSpd/100.f;
+            auto change = dir*(float)pathMove->moveSpd * dt; //pathmove doesnt use friction so no need for the constant
+            auto changeDist = std::sqrt(change.x * change.x + change.y * change.y);
+            if (dist <= changeDist)
+            {
+                pathMove->target++;
+            }
+            pos->pos+= change;
         }
     
         void SpawnEnemies(Entity ent, const float& dt)

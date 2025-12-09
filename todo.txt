@@ -12,6 +12,3 @@ Bonus:
 - Search the project for '//todo:', left comments in areas that could use some tender love and care.
 - I haven't tested and don't remember whether the damagetype::both gets properly handled by the 
   bullet collisions code, it makes me uneasy.
-
-Bugs:
-- Movement is currently framerate independant. Either fix it, or just force lock the game to 60fps.
