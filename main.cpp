@@ -16,8 +16,7 @@ int main () {
 
 	//create the window
 	sf::RenderWindow window(sf::VideoMode({Params::gameW, Params::gameH}), "Dusk");
-	//window.setVerticalSyncEnabled(true);
-	//window.setFramerateLimit(10);
+	window.setVerticalSyncEnabled(true);
 
 	MouseHelper::SetWindow(&window);
 
