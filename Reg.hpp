@@ -126,8 +126,8 @@ public:
     }
 
     template<typename C>
-    C* get(Entity e) {
-        if (!entToBit.contains(e)) {return nullptr;} //dont allow access to entities that havent been created yet
+    C* get(Entity e, bool bypassExist = false) {
+        if (!entToBit.contains(e) && !bypassExist) {return nullptr;} //dont allow access to entities that havent been created yet
         auto& store = storage<C>();
         auto it = store.entityToIndex.find(e);
         if (it == store.entityToIndex.end()) return nullptr;

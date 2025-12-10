@@ -1,10 +1,10 @@
 Core:
-- Class for storing weapons and turrets, probably quite similar to EnemyStatsv.
+- Class for storing weapons and turrets, probably quite similar to EnemyStats.
 - Components for creating UI.
 - Shop system.
 - Turret inventory interface.
 - Money Sysyem (probably use EnemyStatsManager::GetCost() to get money dropped). 
-- Sprite/AnimatedSprite component.
+- AnimatedSprite component.
 - Boss logic.
 - Main menu and game over screens.
 

@@ -9,6 +9,7 @@
 #include "EnemyStats.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "GenericHelpers.hpp"
+#include "TextureManager.hpp"
 
 using ls = LevelSystem;
 
@@ -97,9 +98,28 @@ class EntityManager : public Registry
             playerArs.weapons[0].fireRate = 2;
             playerArs.weapons[0].pierce = 0;
             playerArs.weapons[0].offset = {0, (float)(radius + playerArs.weapons[0].bulletRadius)};
+            playerArs.weapons[0].gunTxtr.loadFromFile("res/img/gun.png");
             add<WeaponArsenal>(player, playerArs);
             add<PlayerWeaponLogic>(player,{4});
 
+            //testing stuff below
+            auto txtr = TxtrMgr::GetTxtr("res/img/playerAni.png");
+            sf::Sprite sprt;
+            sprt.setTexture(*txtr);
+            sprt.setOrigin(sf::Vector2f{32,32});
+            sprt.setTextureRect(sf::IntRect{0,0,64,64});
+            add<Sprite>(player, {sprt, -90});
+
+            auto gun = CreateEntity();
+            add<AttachToEnt>(gun, {player, {60,0}, true});
+            txtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            sprt = sf::Sprite();
+            sprt.setTexture(*txtr);
+            add<Sprite>(gun, Sprite{sprt, 90});
+            add<Position>(gun, {{0,0}});
+            add<WeaponKickback>(gun, {20, 0, 5});
+
+            add<ActiveGun>(player, {gun});
             return player;
         }
 
@@ -109,6 +129,7 @@ class EntityManager : public Registry
             {
                 auto curEnt = ent.first;
                 
+                HandleAttachedEnts(curEnt);
                 HandleVelocity(curEnt, dt);
                 HandleFriction(curEnt, dt);
                 HandlePlayerMovement(curEnt, dt);
@@ -124,6 +145,7 @@ class EntityManager : public Registry
                 HandleTurretShooting(curEnt, dt);
                 HandleTurretCreation(curEnt);
                 HandleTurretDestruction(curEnt);
+                HandleWeaponKickBack(curEnt, dt);
             }
             HandleCreationAndDestruction();
         }
@@ -134,6 +156,7 @@ class EntityManager : public Registry
             {
                 auto curEnt = ent.first;
                 DrawHitboxes(window, curEnt);
+                DrawSprite(window, curEnt);
             }
         }
 
@@ -219,13 +242,32 @@ class EntityManager : public Registry
 
                 arsenal->selected = std::min(arsenal->selected, (int)arsenal->weapons.size()-1);
 
-                //shootgun
+                auto mousePos = (sf::Vector2f)MouseHelper::GetMousePos();
+                RotateSprite(ent, &mousePos);
+
+                //shoot
                 if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) { return; }
                 auto weapon = &arsenal->weapons[arsenal->selected]; 
-                auto mousePos = MouseHelper::GetMousePos();
                 auto pos = get<Position>(ent);
-                Shoot(weapon, (sf::Vector2f)mousePos, pos->pos);
+                if(Shoot(weapon, mousePos, pos->pos))
+                {
+                    if (!has<ActiveGun>(ent)){return;}
+                    auto wkb = get<WeaponKickback>(get<ActiveGun>(ent)->gun);
+                    wkb->curRecoil += wkb->recoil;
+                }
             }
+        }
+
+        void RotateSprite(Entity ent, sf::Vector2f* targetPos)
+        {
+            if (!has<Position, Sprite>(ent)) {return;}
+
+            auto dir = *targetPos - get<Position>(ent)->pos;
+            dir /= std::sqrt(dir.x * dir.x + dir.y * dir.y);
+
+            auto newRot = atan2(dir.y, dir.x) * 180 / M_PI;
+
+            get<Sprite>(ent)->sprt.setRotation(newRot + get<Sprite>(ent)->rotOffset);
         }
 
         bool Shoot(Weapon* weapon, sf::Vector2f target, sf::Vector2f spawnPos, int range = -1)//-1 means doesn't care
@@ -520,6 +562,58 @@ class EntityManager : public Registry
                 if (selPos != pos){continue;}
                 Destroy(tur);
                 return;
+            }
+        }
+
+        void DrawSprite(sf::RenderWindow &window, Entity ent)
+        {
+            if(!has<Sprite>(ent)){return;}
+            auto sprite = get<Sprite>(ent);
+            if (has<Position>(ent))
+            {
+                sprite->sprt.setPosition(get<Position>(ent)->pos);
+            }
+            window.draw(sprite->sprt);
+        }
+
+        void HandleWeaponKickBack(Entity ent, const float& dt)
+        {
+            if (!has<WeaponKickback, Position, Sprite>(ent)){return;}
+            auto wkb = get<WeaponKickback>(ent);
+            if (wkb->curRecoil <= 0) {return;}
+            auto pos = get<Position>(ent);
+            auto rot = get<Sprite>(ent)->sprt.getRotation();
+            rot *= M_PI/180;
+            sf::Vector2f dir = {cos(rot), sin(rot)};
+            pos->pos -= dir * wkb->curRecoil;
+            wkb->curRecoil -= wkb->curRecoil * wkb->bounceBack * dt;
+        }
+        
+        void HandleAttachedEnts(Entity ent)
+        {
+            if (!has<AttachToEnt, Position>(ent)){return;}
+            auto attached = get<AttachToEnt>(ent);
+            if (!has<Position>(attached->parent)){return;}
+            auto pos = get<Position>(ent);
+            pos->pos = get<Position>(attached->parent)->pos;
+
+            if (attached->inheritRot && has<Sprite>(attached->parent))
+            {
+                auto rot = get<Sprite>(attached->parent)->sprt.getRotation();
+                if (has<Sprite>(ent))
+                {
+                    auto sprt = get<Sprite>(ent);
+                    sprt->sprt.setRotation(rot + sprt->rotOffset);
+                }
+                rot *= M_PI/180;
+                auto dir = sf::Vector2f{cos(rot),sin(rot)};
+
+                pos->pos += dir * attached->offset.y;
+                pos->pos += sf::Vector2f(-dir.y, dir.x) * attached->offset.x;
+            }
+            else
+            {
+                pos->pos += attached->offset;
             }
         }
 

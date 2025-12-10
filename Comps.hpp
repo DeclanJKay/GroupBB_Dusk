@@ -47,6 +47,7 @@ struct Weapon
     int bulletRadius = 0;
     int pierce = 0; //currenly doesn't do anything
     damageGroup dGroup = both; //determines who gets hurt by the bullet
+    sf::Texture gunTxtr;
 };
 
 //can be added to entities
@@ -161,7 +162,8 @@ struct TurretWeaponLogic
 
 struct TurretHandler //for spawning turrets (SHOULD ONLY BE ONE ENTITY WITH THIS COMP PER SCENE)
 {
-    
+    //will have stats here later
+    //e.g. money gained back on turret destruction or smthing
 };
 
 struct RestrictPlayerInput
@@ -169,11 +171,37 @@ struct RestrictPlayerInput
     bool restrict = false;
 };
 
+struct Sprite
+{
+    sf::Sprite sprt;
+    float rotOffset = 0;
+};
+
+//these are from my previous attemp at this
+struct AttachToEnt
+{
+    Entity parent;
+    sf::Vector2f offset;
+    bool inheritRot;
+};
+
+struct ActiveGun
+{
+    Entity gun;
+};
+
+struct WeaponKickback
+{
+    float recoil;
+    float curRecoil;
+    float bounceBack;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
-    TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput
-    
+    TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback
 >;
