@@ -15,4 +15,5 @@ class WeaponStatsMgr
 
     public:
         static Weapon GetStats(Weapons weapon);
+        static int GetCost(Weapons weapon);
 };

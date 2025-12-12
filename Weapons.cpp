@@ -99,3 +99,9 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
 
     return curWeapon;
 };
+
+int WeaponStatsMgr::GetCost(Weapons weapon)
+{
+    if (!WeaponCosts.contains(weapon)){return 0;}
+    return WeaponCosts.at(weapon);
+}

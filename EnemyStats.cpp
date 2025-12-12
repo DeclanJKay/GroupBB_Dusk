@@ -348,12 +348,13 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
 
 int EnemyStatsManager::GetCost(EnemyTypes type)
 {
-    if (EnemyToCost.find(type) == EnemyToCost.end()) {return -1;} //returns -1 if invalid
+    if (!EnemyToCost.contains(type)) {return -1;} //returns -1 if invalid
     return EnemyToCost.at(type);
 }
 
 std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int levelInd)
 {
+    //returns a map linking cost to a list of enemy types
     std::map<int, std::vector<EnemyTypes>> returnable;
     for (int i = 0; i <= std::min(levelInd, (int)enemiesPerLevel->size()-1); i++)
     {
@@ -373,6 +374,7 @@ std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int le
 
 std::vector<int> EnemyStatsManager::GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap)
 {
+    //since we cant easily access the 
     std::vector<int> IndexToKey;
     for (auto pair : *costMap)
     {

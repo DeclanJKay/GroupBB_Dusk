@@ -4,7 +4,7 @@
 #include "MouseHelper.hpp"
 #include <SFML/Graphics.hpp>
 #include <iostream>
-#include <cmath>
+#include <math.h>
 #include "gameParams.hpp"
 #include "EnemyStats.hpp"
 #include "tile_level_loader/level_system.hpp"
@@ -86,6 +86,7 @@ class EntityManager : public Registry
             add<Friction>(player, Friction{20});
             add<Health>(player, {hp, hp, friendly});
             add<CircleCollider>(player, CircleCollider{radius});
+            add<Wallet>(player, {});
 
             WeaponArsenal playerArs;
 
@@ -344,6 +345,18 @@ class EntityManager : public Registry
             }
         }
 
+        void DropMoney(Health* health, Entity ent)
+        {
+            if (health->dGroup == damageGroup::friendly){return;}
+            if (!has<EnemyType>(ent)){return;}
+
+            auto wallets = getAllEnt<Wallet>();
+            for (auto w : wallets)
+            {
+                get<Wallet>(w)->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type);
+            }
+        }
+
         void HandleHealth(Entity ent)
         {
             if (has<Health>(ent))
@@ -351,7 +364,13 @@ class EntityManager : public Registry
                 auto health = get<Health>(ent);
                 if (health->hp <= 0)
                 {
+                    //destroy ent
                     Destroy(ent);
+
+                    //increase money in wallets
+                    DropMoney(health, ent);
+                    
+                    //destroy gun if it has one
                     if (!has<ActiveGun>(ent)){return;}
                     Destroy(get<ActiveGun>(ent)->gun);
                 }
