@@ -15,7 +15,7 @@ bool KeyboardHelper::KeyPressed(sf::Keyboard::Key key)
     return keysPressed.contains(key);
 }
 
-void KeyboardHelper::ClearKeys()
+void KeyboardHelper::Clear()
 {
     keysPressed.clear();
 }

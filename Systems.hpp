@@ -10,6 +10,7 @@
 #include "tile_level_loader/level_system.hpp"
 #include "GenericHelpers.hpp"
 #include "TextureManager.hpp"
+#include "Weapons.hpp"
 
 using ls = LevelSystem;
 
@@ -88,17 +89,8 @@ class EntityManager : public Registry
 
             WeaponArsenal playerArs;
 
-            playerArs.weapons.push_back(Weapon{});
-            playerArs.weapons[0].bulletRadius = 10;
-            playerArs.weapons[0].bulletSpeed = 200;
-            playerArs.weapons[0].bulletsShot = 1;
-            playerArs.weapons[0].bulletLifetime = 5;
-            playerArs.weapons[0].damage = 1;
-            playerArs.weapons[0].dGroup = damageGroup::enemy;
-            playerArs.weapons[0].fireRate = 2;
-            playerArs.weapons[0].pierce = 0;
-            playerArs.weapons[0].offset = {0, (float)(radius + playerArs.weapons[0].bulletRadius)};
-            playerArs.weapons[0].gunTxtr.loadFromFile("res/img/gun.png");
+            playerArs.weapons.push_back(WeaponStatsMgr::GetStats(Weapons::StartingWeapon));
+            playerArs.weapons.push_back(WeaponStatsMgr::GetStats(Weapons::Shotgun));
             add<WeaponArsenal>(player, playerArs);
             add<PlayerWeaponLogic>(player,{4});
 
@@ -129,7 +121,8 @@ class EntityManager : public Registry
             {
                 auto curEnt = ent.first;
                 
-                HandleAttachedEnts(curEnt);
+                if (disabled.contains(curEnt)){continue;}
+
                 HandleVelocity(curEnt, dt);
                 HandleFriction(curEnt, dt);
                 HandlePlayerMovement(curEnt, dt);
@@ -145,6 +138,7 @@ class EntityManager : public Registry
                 HandleTurretShooting(curEnt, dt);
                 HandleTurretCreation(curEnt);
                 HandleTurretDestruction(curEnt);
+                HandleAttachedEnts(curEnt);
                 HandleWeaponKickBack(curEnt, dt);
             }
             HandleCreationAndDestruction();
@@ -155,6 +149,7 @@ class EntityManager : public Registry
             for (auto ent : entToBit)
             {
                 auto curEnt = ent.first;
+                if (disabled.contains(curEnt)){continue;}
                 DrawHitboxes(window, curEnt);
                 DrawSprite(window, curEnt);
             }
@@ -229,18 +224,51 @@ class EntityManager : public Registry
             }
         }
     
+        void SwitchGunTxtr(std::shared_ptr<sf::Texture> txtr, Entity gunEnt)
+        {
+            if (txtr == nullptr) {Disable(gunEnt); return;}
+            Enable(gunEnt);
+            if (!has<Sprite>(gunEnt)) {return;}
+            auto sprite = get<Sprite>(gunEnt);
+            sprite->sprt.setTexture(*txtr);
+            auto size = txtr->getSize();
+            sprite->sprt.setTextureRect(sf::IntRect{0,0,(int)size.x,(int)size.y});
+        }
+
+        bool HandlePlayerWeaponSwitch(WeaponArsenal* arsenal)
+        {
+            //numbers
+            int ogInd = arsenal->selected;
+            auto maxInd = (int)arsenal->weapons.size()-1;
+            if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) { arsenal->selected = 0; }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) { arsenal->selected = std::min(1, maxInd); }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) { arsenal->selected = std::min(2, maxInd); }
+            else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) { arsenal->selected = std::min(3, maxInd); }
+
+            //scrollweheel
+            arsenal->selected += MouseHelper::MouseWheelMovement();
+            if (arsenal->selected < 0)
+            {
+                arsenal->selected = maxInd;
+            }
+            else if (arsenal->selected > maxInd)
+            {
+                arsenal->selected = 0;
+            }
+
+            return arsenal->selected != ogInd;
+        }
+
         void HandlePlayerWeapons(Entity ent)
         {
             if(CheckIfPlayerRestrict()){return;}
             if (has<PlayerWeaponLogic, WeaponArsenal, Position>(ent))
             {
                 auto arsenal = get<WeaponArsenal>(ent);
-                if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1)) { arsenal->selected = 0; }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2)) { arsenal->selected  = 1; }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num3)) { arsenal->selected  = 2; }
-                else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num4)) { arsenal->selected  = 3; }
-
-                arsenal->selected = std::min(arsenal->selected, (int)arsenal->weapons.size()-1);
+                if (HandlePlayerWeaponSwitch(arsenal))
+                {
+                    SwitchGunTxtr(arsenal->weapons[arsenal->selected].gunTxtr, get<ActiveGun>(ent)->gun);
+                }
 
                 auto mousePos = (sf::Vector2f)MouseHelper::GetMousePos();
                 RotateSprite(ent, &mousePos);

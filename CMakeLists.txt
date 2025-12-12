@@ -36,6 +36,7 @@ add_executable(tile_engine
   Scenes.cpp
   EnemyStats.cpp
   TextureManager.cpp
+  Weapons.cpp
 
   # headers optional (for VS visibility)
   Scenes.hpp
@@ -49,6 +50,7 @@ add_executable(tile_engine
   EnemyStats.hpp
   GenericHelpers.hpp
   TextureManager.hpp
+  Weapons.hpp
     )
 
 # Link SFML + our library

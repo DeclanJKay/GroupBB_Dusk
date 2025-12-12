@@ -13,5 +13,5 @@ class KeyboardHelper
     public:
         static bool KeyPressed(sf::Keyboard::Key key);
         static void AssembleKeysPressed(sf::Event* event);
-        static void ClearKeys();
+        static void Clear();
 };

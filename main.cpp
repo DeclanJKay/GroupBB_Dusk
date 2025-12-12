@@ -30,6 +30,7 @@ int main () {
       	while (window.pollEvent(event))
 	  	{
 			KeyboardHelper::AssembleKeysPressed(&event);
+			MouseHelper::HandleEvents(&event);
       		if (event.type == sf::Event::Closed)
 			{
         		window.close();
@@ -43,8 +44,8 @@ int main () {
 		GameSys::update(dt);
 		GameSys::render(window);
 		window.display();
-
-		KeyboardHelper::ClearKeys();
+		KeyboardHelper::Clear();
+		MouseHelper::Clear();
 	}
 
 	//Unload and shutdown

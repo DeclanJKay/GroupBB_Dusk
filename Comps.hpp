@@ -3,6 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include <box2d/box2d.h>
 #include <vector>
+#include <memory>
 
 using Entity = uint32_t;
 
@@ -15,7 +16,7 @@ enum damageGroup //to specify who the bullet hits
     both
 };
 
-enum class EnemyTypes {
+enum EnemyTypes {
     Basic,
     Fast,
     Tank,
@@ -33,6 +34,17 @@ enum class EnemyTypes {
 	Boss5
 };
 
+enum Weapons
+{
+    //player weapons
+    StartingWeapon,
+    Sniper,
+    Shotgun,
+    Shiv,
+    SMG,
+    Splurger6000
+};
+
 struct Weapon
 {
     sf::Vector2f offset = {0,0}; //position offset based on direction (bullets already offset by collider radius by default)
@@ -47,7 +59,7 @@ struct Weapon
     int bulletRadius = 0;
     int pierce = 0; //currenly doesn't do anything
     damageGroup dGroup = both; //determines who gets hurt by the bullet
-    sf::Texture gunTxtr;
+    std::shared_ptr<sf::Texture> gunTxtr = nullptr;
 };
 
 //can be added to entities

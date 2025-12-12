@@ -17,6 +17,7 @@ protected:
     std::vector<Entity> removedEnt; //cached free id spots for createentity()
     std::unordered_set<Entity> toRemove; //to prevent errors with altering container size while looping through it
     std::unordered_map<Entity, std::bitset<maxComp>> toAdd; //^same logic as above 
+    std::unordered_set<Entity> disabled;
 
     template<typename C>
     struct ComponentStorage {
@@ -142,6 +143,7 @@ public:
         for (auto ent : store.indexToEntity)
         {
             if (!entToBit.contains(ent)) { continue; }
+            if (disabled.contains(ent)) {continue;}
             actualList.push_back(ent);
         }
         return actualList;
@@ -190,5 +192,17 @@ public:
     {
         if (entToBit.find(e) == entToBit.end()){return false;}
         return true;
+    }
+
+    void Disable(Entity e)
+    {
+        disabled.insert(e);
+    }
+
+    void Enable(Entity e)
+    {
+        auto it = disabled.find(e);
+        if (it == disabled.end()){return;}
+        disabled.erase(it);
     }
 };
