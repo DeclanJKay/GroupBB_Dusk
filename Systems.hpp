@@ -352,6 +352,8 @@ class EntityManager : public Registry
                 if (health->hp <= 0)
                 {
                     Destroy(ent);
+                    if (!has<ActiveGun>(ent)){return;}
+                    Destroy(get<ActiveGun>(ent)->gun);
                 }
             }
         }
