@@ -15,5 +15,5 @@ class WeaponStatsMgr
 
     public:
         static Weapon GetStats(Weapons weapon);
-        static int GetCost(Weapons weapon);
+        static std::map<int, std::vector<Weapons>> CostToWeapons();
 };

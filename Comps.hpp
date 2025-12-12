@@ -17,21 +17,29 @@ enum damageGroup //to specify who the bullet hits
 };
 
 enum EnemyTypes {
-    Basic,
-    Fast,
-    Tank,
-	shortRanged,
-	Exploder,
-    Medium,
-	RangedMelee,
-	FastExploder,
-	LongRange,
-	HeavyTank,
-	Boss1,
-	Boss2,
-	Boss3,
-	Boss4,
-	Boss5
+    eBasic,
+    eFast,
+    eTank,
+	eShortRanged,
+	eExploder,
+    eMedium,
+	eRangedMelee,
+	eFastExploder,
+	eLongRange,
+	eHeavyTank,
+	eBoss1,
+	eBoss2,
+	eBoss3,
+	eBoss4,
+	eBoss5
+};
+
+enum Turrets
+{
+    tBasic,
+    tShotgun,
+    tRapid,
+    tSniper
 };
 
 enum Weapons
@@ -149,7 +157,7 @@ struct TDPathMove
 
 struct EnemyType
 {
-    EnemyTypes type = EnemyTypes::Basic;
+    EnemyTypes type = EnemyTypes::eBasic;
     bool boss = false;
 };
 
@@ -214,11 +222,23 @@ struct Wallet
     int money = 0;
 };
 
+struct Text
+{
+    sf::Text txt;
+};
+
+struct Shop
+{
+    Turrets availableTurrets[4];
+    Weapons availableWeapons[4];
+    int costs[4];
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, Wallet
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, Wallet, Shop
 >;

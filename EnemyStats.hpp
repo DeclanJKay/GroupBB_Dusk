@@ -34,5 +34,4 @@ class EnemyStatsManager
         static EnemyStats GetStats(EnemyTypes type);
         static int GetCost(EnemyTypes type);
         static std::map<int, std::vector<EnemyTypes>> GetLevelCostMap(int levelInd);
-        static std::vector<int> GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap);
 };

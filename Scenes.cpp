@@ -19,7 +19,7 @@ SafeHouse::SafeHouse(bool playerRestrict)
 {
     player = _entMan.CreatePlayer();
 
-    auto type = EnemyTypes::Basic;
+    auto type = EnemyTypes::eBasic;
     //test enemy
     _entMan.CreateSHEnemy(&player, &type);
 

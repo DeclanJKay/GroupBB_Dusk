@@ -1,4 +1,5 @@
 #include "Weapons.hpp"
+#include "GenericHelpers.hpp"
 
 const std::unordered_map<Weapons, int> WeaponStatsMgr::WeaponCosts = 
 {
@@ -100,8 +101,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
     return curWeapon;
 };
 
-int WeaponStatsMgr::GetCost(Weapons weapon)
+std::map<int, std::vector<Weapons>> WeaponStatsMgr::CostToWeapons()
 {
-    if (!WeaponCosts.contains(weapon)){return 0;}
-    return WeaponCosts.at(weapon);
+    return FlipMap(WeaponCosts);
 }

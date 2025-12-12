@@ -1,46 +1,47 @@
 #include "EnemyStats.hpp"
 #include "Comps.hpp"
+#include <iterator>
 
 const std::unordered_map<EnemyTypes, int> EnemyStatsManager::EnemyToCost
 {
-    {EnemyTypes::Basic, 1},
-    {EnemyTypes::Fast, 2},
-    {EnemyTypes::Tank, 3},
-    {EnemyTypes::shortRanged, 3},
-    {EnemyTypes::Exploder, 3},
-    {EnemyTypes::Medium, 3},
-    {EnemyTypes::RangedMelee, 4},
-    {EnemyTypes::FastExploder, 4},
-    {EnemyTypes::LongRange, 4},
-    {EnemyTypes::HeavyTank, 5}
+    {EnemyTypes::eBasic, 1},
+    {EnemyTypes::eFast, 2},
+    {EnemyTypes::eTank, 3},
+    {EnemyTypes::eShortRanged, 3},
+    {EnemyTypes::eExploder, 3},
+    {EnemyTypes::eMedium, 3},
+    {EnemyTypes::eRangedMelee, 4},
+    {EnemyTypes::eFastExploder, 4},
+    {EnemyTypes::eLongRange, 4},
+    {EnemyTypes::eHeavyTank, 5}
 };
 
 const std::vector<EnemyTypes> EnemyStatsManager::enemiesPerLevel[]
 {
     //level 1
     {
-        EnemyTypes::Basic,
-        EnemyTypes::Fast,
-        EnemyTypes::Tank
+        EnemyTypes::eBasic,
+        EnemyTypes::eFast,
+        EnemyTypes::eTank
     },
 
     //level 2
     {
-        EnemyTypes::shortRanged, 
-        EnemyTypes::Exploder
+        EnemyTypes::eShortRanged, 
+        EnemyTypes::eExploder
     },
 
     //level 3
     {
-        EnemyTypes::Medium,
-        EnemyTypes::RangedMelee, 
-        EnemyTypes::FastExploder
+        EnemyTypes::eMedium,
+        EnemyTypes::eRangedMelee, 
+        EnemyTypes::eFastExploder
     },
 
     //level 4
     {
-        EnemyTypes::LongRange,
-        EnemyTypes::HeavyTank
+        EnemyTypes::eLongRange,
+        EnemyTypes::eHeavyTank
     }
 };
 
@@ -51,7 +52,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
     EnemyStats stats;
     switch (type)
     {
-        case EnemyTypes::Basic:
+        case EnemyTypes::eBasic:
             //basic stats
             stats.hp = 3;
             stats.speed = 60.f;
@@ -74,7 +75,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
         break;
 
-        case EnemyTypes::Fast:
+        case EnemyTypes::eFast:
             stats.hp = 2;
             stats.speed = 110.f;
             stats.radius = 12.f;
@@ -96,7 +97,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
         break;
 
-        case EnemyTypes::Tank:
+        case EnemyTypes::eTank:
             stats.hp = 6;
             stats.speed = 40.f;
             stats.radius = 18.f;
@@ -119,7 +120,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             break;
 
             // ----------------- LEVEL 2 UNLOCKS -----------------
-        case EnemyTypes::shortRanged:
+        case EnemyTypes::eShortRanged:
             stats.hp = 4;
             stats.speed = 70.f;
             stats.radius = 14.f;
@@ -142,7 +143,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
-        case EnemyTypes::Exploder:
+        case EnemyTypes::eExploder:
             stats.hp = 2;
             stats.speed = 80.f;
             stats.radius = 14.f;
@@ -166,7 +167,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             break;
 
             // ----------------- LEVEL 3 UNLOCKS -----------------
-        case EnemyTypes::Medium:
+        case EnemyTypes::eMedium:
             stats.hp = 4;
             stats.speed = 75.f;
             stats.radius = 14.f;
@@ -188,7 +189,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
-        case EnemyTypes::RangedMelee:
+        case EnemyTypes::eRangedMelee:
             stats.hp = 5;
             stats.speed = 70.f;
             stats.radius = 15.f;
@@ -220,7 +221,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
-        case EnemyTypes::FastExploder:
+        case EnemyTypes::eFastExploder:
             stats.hp = 2;
             stats.speed = 120.f;
             stats.radius = 13.f;
@@ -244,7 +245,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             break;
 
             // ----------------- LEVEL 4 UNLOCKS -----------------
-        case EnemyTypes::LongRange:
+        case EnemyTypes::eLongRange:
             stats.hp = 3;
             stats.speed = 65.f;
             stats.radius = 13.f;
@@ -268,7 +269,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
             break;
 
-        case EnemyTypes::HeavyTank:
+        case EnemyTypes::eHeavyTank:
             stats.hp = 10;
             stats.speed = 35.f;
             stats.radius = 20.f;
@@ -293,7 +294,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             break;
 
             // ----------------- BOSSES (ONE PER LEVEL) -----------------
-        case EnemyTypes::Boss1:
+        case EnemyTypes::eBoss1:
             stats.hp = 30;
             stats.speed = 55.f;
             stats.radius = 24.f;
@@ -303,7 +304,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.moveShootDelay = 0.5f;
             break;
 
-        case EnemyTypes::Boss2:
+        case EnemyTypes::eBoss2:
             stats.hp = 40;
             stats.speed = 60.f;
             stats.radius = 26.f;
@@ -313,7 +314,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.moveShootDelay = 0.5f;
             break;
 
-        case EnemyTypes::Boss3:
+        case EnemyTypes::eBoss3:
             stats.hp = 50;
             stats.speed = 65.f;
             stats.radius = 28.f;
@@ -323,7 +324,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.moveShootDelay = 0.5f;
             break;
 
-        case EnemyTypes::Boss4:
+        case EnemyTypes::eBoss4:
             stats.hp = 65;
             stats.speed = 70.f;
             stats.radius = 30.f;
@@ -333,7 +334,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.moveShootDelay = 0.5f;
             break;
 
-        case EnemyTypes::Boss5:
+        case EnemyTypes::eBoss5:
             stats.hp = 80;
             stats.speed = 75.f;
             stats.radius = 32.f;
@@ -355,6 +356,7 @@ int EnemyStatsManager::GetCost(EnemyTypes type)
 std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int levelInd)
 {
     //returns a map linking cost to a list of enemy types
+    //similar to FlipMap() in general helpers
     std::map<int, std::vector<EnemyTypes>> returnable;
     for (int i = 0; i <= std::min(levelInd, (int)enemiesPerLevel->size()-1); i++)
     {
@@ -370,15 +372,4 @@ std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int le
         }
     }
     return returnable;
-}
-
-std::vector<int> EnemyStatsManager::GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap)
-{
-    //since we cant easily access the 
-    std::vector<int> IndexToKey;
-    for (auto pair : *costMap)
-    {
-        IndexToKey.push_back(pair.first);
-    }
-    return IndexToKey;
 }

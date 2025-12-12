@@ -11,6 +11,7 @@
 #include "GenericHelpers.hpp"
 #include "TextureManager.hpp"
 #include "Weapons.hpp"
+#include "Turrets.hpp"
 
 using ls = LevelSystem;
 
@@ -153,6 +154,7 @@ class EntityManager : public Registry
                 if (disabled.contains(curEnt)){continue;}
                 DrawHitboxes(window, curEnt);
                 DrawSprite(window, curEnt);
+                DrawTxt(window, curEnt);
             }
         }
 
@@ -513,15 +515,14 @@ class EntityManager : public Registry
                 //todo: realistically these 2 variables should be stored and only recalculated when the lvl increases
                 //but it will do for now
                 auto costInd = GetWeightedIndex(costMap.size(), costMap.size()/2+spawner->lvlIndex, 4);
-                auto cost = EnemyStatsManager::GetSortedKeys(&costMap)[costInd];
-                auto enemiesAtCost = costMap.at(cost);
+                auto costEnemyPair = GetIterator(&costMap, costInd);
 
-                auto type = enemiesAtCost[rand()%enemiesAtCost.size()];
+                auto type = costEnemyPair->second[rand()%costEnemyPair->second.size()];
 
                 auto stats = EnemyStatsManager::GetStats(type);
                 CreateTDEnemy(spawner->path, &type);
                 spawner->spawnTimer = spawner->spawnInterval;
-                spawner->pointBudget -= cost;
+                spawner->pointBudget -= costEnemyPair->first;
                 if (spawner->pointBudget <= 0)
                 {
                     spawner->canStart = false;
@@ -664,6 +665,20 @@ class EntityManager : public Registry
             {
                 pos->pos += attached->offset;
             }
+        }
+
+        void DrawTxt(sf::RenderWindow &window, Entity ent)
+        {
+            if (!has<Text>(ent)){return;}
+            auto text = get<Text>(ent);
+            if (has<Position>(ent)){text->txt.setPosition(get<Position>(ent)->pos);}
+            window.draw(text->txt);
+        }
+
+        void HandleShop(Entity ent)
+        {
+            if (!has<Shop>(ent)){return;}
+            
         }
 
         //helper for spawner logic
