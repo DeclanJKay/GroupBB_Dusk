@@ -2,6 +2,8 @@
 #include <algorithm>
 #include <fstream>
 #include <iostream>
+#include <iterator>
+#include <cmath>
 
 // -------------------------
 // Static member definitions
@@ -22,13 +24,13 @@ sf::Vector2f LevelSystem::_offset(0.f, 0.f);
 float LevelSystem::_tile_size = 100.f;
 
 // Cached world position of the "start" tile (for spawning the player).
-sf::Vector2f LevelSystem::_start_position(0.f, 0.f);
+sf::Vector2f LevelSystem::_start_position;
 
 // One drawable rect per tile, built from the tile data.
 std::vector<std::unique_ptr<sf::RectangleShape>> LevelSystem::_sprites;
 
 // Colour lookup table for each tile type.
-std::map<LevelSystem::Tile, sf::Color> LevelSystem::_colors{
+std::map<LevelSystem::Tile, sf::Color> LevelSystem::_colors = {
     { WALL,     sf::Color(200, 200, 200) },
     { END,      sf::Color(255,  80,  80) },
     { START,    sf::Color(80, 255,  80) },
@@ -54,6 +56,17 @@ sf::Color LevelSystem::get_color(LevelSystem::Tile t) {
 
 // Override the colour used when drawing a specific tile type.
 void LevelSystem::set_color(LevelSystem::Tile t, sf::Color c) {
+    if (_colors.empty())
+    {
+        _colors = {
+            { WALL,     sf::Color(200, 200, 200) },
+            { END,      sf::Color(255,  80,  80) },
+            { START,    sf::Color(80, 255,  80) },
+            { EMPTY,    sf::Color(25,  25,  25) },
+            { ENEMY,    sf::Color(255, 180,   0) },
+            { WAYPOINT, sf::Color(80, 160, 255) }
+        };
+    }
     _colors[t] = c;
 }
 
@@ -66,7 +79,7 @@ sf::Vector2f LevelSystem::get_tile_position(sf::Vector2i p) {
 // Throws if the coordinates are out of range.
 LevelSystem::Tile LevelSystem::get_tile(sf::Vector2i p) {
     if (p.x < 0 || p.y < 0 || p.x >= _width || p.y >= _height) {
-        throw std::string("Tile out of range: ") + std::to_string(p.x) + "," + std::to_string(p.y);
+        return Tile::OUT_OF_RANGE;
     }
     return _tiles[(p.y * _width) + p.x];
 }
@@ -75,7 +88,7 @@ LevelSystem::Tile LevelSystem::get_tile(sf::Vector2i p) {
 // This does a simple floor(v / tile_size) to map back into grid space.
 LevelSystem::Tile LevelSystem::get_tile_at(sf::Vector2f v) {
     const sf::Vector2f a = v - _offset;
-    if (a.x < 0 || a.y < 0) throw std::string("Tile out of range");
+    //if (a.x < 0 || a.y < 0) throw std::string("Tile out of range");
     const sf::Vector2i grid = sf::Vector2i(a / _tile_size);
     return get_tile(grid);
 }
@@ -114,13 +127,15 @@ void LevelSystem::build_sprites() {
 //   'w' = wall, 's' = start, 'e' = end, ' ' = empty,
 //   '+' = waypoint, 'n' = enemy lane.
 // Newlines mark the end of a row.
-void LevelSystem::load_level(const std::string& path, float tile_size) {
+std::vector<sf::Vector2f> LevelSystem::load_level(const std::string& path, float tile_size) {
     _tile_size = tile_size;
     _width = 0;
     _height = 0;
     _start_position = { 0.f, 0.f };
     _tiles.reset();
     _sprites.clear();
+
+    std::vector<sf::Vector2f> enemyPath;
 
     // Read whole file into a single string buffer.
     std::string buffer;
@@ -141,6 +156,7 @@ void LevelSystem::load_level(const std::string& path, float tile_size) {
     std::vector<Tile> temp; // temporary storage for parsed tiles
 
     // Parse each character and convert it to a Tile.
+    int p;
     for (size_t i = 0; i < buffer.size(); ++i) {
         const char c = buffer[i];
         switch (c) {
@@ -149,7 +165,6 @@ void LevelSystem::load_level(const std::string& path, float tile_size) {
             break;
         case 's':
             temp.push_back(START);
-            // When we see the start tile, cache its world position.
             _start_position = get_tile_position({ x, h });
             break;
         case 'e':
@@ -160,6 +175,7 @@ void LevelSystem::load_level(const std::string& path, float tile_size) {
             break;
         case '+':
             temp.push_back(WAYPOINT);
+            enemyPath.push_back(get_tile_position({ x, h }));
             break;
         case 'n':
             temp.push_back(ENEMY);
@@ -205,6 +221,7 @@ void LevelSystem::load_level(const std::string& path, float tile_size) {
     // Build one drawable rect per tile.
     build_sprites();
     std::cout << "Level " << path << " Loaded: " << w << "x" << h << "\n";
+    return enemyPath;
 }
 
 // -------------------------

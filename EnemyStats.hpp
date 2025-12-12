@@ -1,26 +1,38 @@
-// EnemyStats.hpp
 #pragma once
 
-#include <SFML/Graphics/Color.hpp>
-#include "EnemyType.hpp"
+#include <map>
+#include <unordered_map>
+#include "Comps.hpp"
+#include <SFML/Graphics.hpp>
 
-// Base stats per enemy type, shared between TD and Safehouse
-struct EnemyStats {
-    int   hp = 1;
-    float speed = 60.f;
-    float radius = 12.f;
-    sf::Color color = sf::Color::White;
-
-    // Hooks for later behaviours (not fully used yet)
-    bool  isRanged = false;
-    float rangeLimit = 0.f;
-    int   damage = 1;
-    bool  explodes = false;
-    float explosionRadius = 0.f;
-
-    //point cost used by wave generator
-    int   cost;
+//struct with all the variables necessary to spawn an enemy
+struct EnemyStats
+{
+    sf::Color col; //replace with sprite when implemented
+    int hp;
+    int speed;
+    float moveShootDelay;
+    int friction;
+    int radius;
+    WeaponArsenal weapons; //THE RADIUS AND BULLET RADIUS GETS ADDED TO OFFSET.Y BY DEFAULT DURING CREATION (spawns in front of enemy)
+    std::vector<int> ranges;
 };
 
-// Get the stats for a given EnemyType
-EnemyStats get_enemy_stats(EnemyType type);
+//class for defining all stats for each enemy type
+//MAKE IT A SINGLETON?
+class EnemyStatsManager
+{
+    //prevent construction
+    EnemyStatsManager() = delete;
+    ~EnemyStatsManager() = delete;
+
+    private:
+        const static std::unordered_map<EnemyTypes, int> EnemyToCost;
+        const static std::vector<EnemyTypes> enemiesPerLevel[]; 
+
+    public:
+        static EnemyStats GetStats(EnemyTypes type);
+        static int GetCost(EnemyTypes type);
+        static std::map<int, std::vector<EnemyTypes>> GetLevelCostMap(int levelInd);
+        static std::vector<int> GetSortedKeys(std::map<int, std::vector<EnemyTypes>>* costMap);
+};

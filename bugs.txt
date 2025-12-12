@@ -1,0 +1,3 @@
+-enemies will target whatever has become entity 0, after the player is dead.
+    (this can be fixed by getting entities with player specific components, or just 
+    ignored if the scene immediately switches)

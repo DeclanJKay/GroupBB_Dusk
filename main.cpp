@@ -1,30 +1,53 @@
-﻿#include "game_parameters.hpp"
-#include "game_systems.hpp"
-#include "scenes.hpp"
-#include "run_context.hpp"
+///Includes
+#include <SFML/Graphics.hpp>
+#include <cstdlib> //for rand
+#include <ctime> //for seeding rand
 
-using param = Parameters;
+#include "gameSys.hpp"
+#include "gameParams.hpp"
+#include <tuple>
+#include "MouseHelper.hpp"
+#include "KeyboardHelper.hpp"
 
-int main() {
-    // Shared run state for this playthrough (e.g. wave number, player stats)
-    Scenes::runContext = std::make_shared<RunContext>();
-    Scenes::runContext->currency = 5;
+int test;
 
-    // Core Dusk scenes
-    Scenes::safehouse = std::make_shared<SafehouseScene>();
-    Scenes::tower_defence = std::make_shared<TowerDefenceScene>();
-    Scenes::end = std::make_shared<EndScene>();
+int main () {
+	srand(time(0));
 
-    // Start the game in the safehouse (later this could be a main menu)
-    GameSystem::set_active_scene(Scenes::safehouse);
+	//create the window
+	sf::RenderWindow window(sf::VideoMode({Params::gameW, Params::gameH}), "Dusk");
+	window.setVerticalSyncEnabled(true);
 
-    // Kick off the main game loop
-    GameSystem::start(
-        param::game_width,
-        param::game_height,
-        "Dusk",
-        param::time_step
-    );
+	MouseHelper::SetWindow(&window);
 
-    return 0;
+    //initialise and load
+	GameSys::init();
+
+	while (window.isOpen())
+	{
+		//process window events
+      	sf::Event event;
+      	while (window.pollEvent(event))
+	  	{
+			KeyboardHelper::AssembleKeysPressed(&event);
+			MouseHelper::HandleEvents(&event);
+      		if (event.type == sf::Event::Closed)
+			{
+        		window.close();
+      		}
+    	}
+
+		//Calculate dt
+		static sf::Clock clock;
+		const float dt = clock.restart().asSeconds();
+		window.clear();
+		GameSys::update(dt);
+		GameSys::render(window);
+		window.display();
+		KeyboardHelper::Clear();
+		MouseHelper::Clear();
+	}
+
+	//Unload and shutdown
+	GameSys::clean();
 }
