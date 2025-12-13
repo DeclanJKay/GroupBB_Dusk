@@ -227,17 +227,21 @@ class EntityManager : public Registry
                     }
                 }
                 //handle removal
+                auto& curVector = it->second;//shorten for simplicity
                 for (int i = toRemove.size()-1; i >= 0; i--)
                 {
-                    auto& vector = it->second; //shorten for simplicity
-
                     //swap
-                    auto temp = vector.back();
-                    vector.back() = vector[toRemove[i]];
-                    vector[toRemove[i]] = temp;
+                    auto temp = curVector.back();
+                    curVector.back() = curVector[toRemove[i]];
+                    curVector[toRemove[i]] = temp;
 
                     //and pop
-                    vector.pop_back();
+                    curVector.pop_back();
+                }
+                if (curVector.size() == 0)
+                {
+                    it = layermap.erase(it);
+                    continue;
                 }
                 it++;
             }
