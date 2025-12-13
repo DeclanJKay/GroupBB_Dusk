@@ -35,7 +35,7 @@ add_executable(tile_engine
   KeyboardHelper.cpp
   Scenes.cpp
   EnemyStats.cpp
-  TextureManager.cpp
+  FileMgr.cpp
   Weapons.cpp
   Turrets.cpp
 
@@ -50,7 +50,7 @@ add_executable(tile_engine
   Systems.hpp
   EnemyStats.hpp
   GenericHelpers.hpp
-  TextureManager.hpp
+  FileMgr.hpp
   Weapons.hpp
   Turrets.hpp
     )

@@ -90,6 +90,12 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
 
+    auto testText = _entMan.CreateEntity();
+    sf::Text txt;
+    txt.setString("Sigma testing");
+    _entMan.add<Text>(testText, {txt});
+
+    //create entity with reference to main wallet
     if (wallet == nullptr){return;}
     auto wlt = _entMan.CreateEntity();
     _entMan.add<WalletPtr>(wlt, {wallet});

@@ -9,14 +9,16 @@
 Textures need to be stored outside of components as sprites only store a pointer
 to the texture, and components can move around in memory.
 */
-class TxtrMgr
+class FileMgr
 {
-    TxtrMgr() = delete;
-    ~TxtrMgr() = delete;
+    FileMgr() = delete;
+    ~FileMgr() = delete;
     private:
         //stored in a map to prevent loading multiples of the same file
         inline static std::unordered_map<std::string, std::shared_ptr<sf::Texture>> textures; 
+        inline static std::unordered_map<std::string, std::shared_ptr<sf::Font>> fonts; 
     public:
         static std::shared_ptr<sf::Texture> GetTxtr(const std::string& filepath);
-        static void ClearTxtrs(); //call this when a deconstructor for a scene is called
+        static std::shared_ptr<sf::Font> GetFont(const std::string& filepath);
+        static void CleanUp(); //call this when a deconstructor for a scene is called
 };

@@ -2,6 +2,7 @@
 #include <map>
 #include <unordered_map>
 #include <vector>
+#include <string>
 
 //gets sign of a number
 template <typename T> int Sign(T val) 
@@ -35,4 +36,16 @@ std::map<value, std::vector<key>> FlipMap(const std::unordered_map<key, value>& 
         it->second.push_back(pair.first);
     }
     return returnable;
+}
+
+template <typename type>
+void CleanMapOfPtrs(std::unordered_map<std::string, std::shared_ptr<type>>& map)
+{
+    for (auto it = map.begin(); it != map.end(); )
+    {
+        if (it->second.unique()) 
+            it = map.erase(it);
+        else 
+            ++it;
+    }
 }

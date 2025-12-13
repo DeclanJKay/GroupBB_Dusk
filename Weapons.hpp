@@ -3,7 +3,7 @@
 #include "Comps.hpp"
 #include <SFML/Graphics.hpp>
 #include <unordered_map>
-#include "TextureManager.hpp"
+#include "FileMgr.hpp"
 
 class WeaponStatsMgr
 {

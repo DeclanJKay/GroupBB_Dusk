@@ -28,7 +28,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
             curWeapon.fireRate = 2;
             curWeapon.pierce = 0;
             curWeapon.offset = {0, curWeapon.bulletRadius};
-            curWeapon.gunTxtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            curWeapon.gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case Sniper:
@@ -41,7 +41,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
             curWeapon.fireRate = 2;
             curWeapon.pierce = 0;
             curWeapon.offset = {0, curWeapon.bulletRadius};
-            curWeapon.gunTxtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            curWeapon.gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
             
         case Shotgun:
@@ -68,7 +68,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
             curWeapon.fireRate = 2;
             curWeapon.pierce = 0;
             curWeapon.offset = {0, curWeapon.bulletRadius};
-            curWeapon.gunTxtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            curWeapon.gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case SMG:
@@ -81,7 +81,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
             curWeapon.fireRate = 2;
             curWeapon.pierce = 0;
             curWeapon.offset = {0, curWeapon.bulletRadius};
-            curWeapon.gunTxtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            curWeapon.gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case Splurger6000:
@@ -94,7 +94,7 @@ Weapon WeaponStatsMgr::GetStats(Weapons weapon)
             curWeapon.fireRate = 2;
             curWeapon.pierce = 0;
             curWeapon.offset = {0, curWeapon.bulletRadius};
-            curWeapon.gunTxtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            curWeapon.gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
     }
 

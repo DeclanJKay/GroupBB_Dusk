@@ -9,7 +9,7 @@
 #include "EnemyStats.hpp"
 #include "tile_level_loader/level_system.hpp"
 #include "GenericHelpers.hpp"
-#include "TextureManager.hpp"
+#include "FileMgr.hpp"
 #include "Weapons.hpp"
 #include "Turrets.hpp"
 #include "KeyboardHelper.hpp"
@@ -97,7 +97,7 @@ class EntityManager : public Registry
             add<PlayerWeaponLogic>(player,{4});
 
             //testing stuff below
-            auto txtr = TxtrMgr::GetTxtr("res/img/playerAni.png");
+            auto txtr = FileMgr::GetTxtr("res/img/playerAni.png");
             sf::Sprite sprt;
             sprt.setTexture(*txtr);
             sprt.setOrigin(sf::Vector2f{32,32});
@@ -106,7 +106,7 @@ class EntityManager : public Registry
 
             auto gun = CreateEntity();
             add<AttachToEnt>(gun, {player, {60,0}, true});
-            txtr = TxtrMgr::GetTxtr("res/img/gun.png");
+            txtr = FileMgr::GetTxtr("res/img/gun.png");
             sprt = sf::Sprite();
             sprt.setTexture(*txtr);
             add<Sprite>(gun, Sprite{sprt, 90});
