@@ -93,8 +93,9 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
     auto testText = _entMan.CreateEntity();
     sf::Text txt;
     txt.setString("Sigma testing");
+    txt.setFillColor(sf::Color::Black);
     txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-    _entMan.add<Text>(testText, {5, txt});
+    _entMan.add<Text>(testText, {3, txt});
 
     auto testBox = _entMan.CreateEntity();
     sf::RectangleShape rect;

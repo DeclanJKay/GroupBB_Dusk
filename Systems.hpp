@@ -194,33 +194,67 @@ class EntityManager : public Registry
             auto it = layermap.begin();
             while (it != layermap.end())
             {
+                std::vector<int> toRemove;
                 for (int i = 0; i < it->second.size(); i++)
                 {
+                    if (!Exists(it->second[i].first)){toRemove.push_back(i); continue;}
                     if (disabled.contains(it->second[i].first)){continue;} //dont render if disabled
                     switch (it->second[i].second)
                     {
+                        //WHEN ADDING DRAW FUNCTIONS COPY PASTE A CASE ENTRY, REPLACE TYPE IN INDEX<> AND
+                        //REMOVEIFMISSING<>() TO WHATEVER COMP YOURE TESTING FOR AND REPLACE DRAW METHOD
+                        //WITH YOUR OWN ONE. MAKE SURE YOUR COMPONENT INHERITS FROM RENDERABLE  AND
+                        //YOU ADDED IT TO THE SWITCH CASE IN ONADD()
                         case Index<RectShape, AllComponents>::value:
+                            if (RemoveIfMissing<RectShape>(it->second[i].first, i, toRemove)){break;}
                             DrawRects(window, it->second[i].first);
                             break;
 
                         case Index<Sprite, AllComponents>::value:
+                            if (RemoveIfMissing<Sprite>(it->second[i].first, i, toRemove)){break;}
                             DrawSprite(window, it->second[i].first);
                             break;
 
                         case Index<Text, AllComponents>::value:
+                            if (RemoveIfMissing<Text>(it->second[i].first, i, toRemove)){break;}
                             DrawTxt(window, it->second[i].first);
                             break;
 
                         case Index<RenderHitboxes, AllComponents>::value:
+                            if (RemoveIfMissing<RenderHitboxes>(it->second[i].first, i, toRemove)){break;}
                             DrawHitboxes(window, it->second[i].first);
                             break;
                     }
+                }
+                //handle removal
+                for (int i = toRemove.size()-1; i >= 0; i--)
+                {
+                    auto& vector = it->second; //shorten for simplicity
+
+                    //swap
+                    auto temp = vector.back();
+                    vector.back() = vector[toRemove[i]];
+                    vector[toRemove[i]] = temp;
+
+                    //and pop
+                    vector.pop_back();
                 }
                 it++;
             }
         }
 
     private:
+        template<typename comp>
+        bool RemoveIfMissing(Entity ent, int i, std::vector<int>& toRemove)
+        {
+            if (!has<comp>(ent))
+            {
+                toRemove.push_back(i);
+                return true;
+            }
+            return false;
+        }
+
         std::map<int, std::vector<std::pair<Entity, size_t>>> layermap; //variable for handling layers when rendering
 
         void HandleVelocity(Entity ent, const float &dt)
@@ -240,7 +274,7 @@ class EntityManager : public Registry
 
         void DrawHitboxes(sf::RenderWindow &window, Entity ent)
         {
-            if (has<CircleCollider, RenderHitboxes, Position>(ent))
+            if (has<CircleCollider, Position>(ent))
             {
                 auto collider = get<CircleCollider>(ent);
                 auto pos = get<Position>(ent);
@@ -681,7 +715,6 @@ class EntityManager : public Registry
 
         void DrawSprite(sf::RenderWindow &window, Entity ent)
         {
-            if(!has<Sprite>(ent)){return;}
             auto sprite = get<Sprite>(ent);
             if (has<Position>(ent))
             {
@@ -733,7 +766,6 @@ class EntityManager : public Registry
 
         void DrawTxt(sf::RenderWindow &window, Entity ent)
         {
-            if (!has<Text>(ent)){return;}
             auto text = get<Text>(ent);
             if (has<Position>(ent)){text->txt.setPosition(get<Position>(ent)->pos);}
             window.draw(text->txt);
@@ -750,7 +782,6 @@ class EntityManager : public Registry
 
         void DrawRects(sf::RenderWindow &window, Entity ent)
         {
-            if(!has<RectShape>(ent)){return;}
             auto rect = get<RectShape>(ent);
             if (has<Position>(ent))
                 rect->shape.setPosition(get<Position>(ent)->pos);
