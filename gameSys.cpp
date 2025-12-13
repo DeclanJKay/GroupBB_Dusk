@@ -20,10 +20,12 @@ TowerDefence tdScene;
 Screen curScreen;
 
 std::shared_ptr<Wallet> mainWallet;
+std::shared_ptr<UpgradeData> mainUpgrades;
 
 void GameSys::init()
 {
     mainWallet = std::make_shared<Wallet>();
+    mainUpgrades = std::make_shared<UpgradeData>();
     curScreen = safeHouse;
     SwitchPlayerRestrict(curScreen);
 }
@@ -76,14 +78,14 @@ void GameSys::SwitchPlayerRestrict(Screen scrn)
 {
     switch (scrn)
     {
-        //the if statements only trigger if not initialised already
         case Screen::safeHouse:
-            if (!shScene.SetRestrictPlayer(false)){ shScene = SafeHouse(mainWallet, false); }
-            if(!tdScene.SetRestrictPlayer(true)){ tdScene = TowerDefence(mainWallet, true); }
+            if (!shScene.SetRestrictPlayer(false)) { shScene = SafeHouse(mainWallet, mainUpgrades, false); }
+            if (!tdScene.SetRestrictPlayer(true))  { tdScene = TowerDefence(mainWallet, mainUpgrades, true);  }
             break;
+
         case Screen::towerDefence:
-            if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(mainWallet, true); }
-            if(!tdScene.SetRestrictPlayer(false)){ tdScene = TowerDefence(mainWallet, false); }
+            if (!shScene.SetRestrictPlayer(true))  { shScene = SafeHouse(mainWallet, mainUpgrades, true);  }
+            if (!tdScene.SetRestrictPlayer(false)) { tdScene = TowerDefence(mainWallet, mainUpgrades, false); }
             break;
     }
 }

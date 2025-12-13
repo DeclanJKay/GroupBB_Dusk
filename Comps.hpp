@@ -54,6 +54,17 @@ enum Weapons
     Splurger6000
 };
 
+//Upgrades in the game after the player beats a wave
+enum UpgradeTypes
+{
+    uMaxHP,
+    uDamage,
+    uFireRate,
+    uMoveSpeed,
+    uBulletSpeed,
+    uMoneyBonus
+};
+
 struct Weapon
 {
     sf::Vector2f offset = {0,0}; //position offset based on direction (bullets already offset by collider radius by default)
@@ -179,7 +190,26 @@ struct WaveSpawner
     int pointBudget = 0;
     float spawnInterval = 1;
     float spawnTimer = 0;
+    bool waveSeenEnemy = false; // prevents upgrade offer triggering right as wave starts
     std::vector<sf::Vector2f> path;
+};
+
+struct UpgradeData
+{
+    // Persistent upgrade values
+    int bonusMaxHP = 0;
+    int bonusDamage = 0;
+    float bonusFireRate = 0.f;
+    int bonusMoveSpd = 0;
+    int bonusBulletSpeed = 0;
+    int moneyBonus = 0;
+
+    // Pick 1 of 3 upgrade options
+    bool offerActive = false;
+    bool offerPrinted = false;
+    int offerLevel = -1;
+    int lastOfferLevel = -1;
+    std::vector<UpgradeTypes> offerOptions;
 };
 
 struct TurretWeaponLogic
@@ -239,11 +269,16 @@ struct Shop
     std::set<std::pair<Turrets, Weapons>> stock;
 };
 
+struct UpgradeDataPtr
+{
+    std::shared_ptr<UpgradeData> upgradeDataPtr;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr
 >;

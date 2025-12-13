@@ -394,12 +394,21 @@ class EntityManager : public Registry
             if (health->dGroup == damageGroup::friendly){return;}
             if (!has<EnemyType>(ent)){return;}
 
+            int bonus = 0;
+            auto upgEnts = getAllEnt<UpgradeDataPtr>();
+            if (upgEnts.size() > 0)
+            {
+                auto ptr = get<UpgradeDataPtr>(upgEnts[0])->upgradeDataPtr;
+                if (ptr != nullptr) { bonus = ptr->moneyBonus; }
+            }
+
             auto wallets = getAllEnt<WalletPtr>();
             for (auto w : wallets)
             {
-                get<WalletPtr>(w)->walletPtr->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type);
+                get<WalletPtr>(w)->walletPtr->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type) + bonus;
             }
         }
+
 
         void HandleHealth(Entity ent)
         {
@@ -725,6 +734,79 @@ class EntityManager : public Registry
             //check if button pressed
             //equip item
         }
+
+        void ApplyUpgrade(Entity player, UpgradeTypes upg)
+        {
+            if (!Exists(player)) {return;}
+
+            // Grab shared upgrade data if it exists in this scene
+            UpgradeData* upgData = nullptr;
+            auto upgEnts = getAllEnt<UpgradeDataPtr>();
+            if (upgEnts.size() > 0)
+            {
+                auto ptr = get<UpgradeDataPtr>(upgEnts[0])->upgradeDataPtr;
+                if (ptr != nullptr) { upgData = ptr.get(); }
+            }
+
+            switch (upg)
+            {
+                case uMaxHP:
+                {
+                    if (upgData) { upgData->bonusMaxHP += 1; }
+                    if (has<Health>(player))
+                    {
+                        auto hp = get<Health>(player);
+                        hp->maxHealth += 1;
+                        hp->hp += 1;
+                    }
+                } break;
+
+                case uDamage:
+                {
+                    if (upgData) { upgData->bonusDamage += 1; }
+                    if (has<WeaponArsenal>(player))
+                    {
+                        auto ars = get<WeaponArsenal>(player);
+                        for (auto& w : ars->weapons) { w.damage += 1; }
+                    }
+                } break;
+
+                case uFireRate:
+                {
+                    if (upgData) { upgData->bonusFireRate += 0.25f; }
+                    if (has<WeaponArsenal>(player))
+                    {
+                        auto ars = get<WeaponArsenal>(player);
+                        for (auto& w : ars->weapons) { w.fireRate += 0.25f; }
+                    }
+                } break;
+
+                case uMoveSpeed:
+                {
+                    if (upgData) { upgData->bonusMoveSpd += 10; }
+                    if (has<PlayerMovement>(player))
+                    {
+                        get<PlayerMovement>(player)->moveSpd += 10;
+                    }
+                } break;
+
+                case uBulletSpeed:
+                {
+                    if (upgData) { upgData->bonusBulletSpeed += 50; }
+                    if (has<WeaponArsenal>(player))
+                    {
+                        auto ars = get<WeaponArsenal>(player);
+                        for (auto& w : ars->weapons) { w.bulletSpeed += 50; }
+                    }
+                } break;
+
+                case uMoneyBonus:
+                {
+                    if (upgData) { upgData->moneyBonus += 1; }
+                } break;
+            }
+        }
+
 
         //helper for spawner logic
         int GetWeightedIndex(int size, float focalPoint, float spread)

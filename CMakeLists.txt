@@ -38,6 +38,7 @@ add_executable(tile_engine
   FileMgr.cpp
   Weapons.cpp
   Turrets.cpp
+  Upgrades.cpp
 
   # headers optional (for VS visibility)
   Scenes.hpp
@@ -53,6 +54,7 @@ add_executable(tile_engine
   FileMgr.hpp
   Weapons.hpp
   Turrets.hpp
+  Upgrades.hpp
     )
 
 # Link SFML + our library
