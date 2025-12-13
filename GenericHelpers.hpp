@@ -11,9 +11,9 @@ template <typename T> int Sign(T val)
 
 //gets the x element in a provided map
 template <typename MapType>
-typename MapType::iterator GetIterator(MapType* costMap, int i)
+typename MapType::iterator GetIterator(MapType& costMap, int i)
 {
-    typename MapType::iterator it = costMap->begin();
+    typename MapType::iterator it = costMap.begin();
     std::advance(it, i);
     return it;
 }

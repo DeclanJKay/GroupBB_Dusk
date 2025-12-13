@@ -12,6 +12,7 @@
 #include "TextureManager.hpp"
 #include "Weapons.hpp"
 #include "Turrets.hpp"
+#include "KeyboardHelper.hpp"
 
 using ls = LevelSystem;
 
@@ -87,7 +88,6 @@ class EntityManager : public Registry
             add<Friction>(player, Friction{20});
             add<Health>(player, {hp, hp, friendly});
             add<CircleCollider>(player, CircleCollider{radius});
-            add<Wallet>(player, {});
 
             WeaponArsenal playerArs;
 
@@ -117,6 +117,47 @@ class EntityManager : public Registry
             return player;
         }
 
+        void PopulateShops()
+        {
+            if (!KeyboardHelper::KeyPressed(sf::Keyboard::P)){return;}
+            auto shops = getAllEnt<Shop>();
+
+            for (auto shopEnt : shops)
+            {
+                auto shop = get<Shop>(shopEnt);
+                shop->stock.clear();
+                auto costToTurs = TurretStatsManager::CostToTurrets();
+                auto costToWeapons = WeaponStatsMgr::CostToWeapons();
+
+                for (int i = 0; i < 4; i++)
+                {
+                    while (true)
+                    {
+                        std::pair<Turrets, Weapons> cur;
+
+                       //turret
+                        auto ind = GetWeightedIndex(costToTurs.size(), 1, 3);
+                        auto it = GetIterator(costToTurs, ind);
+
+                        cur.first = it->second[rand() % it->second.size()];
+
+                        //weapon
+                        ind = GetWeightedIndex(costToWeapons.size(), 1, 3);
+                        auto it2 = GetIterator(costToWeapons, ind);
+
+                        cur.second = it2->second[rand() % it2->second.size()];
+
+                        if (!shop->stock.contains(cur))
+                        {
+                            shop->stock.insert(cur);
+                            break;
+                        }
+                    }
+                }
+                std::cout<<"yes";
+            }
+        }
+
         void Update(const float &dt)
         {
             for (auto ent : entToBit)
@@ -142,6 +183,7 @@ class EntityManager : public Registry
                 HandleTurretDestruction(curEnt);
                 HandleAttachedEnts(curEnt);
                 HandleWeaponKickBack(curEnt, dt);
+                HandleShop(curEnt);
             }
             HandleCreationAndDestruction();
         }
@@ -352,10 +394,10 @@ class EntityManager : public Registry
             if (health->dGroup == damageGroup::friendly){return;}
             if (!has<EnemyType>(ent)){return;}
 
-            auto wallets = getAllEnt<Wallet>();
+            auto wallets = getAllEnt<WalletPtr>();
             for (auto w : wallets)
             {
-                get<Wallet>(w)->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type);
+                get<WalletPtr>(w)->walletPtr->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type);
             }
         }
 
@@ -515,7 +557,7 @@ class EntityManager : public Registry
                 //todo: realistically these 2 variables should be stored and only recalculated when the lvl increases
                 //but it will do for now
                 auto costInd = GetWeightedIndex(costMap.size(), costMap.size()/2+spawner->lvlIndex, 4);
-                auto costEnemyPair = GetIterator(&costMap, costInd);
+                auto costEnemyPair = GetIterator(costMap, costInd);
 
                 auto type = costEnemyPair->second[rand()%costEnemyPair->second.size()];
 
@@ -678,7 +720,10 @@ class EntityManager : public Registry
         void HandleShop(Entity ent)
         {
             if (!has<Shop>(ent)){return;}
-            
+            PopulateShops();
+            //get wallet
+            //check if button pressed
+            //equip item
         }
 
         //helper for spawner logic

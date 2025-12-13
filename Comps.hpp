@@ -4,10 +4,11 @@
 #include <box2d/box2d.h>
 #include <vector>
 #include <memory>
+#include <set>
 
 using Entity = uint32_t;
 
-//supporting structs and enums
+//SUPPORTING STRUCTS AND ENUMS ------------------------------------------------------------------------
 
 enum damageGroup //to specify who the bullet hits
 {
@@ -70,7 +71,13 @@ struct Weapon
     std::shared_ptr<sf::Texture> gunTxtr = nullptr;
 };
 
-//can be added to entities
+struct Wallet
+{
+    int money = 0;
+};
+
+
+//CAN BE ADDED TO ENTITIES -----------------------------------------------------------------
 struct Position
 {
     sf::Vector2f pos;
@@ -217,9 +224,9 @@ struct WeaponKickback
     float bounceBack;
 };
 
-struct Wallet
+struct WalletPtr
 {
-    int money = 0;
+    std::shared_ptr<Wallet> walletPtr;
 };
 
 struct Text
@@ -229,9 +236,7 @@ struct Text
 
 struct Shop
 {
-    Turrets availableTurrets[4];
-    Weapons availableWeapons[4];
-    int costs[4];
+    std::set<std::pair<Turrets, Weapons>> stock;
 };
 
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
@@ -240,5 +245,5 @@ using AllComponents = std::tuple
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, Wallet, Shop
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text
 >;

@@ -15,7 +15,7 @@ void Scene::Draw(sf::RenderWindow& window)
     _entMan.Draw(window);
 }
 
-SafeHouse::SafeHouse(bool playerRestrict)
+SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet, bool playerRestrict)
 {
     player = _entMan.CreatePlayer();
 
@@ -23,9 +23,17 @@ SafeHouse::SafeHouse(bool playerRestrict)
     //test enemy
     _entMan.CreateSHEnemy(&player, &type);
 
+    //test shop
+    auto shop = _entMan.CreateEntity();
+    _entMan.add<Shop>(shop, Shop{});
+
     //player restriction
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
+
+    if (wallet == nullptr){return;}
+    auto wlt = _entMan.CreateEntity();
+    _entMan.add<WalletPtr>(wlt, {wallet});
 }
 
 void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
@@ -51,7 +59,7 @@ bool SafeHouse::SetRestrictPlayer(bool b)
 
 
 //TOWER DEFENCE
-TowerDefence::TowerDefence(bool playerRestrict)
+TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
 {
     ls::set_color(ls::EMPTY, sf::Color(10, 10, 30));
     ls::set_color(ls::WALL, sf::Color(60, 60, 80));
@@ -81,6 +89,10 @@ TowerDefence::TowerDefence(bool playerRestrict)
     //player restriction
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
+
+    if (wallet == nullptr){return;}
+    auto wlt = _entMan.CreateEntity();
+    _entMan.add<WalletPtr>(wlt, {wallet});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)
