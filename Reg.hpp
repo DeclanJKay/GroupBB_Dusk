@@ -90,7 +90,9 @@ protected:
         }
         toRemove.clear();
     }
-    
+
+    virtual void OnAdd(Entity e, int compInd, void* componentData){}
+
 public:
     Entity CreateEntity()
     {
@@ -116,6 +118,11 @@ public:
         store.entityToIndex[e] = store.data.size(); //match index to array with entity
         store.indexToEntity.push_back(e);           //for removal
         store.data.push_back(component);            //add data to array
+
+        //on add function
+        void* componentPtr = &storage<C>().data.back();
+        constexpr auto componentId = Index<C, AllComponents>::value;
+        OnAdd(e, componentId, componentPtr);
 
         //update bitset
         if (toAdd.find(e) != toAdd.end()) //if not been added yet, alter to add

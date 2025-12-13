@@ -76,6 +76,11 @@ struct Wallet
     int money = 0;
 };
 
+struct Renderable
+{
+    int layer;
+};
+
 
 //CAN BE ADDED TO ENTITIES -----------------------------------------------------------------
 struct Position
@@ -101,7 +106,7 @@ struct Health
     damageGroup dGroup;
 };
 
-struct RenderHitboxes
+struct RenderHitboxes : Renderable
 {
     sf::Color col = sf::Color::White;
 };
@@ -198,7 +203,7 @@ struct RestrictPlayerInput
     bool restrict = false;
 };
 
-struct Sprite
+struct Sprite : Renderable
 {
     sf::Sprite sprt;
     float rotOffset = 0;
@@ -229,7 +234,7 @@ struct WalletPtr
     std::shared_ptr<Wallet> walletPtr;
 };
 
-struct Text
+struct Text : Renderable
 {
     sf::Text txt;
 };
@@ -239,11 +244,16 @@ struct Shop
     std::set<std::pair<Turrets, Weapons>> stock;
 };
 
+struct RectShape : Renderable
+{
+    sf::RectangleShape shape;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, RectShape
 >;

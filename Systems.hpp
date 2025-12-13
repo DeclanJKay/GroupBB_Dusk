@@ -24,7 +24,7 @@ class EntityManager : public Registry
             auto testTur = CreateEntity();
             add<Position>(testTur, {(sf::Vector2f)pos});
             add<CircleCollider>(testTur, {20});
-            add<RenderHitboxes>(testTur, {sf::Color::Cyan});
+            add<RenderHitboxes>(testTur, {2, sf::Color::Cyan});
             add<TurretWeaponLogic>(testTur, {300});
 
             WeaponArsenal weaponArs;
@@ -44,7 +44,7 @@ class EntityManager : public Registry
             auto stats = EnemyStatsManager::GetStats(*type);
 
             auto enemy = CreateEntity();
-            add<RenderHitboxes>(enemy, RenderHitboxes{stats.col});
+            add<RenderHitboxes>(enemy, RenderHitboxes{3, stats.col});
             add<Position>(enemy, Position{sf::Vector2f(300, 100)}); //door location (todo: add multiple spawnpoint?)
             add<Velocity>(enemy, Velocity{sf::Vector2f(0,0)});
             add<Friction>(enemy, Friction{20});
@@ -71,7 +71,7 @@ class EntityManager : public Registry
             add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
             add<TDPathMove>(enemy, {false, stats.speed, 1, sorted});
             add<CircleCollider>(enemy, {stats.radius});
-            add<RenderHitboxes>(enemy, {stats.col}); 
+            add<RenderHitboxes>(enemy, {5, stats.col}); 
             add<EnemyType>(enemy, EnemyType{*type, false});
         }
 
@@ -81,7 +81,7 @@ class EntityManager : public Registry
             int hp = 3;
 
             auto player = CreateEntity();
-            add<RenderHitboxes>(player, RenderHitboxes{sf::Color::White});
+            add<RenderHitboxes>(player, RenderHitboxes{1, sf::Color::White});
             add<PlayerMovement>(player, PlayerMovement{50});
             add<Position>(player, Position{sf::Vector2f(300,300)});
             add<Velocity>(player, Velocity{sf::Vector2f(0,0)});
@@ -102,14 +102,14 @@ class EntityManager : public Registry
             sprt.setTexture(*txtr);
             sprt.setOrigin(sf::Vector2f{32,32});
             sprt.setTextureRect(sf::IntRect{0,0,64,64});
-            add<Sprite>(player, {sprt, -90});
+            add<Sprite>(player, {7, sprt, -90});
 
             auto gun = CreateEntity();
             add<AttachToEnt>(gun, {player, {60,0}, true});
             txtr = FileMgr::GetTxtr("res/img/gun.png");
             sprt = sf::Sprite();
             sprt.setTexture(*txtr);
-            add<Sprite>(gun, Sprite{sprt, 90});
+            add<Sprite>(gun, Sprite{5, sprt, 90});
             add<Position>(gun, {{0,0}});
             add<WeaponKickback>(gun, {20, 0, 5});
 
@@ -196,11 +196,42 @@ class EntityManager : public Registry
                 if (disabled.contains(curEnt)){continue;}
                 DrawHitboxes(window, curEnt);
                 DrawSprite(window, curEnt);
+                DrawRects(window, curEnt);
                 DrawTxt(window, curEnt);
             }
+
+            auto it = layermap.begin();
+            while (it != layermap.end())
+            {
+                for (int i = 0; i < it->second.size(); i++)
+                {
+                    switch (it->second[i].second)
+                    {
+                        case Index<RectShape, AllComponents>::value:
+                            std::cout<<"draw rect for ent"<<it->second[i].first<<"\n";
+                            break;
+
+                        case Index<Sprite, AllComponents>::value:
+                            std::cout<<"draw sprite for ent"<<it->second[i].first<<"\n";
+                            break;
+
+                        case Index<Text, AllComponents>::value:
+                            std::cout<<"draw text for ent"<<it->second[i].first<<"\n";
+                            break;
+
+                        case Index<RenderHitboxes, AllComponents>::value:
+                            std::cout<<"draw hitbox for ent"<<it->second[i].first<<"\n";
+                            break;
+                    }
+                }
+                it++;
+            }
+            std::cout<<"\n";
         }
 
     private:
+        std::map<int, std::vector<std::pair<Entity, size_t>>> layermap; //variable for handling layers when rendering
+
         void HandleVelocity(Entity ent, const float &dt)
         {
             if (has<Position, Velocity>(ent))
@@ -369,7 +400,7 @@ class EntityManager : public Registry
                 //this is added for testing purposes
                 sf::Color col = sf::Color::Red;
                 if (weapon->dGroup == enemy) { col = sf::Color::Green; }
-                add<RenderHitboxes>(curBullet, RenderHitboxes{col});
+                add<RenderHitboxes>(curBullet, RenderHitboxes{8, col});
             }
             weapon->fireDelay = 1.f/weapon->fireRate;
             return true;
@@ -726,6 +757,15 @@ class EntityManager : public Registry
             //equip item
         }
 
+        void DrawRects(sf::RenderWindow &window, Entity ent)
+        {
+            if(!has<RectShape>(ent)){return;}
+            auto rect = get<RectShape>(ent);
+            if (has<Position>(ent))
+                rect->shape.setPosition(get<Position>(ent)->pos);
+            window.draw(rect->shape);
+        }
+
         //helper for spawner logic
         int GetWeightedIndex(int size, float focalPoint, float spread)
          {
@@ -763,4 +803,21 @@ class EntityManager : public Registry
             }
             return false;
         } 
+    
+        void OnAdd(Entity e, int compInd, void* componentData) override
+        {
+            //add to layer map
+            switch (compInd)
+            {
+                case Index<RectShape, AllComponents>::value:
+                case Index<RenderHitboxes, AllComponents>::value:
+                case Index<Text, AllComponents>::value:
+                case Index<Sprite, AllComponents>::value:
+                    //cast to renderable (so we can get the layer int)
+                    Renderable* renderablePtr = static_cast<Renderable*>(componentData);
+                    int layer = renderablePtr->layer;
+                    layermap[layer].push_back({e,compInd});
+                    break;
+            }
+        }
     };
