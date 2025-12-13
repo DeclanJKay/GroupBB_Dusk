@@ -190,43 +190,34 @@ class EntityManager : public Registry
 
         void Draw(sf::RenderWindow &window)
         {
-            for (auto ent : entToBit)
-            {
-                auto curEnt = ent.first;
-                if (disabled.contains(curEnt)){continue;}
-                DrawHitboxes(window, curEnt);
-                DrawSprite(window, curEnt);
-                DrawRects(window, curEnt);
-                DrawTxt(window, curEnt);
-            }
-
+            //my god
             auto it = layermap.begin();
             while (it != layermap.end())
             {
                 for (int i = 0; i < it->second.size(); i++)
                 {
+                    if (disabled.contains(it->second[i].first)){continue;} //dont render if disabled
                     switch (it->second[i].second)
                     {
                         case Index<RectShape, AllComponents>::value:
-                            std::cout<<"draw rect for ent"<<it->second[i].first<<"\n";
+                            DrawRects(window, it->second[i].first);
                             break;
 
                         case Index<Sprite, AllComponents>::value:
-                            std::cout<<"draw sprite for ent"<<it->second[i].first<<"\n";
+                            DrawSprite(window, it->second[i].first);
                             break;
 
                         case Index<Text, AllComponents>::value:
-                            std::cout<<"draw text for ent"<<it->second[i].first<<"\n";
+                            DrawTxt(window, it->second[i].first);
                             break;
 
                         case Index<RenderHitboxes, AllComponents>::value:
-                            std::cout<<"draw hitbox for ent"<<it->second[i].first<<"\n";
+                            DrawHitboxes(window, it->second[i].first);
                             break;
                     }
                 }
                 it++;
             }
-            std::cout<<"\n";
         }
 
     private:
