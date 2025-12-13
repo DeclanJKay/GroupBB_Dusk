@@ -23,10 +23,6 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet, bool playerRestrict)
     //test enemy
     _entMan.CreateSHEnemy(&player, &type);
 
-    //test shop
-    auto shop = _entMan.CreateEntity();
-    _entMan.add<Shop>(shop, Shop{});
-
     //player restriction
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
@@ -90,18 +86,6 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
 
-    auto testText = _entMan.CreateEntity();
-    sf::Text txt;
-    txt.setString("Sigma testing");
-    txt.setFillColor(sf::Color::Black);
-    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-    _entMan.add<Text>(testText, {3, txt});
-
-    auto testBox = _entMan.CreateEntity();
-    sf::RectangleShape rect;
-    rect.setSize({100,200});
-    _entMan.add<RectShape>(testBox, {4, rect});
-
     //create entity with reference to main wallet
     if (wallet == nullptr){return;}
     auto wlt = _entMan.CreateEntity();
@@ -140,6 +124,7 @@ std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path
 void TowerDefence::Update(const float& dt, bool allEnemiesDead)
 {
     Scene::Update(dt);
+
     auto pathEnts = _entMan.getAllEnt<TDPathMove>();
     for (auto ent : pathEnts)
     {
@@ -171,4 +156,63 @@ std::vector<EnemyTypes> TowerDefence::GetTransfers()
     auto returnable = toTransfer;
     toTransfer.clear();
     return returnable;
+}
+
+
+//SHOP
+ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
+{
+    if (wallet == nullptr){return;}
+
+    //create instance with wallet ptr
+    auto wall = _entMan.CreateEntity();
+    _entMan.add<WalletPtr>(wall, {wallet});
+
+    //create shop
+    auto shop = _entMan.CreateEntity();
+    _entMan.add<Shop>(shop, Shop{});
+
+    //create money display
+    totalMoney = _entMan.CreateEntity();
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setString(std::to_string(wallet->money));
+    _entMan.add<Text>(totalMoney, {1,txt});
+
+    //test button
+    auto button = _entMan.CreateEntity();
+    _entMan.add<Position>(button, {{600, 300}});
+    sf::RectangleShape shape;
+    shape.setSize({300,100});
+    shape.setOrigin({150, 50});
+    _entMan.add<RectShape>(button, {10,shape});
+    _entMan.add<Button>(button, {{300,100},false,false});
+    sf::Text txt2;
+    txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt2.setString("Epic Button");
+    txt2.setColor(sf::Color::Black);
+    txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
+    _entMan.add<Text>(button, {11, txt2});
+}
+
+void ShopScene::Update(const float& dt) 
+{
+    Scene::Update(dt);
+
+    auto wallet = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
+    _entMan.get<Text>(totalMoney)->txt.setString(std::to_string(wallet->walletPtr->money));
+
+    auto butts = _entMan.getAllEnt<Button>();
+    auto but = _entMan.get<Button>(butts[0]);
+    auto rect = _entMan.get<RectShape>(butts[0]);
+    rect->shape.setFillColor(sf::Color::White);
+    if (but->pressed)
+    {
+        rect->shape.setFillColor(sf::Color::Green);
+    }
+    else if (but->hover)
+    {
+        rect->shape.setFillColor(sf::Color::Yellow);
+    }
+
 }

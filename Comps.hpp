@@ -249,11 +249,19 @@ struct RectShape : Renderable
     sf::RectangleShape shape;
 };
 
+struct Button
+{
+    sf::Vector2f size;
+    bool hover = false;
+    bool pressed = false;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, RectShape
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, RectShape,
+    Button
 >;

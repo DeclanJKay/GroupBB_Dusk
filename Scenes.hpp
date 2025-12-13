@@ -37,3 +37,14 @@ class TowerDefence : public Scene
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
         bool SetRestrictPlayer(bool b);
 };
+
+class ShopScene : public Scene
+{
+    private:
+        Entity buyButtons[4];
+        Entity restockButton;
+        Entity totalMoney;
+    public:
+        ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
+        void Update(const float& dt) override;
+};

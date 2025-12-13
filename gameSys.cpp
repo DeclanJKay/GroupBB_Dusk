@@ -16,8 +16,10 @@ using ls = LevelSystem;
 
 SafeHouse shScene;
 TowerDefence tdScene;
+ShopScene shopScene;
 
 Screen curScreen;
+Screen lastScreen;
 
 std::shared_ptr<Wallet> mainWallet;
 
@@ -25,6 +27,8 @@ void GameSys::init()
 {
     mainWallet = std::make_shared<Wallet>();
     curScreen = safeHouse;
+    
+    shopScene = ShopScene(mainWallet);
     SwitchPlayerRestrict(curScreen);
 }
 
@@ -32,7 +36,9 @@ void GameSys::update(const float &dt)
 {
     switch (curScreen)
     {
-        case towerDefence: //implementation for 'case towerDefence || safeHouse:'
+        case shop:
+            shopScene.Update(dt);
+        case towerDefence:
         case safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());
             tdScene.Update(dt, shScene.NoEnemies());
@@ -52,6 +58,9 @@ void GameSys::render(sf::RenderWindow &window)
             ls::render(window);
             tdScene.Draw(window);
             break;
+        case shop:
+            shopScene.Draw(window);
+            break;
     }
 }
 
@@ -62,7 +71,7 @@ void GameSys::clean()
 
 void GameSys::ToggleGameScreen()
 {
-    if (KeyboardHelper::KeyPressed(sf::Keyboard::Tab))
+    if (KeyboardHelper::KeyPressed(sf::Keyboard::Tab) && curScreen != shop)
     {
         if (curScreen == safeHouse)
             curScreen = towerDefence;
@@ -70,6 +79,20 @@ void GameSys::ToggleGameScreen()
             curScreen = safeHouse;
         SwitchPlayerRestrict(curScreen);
     }
+    else if (KeyboardHelper::KeyPressed(sf::Keyboard::P))
+    {
+        if (curScreen != shop)
+        {
+            lastScreen = curScreen;
+            curScreen = shop;
+        }
+        else
+        {
+            curScreen = lastScreen;
+        }
+    }
+    else {return;}
+    SwitchPlayerRestrict(curScreen);
 }
 
 void GameSys::SwitchPlayerRestrict(Screen scrn)
@@ -84,6 +107,10 @@ void GameSys::SwitchPlayerRestrict(Screen scrn)
         case Screen::towerDefence:
             if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(mainWallet, true); }
             if(!tdScene.SetRestrictPlayer(false)){ tdScene = TowerDefence(mainWallet, false); }
+            break;
+        case Screen::shop:
+            if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(mainWallet, true); }
+            if(!tdScene.SetRestrictPlayer(true)){ tdScene = TowerDefence(mainWallet, true); }
             break;
     }
 }

@@ -19,6 +19,11 @@ using ls = LevelSystem;
 class EntityManager : public Registry
 {
     public:
+        void CreateButton()
+        {
+            
+        }
+
         void CreateTurret(sf::Vector2i pos) //prefab for turret
         {
             auto testTur = CreateEntity();
@@ -184,6 +189,7 @@ class EntityManager : public Registry
                 HandleAttachedEnts(curEnt);
                 HandleWeaponKickBack(curEnt, dt);
                 HandleShop(curEnt);
+                HandleButton(curEnt);
             }
             HandleCreationAndDestruction();
         }
@@ -197,6 +203,7 @@ class EntityManager : public Registry
                 std::vector<int> toRemove;
                 for (int i = 0; i < it->second.size(); i++)
                 {
+                    if (toAdd.contains(it->second[i].first)){continue;} //if not yet added dont render or remove
                     if (!Exists(it->second[i].first)){toRemove.push_back(i); continue;}
                     if (disabled.contains(it->second[i].first)){continue;} //dont render if disabled
                     switch (it->second[i].second)
@@ -248,17 +255,6 @@ class EntityManager : public Registry
         }
 
     private:
-        template<typename comp>
-        bool RemoveIfMissing(Entity ent, int i, std::vector<int>& toRemove)
-        {
-            if (!has<comp>(ent))
-            {
-                toRemove.push_back(i);
-                return true;
-            }
-            return false;
-        }
-
         std::map<int, std::vector<std::pair<Entity, size_t>>> layermap; //variable for handling layers when rendering
 
         void HandleVelocity(Entity ent, const float &dt)
@@ -792,6 +788,29 @@ class EntityManager : public Registry
             window.draw(rect->shape);
         }
 
+        void HandleButton(Entity ent)
+        {
+            //return if doesnt have button and position
+            if (!has<Button, Position>(ent)){return;}
+
+            //get all needed comps
+            auto but = get<Button>(ent);
+            auto mPos = MouseHelper::GetMousePos();
+            auto pos = get<Position>(ent);
+
+            //reset button variables
+            but->hover = false;
+            but->pressed = false;
+            
+            //return if not inside rectacngle hitbox
+            if (mPos.x > pos->pos.x+but->size.x/2 || mPos.x < pos->pos.x-but->size.x/2) {return;}
+            if (mPos.y > pos->pos.y+but->size.y/2 || mPos.y < pos->pos.y-but->size.y/2) {return;}
+            but->hover = true;
+            //return if button not just released
+            if (!MouseHelper::ButtonReleased(sf::Mouse::Left)){return;}
+            but->pressed = true;
+        }
+
         //helper for spawner logic
         int GetWeightedIndex(int size, float focalPoint, float spread)
          {
@@ -845,5 +864,16 @@ class EntityManager : public Registry
                     layermap[layer].push_back({e,compInd});
                     break;
             }
+        }
+    
+        template<typename comp>
+        bool RemoveIfMissing(Entity ent, int i, std::vector<int>& toRemove)
+        {
+            if (!has<comp>(ent))
+            {
+                toRemove.push_back(i);
+                return true;
+            }
+            return false;
         }
     };
