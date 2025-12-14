@@ -53,6 +53,10 @@ bool SafeHouse::SetRestrictPlayer(bool b)
     return true;
 }
 
+WeaponArsenal* SafeHouse::GetPlayerArsenal()
+{
+    return _entMan.get<WeaponArsenal>(player);
+}
 
 //TOWER DEFENCE
 TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
@@ -90,6 +94,10 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, bool playerRestrict)
     if (wallet == nullptr){return;}
     auto wlt = _entMan.CreateEntity();
     _entMan.add<WalletPtr>(wlt, {wallet});
+
+    //create turret inventory
+    turretHand = _entMan.CreateEntity();
+    _entMan.add<TurretHandler>(turretHand, {{{Turrets::tBasic, 2}}, 0, 0.3f});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)
@@ -158,6 +166,10 @@ std::vector<EnemyTypes> TowerDefence::GetTransfers()
     return returnable;
 }
 
+TurretHandler* TowerDefence::GetTurretHand()
+{
+    return _entMan.get<TurretHandler>(turretHand);
+}
 
 //SHOP
 ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
@@ -341,7 +353,7 @@ void ShopScene::UpdatePrices()
     }
 }
 
-void ShopScene::Update(const float& dt) 
+void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHand) 
 {
     Scene::Update(dt);
 
@@ -370,7 +382,7 @@ void ShopScene::Update(const float& dt)
         auto but = _entMan.get<Button>(buyButtons[i]);
         if (but->pressed)
         {
-            if (_entMan.BuyFromShop(i, _entMan.getAllEnt<Shop>()[0]))
+            if (_entMan.BuyFromShop(i, _entMan.getAllEnt<Shop>()[0], ars, turHand))
             {
                 UpdateShopEnt(i);
             }

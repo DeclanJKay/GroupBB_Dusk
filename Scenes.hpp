@@ -25,11 +25,13 @@ class SafeHouse : public Scene
         void Update(const float&dt, std::vector<EnemyTypes> toSpawn);
         bool NoEnemies();
         bool SetRestrictPlayer(bool b);
+        WeaponArsenal* GetPlayerArsenal();
 };
 
 class TowerDefence : public Scene
 {
     Entity RestrictPlayerEnt;
+    Entity turretHand;
     std::vector<EnemyTypes> toTransfer;
     public:
         TowerDefence(std::shared_ptr<Wallet> wallet = nullptr, bool playerRestrict = false);
@@ -37,6 +39,7 @@ class TowerDefence : public Scene
         std::vector<EnemyTypes> GetTransfers();
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
         bool SetRestrictPlayer(bool b);
+        TurretHandler* GetTurretHand();
 };
 
 class ShopScene : public Scene
@@ -58,5 +61,5 @@ class ShopScene : public Scene
         void UpdatePrices();
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
-        void Update(const float& dt) override;
+        void Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHand);
 };

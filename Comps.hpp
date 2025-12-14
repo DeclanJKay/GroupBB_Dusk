@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <map>
 
 using Entity = uint32_t;
 
@@ -120,6 +121,7 @@ struct WeaponArsenal
 {
     int selected = 0;
     std::vector<Weapon> weapons;
+    bool switched = true;
 };
 
 struct CircleCollider
@@ -192,10 +194,16 @@ struct TurretWeaponLogic
     int range;
 };
 
+struct TurretType
+{
+    Turrets type;
+};
+
 struct TurretHandler //for spawning turrets (SHOULD ONLY BE ONE ENTITY WITH THIS COMP PER SCENE)
 {
-    //will have stats here later
-    //e.g. money gained back on turret destruction or smthing
+    std::map<Turrets, int> inv;
+    int selected = 0;
+    float refund = 0.3f;
 };
 
 struct RestrictPlayerInput
@@ -265,5 +273,5 @@ using AllComponents = std::tuple
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
     Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, RectShape,
-    Button
+    Button, TurretType
 >;

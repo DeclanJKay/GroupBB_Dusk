@@ -37,7 +37,7 @@ void GameSys::update(const float &dt)
     switch (curScreen)
     {
         case shop:
-            shopScene.Update(dt);
+            shopScene.Update(dt, shScene.GetPlayerArsenal(), tdScene.GetTurretHand());
         case towerDefence:
         case safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());
@@ -87,6 +87,13 @@ void GameSys::ToggleGameScreen()
             curScreen = shop;
         }
         else
+        {
+            curScreen = lastScreen;
+        }
+    }
+    else if (KeyboardHelper::KeyPressed(sf::Keyboard::Tab) || KeyboardHelper::KeyPressed(sf::Keyboard::Escape))
+    {
+        if (curScreen == shop)
         {
             curScreen = lastScreen;
         }
