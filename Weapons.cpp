@@ -105,3 +105,27 @@ std::map<int, std::vector<Weapons>> WeaponStatsMgr::CostToWeapons()
 {
     return FlipMap(WeaponCosts);
 }
+
+std::string WeaponStatsMgr::GetWeaponName(Weapons weapon)
+{
+    switch (weapon)
+    {
+        case Weapons::Shiv :
+            return "Shiv";
+
+        case Weapons::Shotgun :
+            return "Shotgun";
+
+        case Weapons::SMG :
+            return "SMG";
+
+        case Weapons::Sniper :
+            return "Sniper";
+
+        case Weapons::Splurger6000 :
+            return "Splurger6000";
+
+        case Weapons::StartingWeapon :
+            return "StartingWeapon";
+    }
+}

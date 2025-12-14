@@ -181,31 +181,75 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     txt.setString(std::to_string(wallet->money));
     _entMan.add<Text>(totalMoney, {1,txt});
 
-    CreateShopEnts();
-    //test button
-    /*
-    auto button = _entMan.CreateEntity();
-    _entMan.add<Position>(button, {{600, 300}});
-    sf::RectangleShape shape;
-    shape.setSize({300,100});
-    shape.setOrigin({150, 50});
-    _entMan.add<RectShape>(button, {10,shape});
-    _entMan.add<Button>(button, {{300,100},false,false});
-    sf::Text txt2;
-    txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-    txt2.setString("Epic Button");
-    txt2.setColor(sf::Color::Black);
-    txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
-    _entMan.add<Text>(button, {11, txt2});*/
+    CreateShopEnts(shop);
+    CreateHoverDescription();
 }
 
-void ShopScene::CreateShopEnts()
+void ShopScene::CreateHoverDescription()
+{
+    hoverDesc = _entMan.CreateEntity();
+    _entMan.add<Position>(hoverDesc, {});
+    sf::RectangleShape shape;
+    shape.setFillColor(sf::Color::Yellow);
+    _entMan.add<RectShape>(hoverDesc, {3, shape});
+    sf::Text txt;
+    txt.setFillColor(sf::Color::Black);
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    _entMan.add<Text>(hoverDesc, {4, txt});
+    _entMan.Disable(hoverDesc);
+}
+
+void ShopScene::UpdateHoverDesc(std::string text)
+{
+    int padding = 10;
+    _entMan.Enable(hoverDesc);
+    _entMan.get<Position>(hoverDesc)->pos = (sf::Vector2f)MouseHelper::GetMousePos();
+    auto txt = _entMan.get<Text>(hoverDesc);
+    txt->txt.setString(text);
+    txt->txt.setOrigin({-padding/2,-padding/2});
+    auto rect = _entMan.get<RectShape>(hoverDesc);
+    auto txtSize = txt->txt.getGlobalBounds();
+    rect->shape.setSize({txtSize.width + 10, txtSize.height + 10});
+}
+
+void ShopScene::ShowDesc(Turrets turret)
+{
+    auto stats = TurretStatsManager::GetStats(turret);
+    std::string text = 
+        TurretStatsManager::GetTurretName(turret) + "\n" + 
+        "Range: " + std::to_string(stats.range)  + "\n" + 
+        "Damage: " + std::to_string(stats.weapons.weapons[0].damage)  + "\n" + 
+        "BulletsShot: " + std::to_string(stats.weapons.weapons[0].bulletsShot)  + "\n" + 
+        "Firerate: " + std::to_string(stats.weapons.weapons[0].fireRate)  + "\n" + 
+        "Spread: " + std::to_string(stats.weapons.weapons[0].bulletSpread)
+    ;
+    UpdateHoverDesc(text);
+}
+
+void ShopScene::ShowDesc(Weapons weapon)
+{
+    auto stats = WeaponStatsMgr::GetStats(weapon);
+    std::string text = 
+        WeaponStatsMgr::GetWeaponName(weapon) + "\n" + 
+        "Range: " + std::to_string(stats.bulletLifetime * stats.bulletSpeed)  + "\n" + 
+        "Damage: " + std::to_string(stats.damage)  + "\n" + 
+        "BulletsShot: " + std::to_string(stats.bulletsShot)  + "\n" + 
+        "Firerate: " + std::to_string(stats.fireRate)  + "\n" + 
+        "Spread: " + std::to_string(stats.bulletSpread)
+        ;
+    UpdateHoverDesc(text);
+}
+
+void ShopScene::CreateShopEnts(Entity shop)
 {
     const sf::Vector2f size = {170,170};
     int paddingX = 80;
     int paddingY = 200;
     int entries = 3;
     auto firstX = (Params::gameW - (size.x*entries + paddingX*(entries-1)))/2 + size.x/2;
+
+    auto stock = _entMan.get<Shop>(shop, true)->stock; //is just a copy of the data
+
     for (int i = 0; i < entries; i++)
     {
         buyButtons[i] = _entMan.CreateEntity();
@@ -216,15 +260,37 @@ void ShopScene::CreateShopEnts()
         shape.setOrigin({size.x/2, size.y/2});
         _entMan.add<RectShape>(buyButtons[i], {1,shape});
         _entMan.add<Button>(buyButtons[i], {{size.x, size.y}, false, false});
+        
+        //replace this with a sprite later
+        sf::Text txt2;
+        txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        txt2.setString(TurretStatsManager::GetTurretName(stock.begin()->first));
+        txt2.setColor(sf::Color::Black);
+        txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
+        _entMan.add<Text>(buyButtons[i], {2, txt2});
 
-        auto weapon = _entMan.CreateEntity();
-        _entMan.add<Position>(weapon, {pos + sf::Vector2f(80,60)});
+        weaponButts[i] = _entMan.CreateEntity();
+        _entMan.add<Position>(weaponButts[i], {pos + sf::Vector2f(80,60)});
         sf::RectangleShape shape2;
         shape2.setSize({80,80});
         shape2.setOrigin({40,40});
         shape2.setFillColor(sf::Color::Magenta);
-        _entMan.add<RectShape>(weapon, {2,shape2});
-        _entMan.add<Button>(weapon, {{80,80}, false, false});
+        _entMan.add<RectShape>(weaponButts[i], {2,shape2});
+        _entMan.add<Button>(weaponButts[i], {{80,80}, false, false});
+
+        //replace this with a sprite later
+        sf::Text txt;
+        txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        txt.setString(WeaponStatsMgr::GetWeaponName(stock.begin()->second));
+        txt.setColor(sf::Color::Black);
+        txt.setCharacterSize(20);
+        txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
+        _entMan.add<Text>(weaponButts[i], {2, txt});
+
+        sf::Text price;
+        auto priceEnt = _entMan.CreateEntity();
+
+        stock.erase(stock.begin());
     }
 }
 
@@ -232,28 +298,32 @@ void ShopScene::Update(const float& dt)
 {
     Scene::Update(dt);
 
+    _entMan.Disable(hoverDesc);
+
     auto wallet = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
     _entMan.get<Text>(totalMoney)->txt.setString(std::to_string(wallet->walletPtr->money));
 
-    auto butts = _entMan.getAllEnt<Button>();
-    auto but = _entMan.get<Button>(butts[0]);
-    auto rect = _entMan.get<RectShape>(butts[0]);
-
-    for (auto cur : butts)
+    //weapon hover desc
+    for (int i = 0; i < 3; i++)
     {
-        std::cout<<_entMan.get<Position>(cur)->pos.x<<" " << _entMan.get<Position>(cur)->pos.y << "\n";
-    }
-    std::cout<<MouseHelper::GetMousePos().x<<" "<<MouseHelper::GetMousePos().y<<"\n";
-    std::cout<<"\n";
-
-    rect->shape.setFillColor(sf::Color::White);
-    if (but->pressed)
-    {
-        rect->shape.setFillColor(sf::Color::Green);
-    }
-    else if (but->hover)
-    {
-        rect->shape.setFillColor(sf::Color::Yellow);
+        auto but = _entMan.get<Button>(weaponButts[i]);
+        if (but->hover)
+        {
+            auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
+            ShowDesc(GetIterator(shop->stock, i)->second);
+            return;
+        }
     }
 
+    //turret hover desk
+    for (int i = 0; i < 3; i++)
+    {
+        auto but = _entMan.get<Button>(buyButtons[i]);
+        if (but->hover)
+        {
+            auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
+            ShowDesc(GetIterator(shop->stock, i)->first);
+            return;
+        }
+    }
 }

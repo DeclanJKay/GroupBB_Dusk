@@ -4,6 +4,7 @@
 #include <SFML/Graphics.hpp>
 #include <unordered_map>
 #include "FileMgr.hpp"
+#include <string>
 
 class WeaponStatsMgr
 {
@@ -16,4 +17,5 @@ class WeaponStatsMgr
     public:
         static Weapon GetStats(Weapons weapon);
         static std::map<int, std::vector<Weapons>> CostToWeapons();
+        static std::string GetWeaponName(Weapons weapon);
 };

@@ -143,13 +143,13 @@ public:
     }
 
     template<typename C>
-    std::vector<Entity> getAllEnt()
+    std::vector<Entity> getAllEnt(bool bypassExist = false)
     {
         auto& store = storage<C>();
         std::vector<Entity> actualList; //prevent returning not yet created entities
         for (auto ent : store.indexToEntity)
         {
-            if (!entToBit.contains(ent)) { continue; }
+            if (!bypassExist && !entToBit.contains(ent)) { continue; }
             if (disabled.contains(ent)) {continue;}
             actualList.push_back(ent);
         }

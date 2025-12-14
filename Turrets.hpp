@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include "Comps.hpp"
 #include "GenericHelpers.hpp"
-
+#include <string>
 
 struct TurretStats
 {
@@ -22,4 +22,5 @@ class TurretStatsManager
     public:
         static std::map<int, std::vector<Turrets>> CostToTurrets();
         static TurretStats GetStats(Turrets turret);
+        static std::string GetTurretName(Turrets turret);
 };

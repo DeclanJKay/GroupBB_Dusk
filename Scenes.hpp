@@ -3,6 +3,7 @@
 #include <box2d/box2d.h>
 #include "Systems.hpp"
 #include <unordered_map>
+#include "GenericHelpers.hpp"
 
 class Scene
 {
@@ -42,10 +43,17 @@ class ShopScene : public Scene
 {
     private:
         Entity buyButtons[3];
+        Entity weaponButts[3];
+        Entity prices[3];
         Entity restockButton;
         Entity totalMoney;
+        Entity hoverDesc;
 
-        void CreateShopEnts();
+        void CreateShopEnts(Entity shop);
+        void CreateHoverDescription();
+        void ShowDesc(Turrets turret);
+        void UpdateHoverDesc(std::string text);
+        void ShowDesc(Weapons weapon);
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
         void Update(const float& dt) override;

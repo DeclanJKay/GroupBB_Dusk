@@ -124,11 +124,11 @@ class EntityManager : public Registry
 
         void PopulateShops(int slots)
         {
-            auto shops = getAllEnt<Shop>();
+            auto shops = getAllEnt<Shop>(true);
 
             for (auto shopEnt : shops)
             {
-                auto shop = get<Shop>(shopEnt);
+                auto shop = get<Shop>(shopEnt, true);
                 shop->stock.clear();
                 auto costToTurs = TurretStatsManager::CostToTurrets();
                 auto costToWeapons = WeaponStatsMgr::CostToWeapons();
