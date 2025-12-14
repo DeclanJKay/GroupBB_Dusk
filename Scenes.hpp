@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "FileMgr.hpp" // so you can use FileMgr::GetFont
 
+#include "GenericHelpers.hpp"
 
 class Scene
 {
@@ -30,13 +31,13 @@ class SafeHouse : public Scene
         bool NoEnemies();
         bool ApplyUpgrade(UpgradeTypes upg);
         bool SetRestrictPlayer(bool b);
-
-        
+        WeaponArsenal* GetPlayerArsenal();
 };
 
 class TowerDefence : public Scene
 {
     Entity RestrictPlayerEnt;
+    Entity turretHand;
     Entity upgradeTextEnt;
     Entity debugTextEnt = 0;
     bool showDebug = false;
@@ -47,4 +48,27 @@ class TowerDefence : public Scene
         std::vector<EnemyTypes> GetTransfers();
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
         bool SetRestrictPlayer(bool b);
+        TurretHandler* GetTurretHand();
+};
+
+class ShopScene : public Scene
+{
+    private:
+        Entity buyButtons[3];
+        Entity weaponButts[3];
+        Entity prices[3];
+        Entity restockButton;
+        Entity totalMoney;
+        Entity hoverDesc;
+
+        void InitialiseShopInterface(Entity shop);
+        void UpdateShopEnt(int index);
+        void CreateHoverDescription();
+        void ShowDesc(Turrets turret);
+        void UpdateHoverDesc(std::string text);
+        void ShowDesc(Weapons weapon);
+        void UpdatePrices();
+    public:
+        ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
+        void Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHand);
 };

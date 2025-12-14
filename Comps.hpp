@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <set>
+#include <map>
 
 using Entity = uint32_t;
 
@@ -87,6 +88,11 @@ struct Wallet
     int money = 0;
 };
 
+struct Renderable
+{
+    int layer;
+};
+
 
 //CAN BE ADDED TO ENTITIES -----------------------------------------------------------------
 struct Position
@@ -112,7 +118,7 @@ struct Health
     damageGroup dGroup;
 };
 
-struct RenderHitboxes
+struct RenderHitboxes : Renderable
 {
     sf::Color col = sf::Color::White;
 };
@@ -126,6 +132,7 @@ struct WeaponArsenal
 {
     int selected = 0;
     std::vector<Weapon> weapons;
+    bool switched = true;
 };
 
 struct CircleCollider
@@ -217,10 +224,16 @@ struct TurretWeaponLogic
     int range;
 };
 
+struct TurretType
+{
+    Turrets type;
+};
+
 struct TurretHandler //for spawning turrets (SHOULD ONLY BE ONE ENTITY WITH THIS COMP PER SCENE)
 {
-    //will have stats here later
-    //e.g. money gained back on turret destruction or smthing
+    std::map<Turrets, int> inv;
+    int selected = 0;
+    float refund = 0.3f;
 };
 
 struct RestrictPlayerInput
@@ -228,7 +241,7 @@ struct RestrictPlayerInput
     bool restrict = false;
 };
 
-struct Sprite
+struct Sprite : Renderable
 {
     sf::Sprite sprt;
     float rotOffset = 0;
@@ -259,7 +272,7 @@ struct WalletPtr
     std::shared_ptr<Wallet> walletPtr;
 };
 
-struct Text
+struct Text : Renderable
 {
     sf::Text txt;
 };
@@ -267,6 +280,20 @@ struct Text
 struct Shop
 {
     std::set<std::pair<Turrets, Weapons>> stock;
+    std::pair<Turrets, Weapons> order[3];
+    int prices[3];
+};
+
+struct RectShape : Renderable
+{
+    sf::RectangleShape shape;
+};
+
+struct Button
+{
+    sf::Vector2f size;
+    bool hover = false;
+    bool pressed = false;
 };
 
 struct UpgradeDataPtr
@@ -280,5 +307,6 @@ using AllComponents = std::tuple
     EnemyShootingLogic, EnemySafeMove, Friction, Position, Velocity, CircleCollider, 
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
-    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr
+    Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr, TurretType,
+    Button, RectShape
 >;

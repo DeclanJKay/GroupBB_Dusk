@@ -74,3 +74,26 @@ TurretStats TurretStatsManager::GetStats(Turrets turret)
     }
     return stats;
 }
+
+std::string TurretStatsManager::GetTurretName(Turrets turret)
+{
+    switch (turret)
+    {
+        case tBasic:
+            return "Basic";
+
+        case tRapid:
+            return "Rapid";
+
+        case tShotgun:
+            return "Shotgun";
+
+        case tSniper:
+            return "Sniper";
+    }
+}
+
+int TurretStatsManager::GetCost(Turrets turret)
+{
+    return TurToCost.at(turret);
+}

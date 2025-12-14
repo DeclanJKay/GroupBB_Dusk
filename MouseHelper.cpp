@@ -15,6 +15,10 @@ void MouseHelper::HandleEvents(sf::Event* event)
     {
         pressed.insert(event->mouseButton.button);
     }
+    if (event->type == sf::Event::MouseButtonReleased)
+    {
+        released.insert(event->mouseButton.button);
+    }
 }
 
 sf::Vector2i MouseHelper::GetMousePos()
@@ -27,6 +31,11 @@ bool MouseHelper::ButtonPressed(sf::Mouse::Button but)
     return pressed.contains(but);
 }
 
+bool MouseHelper::ButtonReleased(sf::Mouse::Button but)
+{
+    return released.contains(but);
+}
+
 float MouseHelper::MouseWheelMovement()
 {
     return mWheelMove;
@@ -36,4 +45,5 @@ void MouseHelper::Clear()
 {
     mWheelMove = 0;
     pressed.clear();
+    released.clear();
 }

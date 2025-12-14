@@ -90,7 +90,9 @@ protected:
         }
         toRemove.clear();
     }
-    
+
+    virtual void OnAdd(Entity e, int compInd, void* componentData){}
+
 public:
     Entity CreateEntity()
     {
@@ -117,6 +119,11 @@ public:
         store.indexToEntity.push_back(e);           //for removal
         store.data.push_back(component);            //add data to array
 
+        //on add function
+        void* componentPtr = &storage<C>().data.back();
+        constexpr auto componentId = Index<C, AllComponents>::value;
+        OnAdd(e, componentId, componentPtr);
+
         //update bitset
         if (toAdd.find(e) != toAdd.end()) //if not been added yet, alter to add
         {
@@ -136,13 +143,13 @@ public:
     }
 
     template<typename C>
-    std::vector<Entity> getAllEnt()
+    std::vector<Entity> getAllEnt(bool bypassExist = false)
     {
         auto& store = storage<C>();
         std::vector<Entity> actualList; //prevent returning not yet created entities
         for (auto ent : store.indexToEntity)
         {
-            if (!entToBit.contains(ent)) { continue; }
+            if (!bypassExist && !entToBit.contains(ent)) { continue; }
             if (disabled.contains(ent)) {continue;}
             actualList.push_back(ent);
         }

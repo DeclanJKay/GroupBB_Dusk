@@ -49,3 +49,9 @@ void CleanMapOfPtrs(std::unordered_map<std::string, std::shared_ptr<type>>& map)
             ++it;
     }
 }
+
+static void ChangeStringCentred(sf::Text& txt, std::string newText)
+{
+    txt.setString(newText);
+    txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
+}
