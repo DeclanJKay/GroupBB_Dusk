@@ -39,7 +39,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
     upgradeTextEnt = _entMan.CreateEntity();
     {
         sf::Text offerTxt;
-        auto font = FileMgr::GetFont("res/fonts/arial.ttf");
+        auto font = FileMgr::GetFont("res/fonts/ARIAL.TTF");
         offerTxt.setFont(*font);
         offerTxt.setCharacterSize(20);
         offerTxt.setPosition(20.f, 20.f);
@@ -51,7 +51,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
     debugTextEnt = _entMan.CreateEntity();
     {
         sf::Text dbgTxt;
-        auto font = FileMgr::GetFont("res/fonts/arial.ttf");
+        auto font = FileMgr::GetFont("res/fonts/ARIAL.TTF");
         dbgTxt.setFont(*font);
         dbgTxt.setCharacterSize(16);
         dbgTxt.setPosition(20.f, 170.f); // lower so it doesn’t overlap the upgrade list
