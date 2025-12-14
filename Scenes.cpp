@@ -172,6 +172,8 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     auto shop = _entMan.CreateEntity();
     _entMan.add<Shop>(shop, Shop{});
 
+    _entMan.PopulateShops(3);
+
     //create money display
     totalMoney = _entMan.CreateEntity();
     sf::Text txt;
@@ -179,7 +181,9 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     txt.setString(std::to_string(wallet->money));
     _entMan.add<Text>(totalMoney, {1,txt});
 
+    CreateShopEnts();
     //test button
+    /*
     auto button = _entMan.CreateEntity();
     _entMan.add<Position>(button, {{600, 300}});
     sf::RectangleShape shape;
@@ -192,7 +196,36 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     txt2.setString("Epic Button");
     txt2.setColor(sf::Color::Black);
     txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
-    _entMan.add<Text>(button, {11, txt2});
+    _entMan.add<Text>(button, {11, txt2});*/
+}
+
+void ShopScene::CreateShopEnts()
+{
+    const sf::Vector2f size = {170,170};
+    int paddingX = 80;
+    int paddingY = 200;
+    int entries = 3;
+    auto firstX = (Params::gameW - (size.x*entries + paddingX*(entries-1)))/2 + size.x/2;
+    for (int i = 0; i < entries; i++)
+    {
+        buyButtons[i] = _entMan.CreateEntity();
+        sf::Vector2f pos = {firstX + (paddingX + size.x)*i, Params::gameH - size.y/2 - paddingY};
+        _entMan.add<Position>(buyButtons[i], {pos});
+        sf::RectangleShape shape;
+        shape.setSize({size.x,size.y});
+        shape.setOrigin({size.x/2, size.y/2});
+        _entMan.add<RectShape>(buyButtons[i], {1,shape});
+        _entMan.add<Button>(buyButtons[i], {{size.x, size.y}, false, false});
+
+        auto weapon = _entMan.CreateEntity();
+        _entMan.add<Position>(weapon, {pos + sf::Vector2f(80,60)});
+        sf::RectangleShape shape2;
+        shape2.setSize({80,80});
+        shape2.setOrigin({40,40});
+        shape2.setFillColor(sf::Color::Magenta);
+        _entMan.add<RectShape>(weapon, {2,shape2});
+        _entMan.add<Button>(weapon, {{80,80}, false, false});
+    }
 }
 
 void ShopScene::Update(const float& dt) 
@@ -205,6 +238,14 @@ void ShopScene::Update(const float& dt)
     auto butts = _entMan.getAllEnt<Button>();
     auto but = _entMan.get<Button>(butts[0]);
     auto rect = _entMan.get<RectShape>(butts[0]);
+
+    for (auto cur : butts)
+    {
+        std::cout<<_entMan.get<Position>(cur)->pos.x<<" " << _entMan.get<Position>(cur)->pos.y << "\n";
+    }
+    std::cout<<MouseHelper::GetMousePos().x<<" "<<MouseHelper::GetMousePos().y<<"\n";
+    std::cout<<"\n";
+
     rect->shape.setFillColor(sf::Color::White);
     if (but->pressed)
     {

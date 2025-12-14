@@ -41,9 +41,11 @@ class TowerDefence : public Scene
 class ShopScene : public Scene
 {
     private:
-        Entity buyButtons[4];
+        Entity buyButtons[3];
         Entity restockButton;
         Entity totalMoney;
+
+        void CreateShopEnts();
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
         void Update(const float& dt) override;

@@ -122,9 +122,8 @@ class EntityManager : public Registry
             return player;
         }
 
-        void PopulateShops()
+        void PopulateShops(int slots)
         {
-            if (!KeyboardHelper::KeyPressed(sf::Keyboard::P)){return;}
             auto shops = getAllEnt<Shop>();
 
             for (auto shopEnt : shops)
@@ -134,7 +133,7 @@ class EntityManager : public Registry
                 auto costToTurs = TurretStatsManager::CostToTurrets();
                 auto costToWeapons = WeaponStatsMgr::CostToWeapons();
 
-                for (int i = 0; i < 4; i++)
+                for (int i = 0; i < slots; i++)
                 {
                     while (true)
                     {
@@ -159,7 +158,6 @@ class EntityManager : public Registry
                         }
                     }
                 }
-                std::cout<<"yes";
             }
         }
 
@@ -188,7 +186,6 @@ class EntityManager : public Registry
                 HandleTurretDestruction(curEnt);
                 HandleAttachedEnts(curEnt);
                 HandleWeaponKickBack(curEnt, dt);
-                HandleShop(curEnt);
                 HandleButton(curEnt);
             }
             HandleCreationAndDestruction();
@@ -769,15 +766,6 @@ class EntityManager : public Registry
             auto text = get<Text>(ent);
             if (has<Position>(ent)){text->txt.setPosition(get<Position>(ent)->pos);}
             window.draw(text->txt);
-        }
-
-        void HandleShop(Entity ent)
-        {
-            if (!has<Shop>(ent)){return;}
-            PopulateShops();
-            //get wallet
-            //check if button pressed
-            //equip item
         }
 
         void DrawRects(sf::RenderWindow &window, Entity ent)
