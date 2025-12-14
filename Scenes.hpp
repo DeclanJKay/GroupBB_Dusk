@@ -49,11 +49,13 @@ class ShopScene : public Scene
         Entity totalMoney;
         Entity hoverDesc;
 
-        void CreateShopEnts(Entity shop);
+        void InitialiseShopInterface(Entity shop);
+        void UpdateShopEnt(int index);
         void CreateHoverDescription();
         void ShowDesc(Turrets turret);
         void UpdateHoverDesc(std::string text);
         void ShowDesc(Weapons weapon);
+        void UpdatePrices();
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
         void Update(const float& dt) override;

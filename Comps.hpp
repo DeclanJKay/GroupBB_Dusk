@@ -242,6 +242,8 @@ struct Text : Renderable
 struct Shop
 {
     std::set<std::pair<Turrets, Weapons>> stock;
+    std::pair<Turrets, Weapons> order[3];
+    int prices[3];
 };
 
 struct RectShape : Renderable

@@ -92,3 +92,8 @@ std::string TurretStatsManager::GetTurretName(Turrets turret)
             return "Sniper";
     }
 }
+
+int TurretStatsManager::GetCost(Turrets turret)
+{
+    return TurToCost.at(turret);
+}

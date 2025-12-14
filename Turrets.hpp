@@ -23,4 +23,5 @@ class TurretStatsManager
         static std::map<int, std::vector<Turrets>> CostToTurrets();
         static TurretStats GetStats(Turrets turret);
         static std::string GetTurretName(Turrets turret);
+        static int GetCost(Turrets turret);
 };

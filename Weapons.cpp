@@ -129,3 +129,8 @@ std::string WeaponStatsMgr::GetWeaponName(Weapons weapon)
             return "StartingWeapon";
     }
 }
+
+int WeaponStatsMgr::GetCost(Weapons weapon)
+{
+    return WeaponCosts.at(weapon);
+}

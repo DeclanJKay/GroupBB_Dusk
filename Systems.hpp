@@ -19,10 +19,6 @@ using ls = LevelSystem;
 class EntityManager : public Registry
 {
     public:
-        void CreateButton()
-        {
-            
-        }
 
         void CreateTurret(sf::Vector2i pos) //prefab for turret
         {
@@ -122,43 +118,30 @@ class EntityManager : public Registry
             return player;
         }
 
-        void PopulateShops(int slots)
+        void PopulateShop(Entity shopEnt)
         {
-            auto shops = getAllEnt<Shop>(true);
+            auto costToTurs = TurretStatsManager::CostToTurrets();
+            auto costToWeapons = WeaponStatsMgr::CostToWeapons();
 
-            for (auto shopEnt : shops)
+            for (int i = 0; i < 3; i++)
             {
-                auto shop = get<Shop>(shopEnt, true);
-                shop->stock.clear();
-                auto costToTurs = TurretStatsManager::CostToTurrets();
-                auto costToWeapons = WeaponStatsMgr::CostToWeapons();
-
-                for (int i = 0; i < slots; i++)
-                {
-                    while (true)
-                    {
-                        std::pair<Turrets, Weapons> cur;
-
-                       //turret
-                        auto ind = GetWeightedIndex(costToTurs.size(), 1, 3);
-                        auto it = GetIterator(costToTurs, ind);
-
-                        cur.first = it->second[rand() % it->second.size()];
-
-                        //weapon
-                        ind = GetWeightedIndex(costToWeapons.size(), 1, 3);
-                        auto it2 = GetIterator(costToWeapons, ind);
-
-                        cur.second = it2->second[rand() % it2->second.size()];
-
-                        if (!shop->stock.contains(cur))
-                        {
-                            shop->stock.insert(cur);
-                            break;
-                        }
-                    }
-                }
+                RollShopItem(costToTurs,costToWeapons,shopEnt,i);
             }
+        }
+
+        bool BuyFromShop(int index, Entity shopEnt)
+        {
+            auto shop = get<Shop>(shopEnt);
+            auto wallet = get<WalletPtr>(getAllEnt<WalletPtr>()[0]);
+
+            if (shop->prices[index] > wallet->walletPtr->money){return false;}
+            wallet->walletPtr->money -= shop->prices[index];
+
+            auto costToTurs = TurretStatsManager::CostToTurrets();
+            auto costToWeapons = WeaponStatsMgr::CostToWeapons();
+            shop->stock.erase(shop->order[index]);
+            RollShopItem(costToTurs,costToWeapons,shopEnt,index);
+            return true;
         }
 
         void Update(const float &dt)
@@ -863,5 +846,38 @@ class EntityManager : public Registry
                 return true;
             }
             return false;
+        }
+    
+        void RollShopItem(
+            std::map<int,std::vector<Turrets>>& costToTurs, 
+            std::map<int,std::vector<Weapons>>& costToWeapons,
+            Entity shopEnt,
+            int indexOfEntry)
+        {
+            auto shop = get<Shop>(shopEnt, true);
+            while (true)
+            {
+                std::pair<Turrets, Weapons> cur;
+
+                //turret
+                auto ind = GetWeightedIndex(costToTurs.size(), 1, 3);
+                auto it = GetIterator(costToTurs, ind);
+
+                cur.first = it->second[rand() % it->second.size()];
+
+                //weapon
+                ind = GetWeightedIndex(costToWeapons.size(), 1, 3);
+                auto it2 = GetIterator(costToWeapons, ind);
+
+                cur.second = it2->second[rand() % it2->second.size()];
+
+                if (!shop->stock.contains(cur))
+                {
+                    shop->stock.insert(cur);
+                    shop->order[indexOfEntry] = cur;
+                    shop->prices[indexOfEntry] = it->first + it2->first;
+                    break;
+                }
+            }
         }
     };

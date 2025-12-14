@@ -172,7 +172,7 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     auto shop = _entMan.CreateEntity();
     _entMan.add<Shop>(shop, Shop{});
 
-    _entMan.PopulateShops(3);
+    _entMan.PopulateShop(shop);
 
     //create money display
     totalMoney = _entMan.CreateEntity();
@@ -181,7 +181,7 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
     txt.setString(std::to_string(wallet->money));
     _entMan.add<Text>(totalMoney, {1,txt});
 
-    CreateShopEnts(shop);
+    InitialiseShopInterface(shop);
     CreateHoverDescription();
 }
 
@@ -203,13 +203,19 @@ void ShopScene::UpdateHoverDesc(std::string text)
 {
     int padding = 10;
     _entMan.Enable(hoverDesc);
-    _entMan.get<Position>(hoverDesc)->pos = (sf::Vector2f)MouseHelper::GetMousePos();
+    auto pos = _entMan.get<Position>(hoverDesc);
+    pos->pos = (sf::Vector2f)MouseHelper::GetMousePos();
     auto txt = _entMan.get<Text>(hoverDesc);
     txt->txt.setString(text);
     txt->txt.setOrigin({-padding/2,-padding/2});
     auto rect = _entMan.get<RectShape>(hoverDesc);
     auto txtSize = txt->txt.getGlobalBounds();
     rect->shape.setSize({txtSize.width + 10, txtSize.height + 10});
+    auto sticksout = Params::gameW - (rect->shape.getSize().x + pos->pos.x);
+    if (sticksout < 0)
+    {
+        pos->pos.x += sticksout;
+    }
 }
 
 void ShopScene::ShowDesc(Turrets turret)
@@ -240,7 +246,7 @@ void ShopScene::ShowDesc(Weapons weapon)
     UpdateHoverDesc(text);
 }
 
-void ShopScene::CreateShopEnts(Entity shop)
+void ShopScene::InitialiseShopInterface(Entity shop)
 {
     const sf::Vector2f size = {170,170};
     int paddingX = 80;
@@ -248,7 +254,7 @@ void ShopScene::CreateShopEnts(Entity shop)
     int entries = 3;
     auto firstX = (Params::gameW - (size.x*entries + paddingX*(entries-1)))/2 + size.x/2;
 
-    auto stock = _entMan.get<Shop>(shop, true)->stock; //is just a copy of the data
+    auto ordered = _entMan.get<Shop>(shop, true)->order; //is just a copy of the data
 
     for (int i = 0; i < entries; i++)
     {
@@ -264,7 +270,7 @@ void ShopScene::CreateShopEnts(Entity shop)
         //replace this with a sprite later
         sf::Text txt2;
         txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-        txt2.setString(TurretStatsManager::GetTurretName(stock.begin()->first));
+        txt2.setString(TurretStatsManager::GetTurretName(ordered[i].first));
         txt2.setColor(sf::Color::Black);
         txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
         _entMan.add<Text>(buyButtons[i], {2, txt2});
@@ -281,16 +287,57 @@ void ShopScene::CreateShopEnts(Entity shop)
         //replace this with a sprite later
         sf::Text txt;
         txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-        txt.setString(WeaponStatsMgr::GetWeaponName(stock.begin()->second));
+        txt.setString(WeaponStatsMgr::GetWeaponName(ordered[i].second));
         txt.setColor(sf::Color::Black);
         txt.setCharacterSize(20);
         txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
         _entMan.add<Text>(weaponButts[i], {2, txt});
 
+        //prices
         sf::Text price;
-        auto priceEnt = _entMan.CreateEntity();
+        price.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        prices[i] = _entMan.CreateEntity();
+        _entMan.add<Position>(prices[i] , {{pos.x, pos.y + size.y/2 + 50}});
+        ChangeStringCentred(price, std::to_string(_entMan.get<Shop>(shop, true)->prices[i]));
+        _entMan.add<Text>(prices[i] , {1, price});
+    }
+}
 
-        stock.erase(stock.begin());
+void ShopScene::UpdateShopEnt(int i)
+{
+    auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
+    auto butTxt = _entMan.get<Text>(buyButtons[i]);
+    auto weaponTxt = _entMan.get<Text>(weaponButts[i]);
+    auto priceTxt = _entMan.get<Text>(prices[i]);
+
+    //update but
+    ChangeStringCentred(butTxt->txt, TurretStatsManager::GetTurretName(shop->order[i].first));
+
+    //update weapons
+    ChangeStringCentred(weaponTxt->txt, WeaponStatsMgr::GetWeaponName(shop->order[i].second));
+
+    //update price
+    ChangeStringCentred(priceTxt->txt, std::to_string(shop->prices[i]));
+    
+    
+    
+    //butTxt->txt.setString(std::to_string(shop->prices[i]));
+    //butTxt->txt.setOrigin(butTxt->txt.getGlobalBounds().getSize()/2.f);
+}
+
+void ShopScene::UpdatePrices()
+{
+    for (int i = 0; i < 3; i++)
+    {
+        auto txt = _entMan.get<Text>(prices[i]);
+        auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
+
+        if (shop->prices[i] <= _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0])->walletPtr->money)
+        {
+            txt->txt.setColor(sf::Color::White);
+            continue;
+        }
+        txt->txt.setColor(sf::Color::Red);
     }
 }
 
@@ -299,9 +346,12 @@ void ShopScene::Update(const float& dt)
     Scene::Update(dt);
 
     _entMan.Disable(hoverDesc);
+    UpdatePrices();
 
     auto wallet = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
     _entMan.get<Text>(totalMoney)->txt.setString(std::to_string(wallet->walletPtr->money));
+
+    auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
 
     //weapon hover desc
     for (int i = 0; i < 3; i++)
@@ -309,8 +359,7 @@ void ShopScene::Update(const float& dt)
         auto but = _entMan.get<Button>(weaponButts[i]);
         if (but->hover)
         {
-            auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
-            ShowDesc(GetIterator(shop->stock, i)->second);
+            ShowDesc(shop->order[i].second);
             return;
         }
     }
@@ -319,10 +368,18 @@ void ShopScene::Update(const float& dt)
     for (int i = 0; i < 3; i++)
     {
         auto but = _entMan.get<Button>(buyButtons[i]);
+        if (but->pressed)
+        {
+            if (_entMan.BuyFromShop(i, _entMan.getAllEnt<Shop>()[0]))
+            {
+                UpdateShopEnt(i);
+            }
+        }
+        
         if (but->hover)
         {
             auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
-            ShowDesc(GetIterator(shop->stock, i)->first);
+            ShowDesc(shop->order[i].first);
             return;
         }
     }
