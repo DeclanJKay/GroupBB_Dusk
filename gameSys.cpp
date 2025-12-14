@@ -118,8 +118,8 @@ void GameSys::SwitchPlayerRestrict(Screen scrn)
             if (!tdScene.SetRestrictPlayer(false)) { tdScene = TowerDefence(mainWallet, mainUpgrades, false); }
             break;
         case Screen::shop:
-            if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(mainWallet, true); }
-            if(!tdScene.SetRestrictPlayer(true)){ tdScene = TowerDefence(mainWallet, true); }
+            if(!shScene.SetRestrictPlayer(true)){ shScene = SafeHouse(mainWallet, mainUpgrades, true); }
+            if(!tdScene.SetRestrictPlayer(true)){ tdScene = TowerDefence(mainWallet, mainUpgrades, true); }
             break;
     }
 }

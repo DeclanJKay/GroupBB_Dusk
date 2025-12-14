@@ -40,7 +40,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
         offerTxt.setCharacterSize(20);
         offerTxt.setPosition(20.f, 20.f);
         offerTxt.setString("");
-        _entMan.add<Text>(upgradeTextEnt, Text{offerTxt});
+        _entMan.add<Text>(upgradeTextEnt, Text{5,offerTxt});
     }
 
     // --- Debug Stats text entity ---
@@ -52,7 +52,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
         dbgTxt.setCharacterSize(16);
         dbgTxt.setPosition(20.f, 170.f); // lower so it doesn’t overlap the upgrade list
         dbgTxt.setString("");
-        _entMan.add<Text>(debugTextEnt, Text{dbgTxt});
+        _entMan.add<Text>(debugTextEnt, Text{5, dbgTxt});
     }
 
     
@@ -185,13 +185,6 @@ bool SafeHouse::ApplyUpgrade(UpgradeTypes upg)
 {
     return UpgradeManager::ApplyUpgrade(_entMan, player, upg);
 }
-
-
-bool SafeHouse::ApplyUpgrade(UpgradeTypes upg)
-{
-    return UpgradeManager::ApplyUpgrade(_entMan, player, upg);
-}
-
 
 WeaponArsenal* SafeHouse::GetPlayerArsenal()
 {
