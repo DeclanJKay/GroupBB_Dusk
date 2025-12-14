@@ -624,7 +624,8 @@ class EntityManager : public Registry
                 target = inRange[i];
             }
             
-            Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos);
+                 Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos);
+
         }
 
         void HandleTurretCreation(Entity ent)
@@ -645,6 +646,7 @@ class EntityManager : public Registry
                 }
             }
             CreateTurret(placePos);
+
         }
 
         void HandleTurretDestruction(Entity ent)
