@@ -23,11 +23,6 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
 {
     player = _entMan.CreatePlayer();
 
-    //Test enemy
-    auto type = EnemyTypes::eBasic;
-    _entMan.CreateSHEnemy(&player, &type);
-
-
     RestrictPlayerEnt = _entMan.CreateEntity();
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict});
 
@@ -70,13 +65,13 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
 }
 
 
-void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
+void SafeHouse::Update(const float& dt, std::vector<std::pair<EnemyTypes, int>> toSpawn)
 {
     Scene::Update(dt);
 
     for (int i = 0; i < (int)toSpawn.size(); i++)
     {
-        _entMan.CreateSHEnemy(&player, &toSpawn[i]);
+        _entMan.CreateSHEnemy(&player, &toSpawn[i].first, toSpawn[i].second);
     }
 
     // Toggle debug overlay
@@ -171,7 +166,7 @@ void SafeHouse::Update(const float& dt, std::vector<EnemyTypes> toSpawn)
 
 bool SafeHouse::NoEnemies()
 {
-    return _entMan.getAllEnt<EnemyType>().size() == 0;
+    return _entMan.getAllEnt<EnemyType>(true).empty();
 }
 
 bool SafeHouse::SetRestrictPlayer(bool b)
@@ -288,7 +283,10 @@ void TowerDefence::Update(const float& dt, bool allEnemiesDead)
     {
         if (_entMan.get<TDPathMove>(ent)->reachedEnd)
         {
-            toTransfer.push_back(_entMan.get<EnemyType>(ent)->type);
+            auto hp = _entMan.get<Health>(ent)->hp;
+            if (_entMan.has<Shield>(ent))
+                hp += std::max(_entMan.get<Shield>(ent)->amount, 0);
+            toTransfer.push_back({_entMan.get<EnemyType>(ent)->type, hp});
         }
     }
 
@@ -322,10 +320,11 @@ void TowerDefence::Update(const float& dt, bool allEnemiesDead)
     bool offerActive = false;
     auto upg = UpgradeManager::GetUpgradeData(_entMan);
     if (upg != nullptr) { offerActive = upg->offerActive; }
+    if (offerActive) {return;}
 
     for (auto s : spawners)
     {
-        _entMan.get<WaveSpawner>(s)->canStart = (betweenWaves && !offerActive);
+        _entMan.get<WaveSpawner>(s)->canStart = true;
     }
 }
 
@@ -337,7 +336,7 @@ bool TowerDefence::SetRestrictPlayer(bool b)
     return true;
 }
 
-std::vector<EnemyTypes> TowerDefence::GetTransfers()
+std::vector<std::pair<EnemyTypes, int>> TowerDefence::GetTransfers()
 {
     auto returnable = toTransfer;
     toTransfer.clear();

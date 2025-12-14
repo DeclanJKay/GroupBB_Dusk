@@ -169,7 +169,9 @@ struct EnemyShootingLogic
 {
     float moveDelay; //amount of time to stand still after a shot
     Entity target;
+    sf::Vector2i switchCDrange;
     float moveTimer = 0; //linked to moveDelay
+    float weaponSwitchTimer = 0;
 };
 
 struct TDPathMove
@@ -183,7 +185,6 @@ struct TDPathMove
 struct EnemyType
 {
     EnemyTypes type = EnemyTypes::eBasic;
-    bool boss = false;
 };
 
 struct WaveSpawner
@@ -307,6 +308,11 @@ struct Dragable
     bool dragging = false;
 };
 
+struct Shield
+{
+    int amount;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
@@ -314,5 +320,5 @@ using AllComponents = std::tuple
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
     Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr, TurretType,
-    Button, RectShape, Dragable
+    Button, RectShape, Dragable, Shield
 >;

@@ -40,7 +40,7 @@ public:
         }
     }
 
-    void CreateSHEnemy(Entity *player, EnemyTypes *type) // prefab for sh enemy
+    void CreateSHEnemy(Entity *player, EnemyTypes *type, int hp) // prefab for sh enemy
     {
         auto stats = EnemyStatsManager::GetStats(*type);
 
@@ -50,10 +50,10 @@ public:
         add<Velocity>(enemy, Velocity{sf::Vector2f(0, 0)});
         add<Friction>(enemy, Friction{20});
         add<CircleCollider>(enemy, CircleCollider{stats.radius});
-        add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
+        add<Health>(enemy, {stats.hp, hp, damageGroup::enemy});
         add<EnemySafeMove>(enemy, EnemySafeMove{*player, (int)(stats.speed * 0.3f), stats.ranges});
-        add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player});
-        add<EnemyType>(enemy, EnemyType{*type, false});
+        add<EnemyShootingLogic>(enemy, EnemyShootingLogic{stats.moveShootDelay, *player, stats.swapCDrange});
+        add<EnemyType>(enemy, EnemyType{*type});
 
         // offset bullets based on radius
         for (int i = 0; i < stats.weapons.weapons.size(); i++)
@@ -73,7 +73,10 @@ public:
         add<TDPathMove>(enemy, {false, stats.speed, 1, sorted});
         add<CircleCollider>(enemy, {stats.radius});
         add<RenderHitboxes>(enemy, {5, stats.col});
-        add<EnemyType>(enemy, EnemyType{*type, false});
+        add<EnemyType>(enemy, EnemyType{*type});
+
+        if (stats.shieldAmount <= 0){return;}
+        add<Shield>(enemy, {stats.shieldAmount});
     }
 
     Entity CreatePlayer() // prefab for player
@@ -590,7 +593,14 @@ private:
                 continue;
                 ;
             }
-            eHP->hp -= bul->damage;
+            if (has<Shield>(ent))
+            {
+                auto shield = get<Shield>(ent);
+                if (shield->amount > 0)
+                    shield->amount -= bul->damage;
+            }
+            else 
+                eHP->hp -= bul->damage;
             bul->pierce--; // this is to prevent bullets hitting multiple enemies when grouped up
             Destroy(curBul);
         }
@@ -689,16 +699,22 @@ private:
         auto weaponArse = get<WeaponArsenal>(ent);
         int range = -1;
         if (has<EnemySafeMove>(ent))
-        {
-            auto sigma = get<EnemySafeMove>(ent)->range[weaponArse->selected];
             range = get<EnemySafeMove>(ent)->range[weaponArse->selected];
+        if (weaponArse->weapons.size() > 1)
+        {
+            if (shootLog->weaponSwitchTimer <= 0)
+            {
+                SwitchSelWeapon(weaponArse, rand()%weaponArse->weapons.size());
+                auto range = shootLog->switchCDrange.y - shootLog->switchCDrange.x;
+                shootLog->weaponSwitchTimer = shootLog->switchCDrange.x + (rand()%(range+1));
+            }
+            else
+            {
+                shootLog->weaponSwitchTimer -= dt;
+            }
         }
         if (Shoot(&weaponArse->weapons[weaponArse->selected], get<Position>(shootLog->target)->pos, get<Position>(ent)->pos, range))
         {
-            if (shootLog->moveDelay <= 0)
-            {
-                return;
-            }
             shootLog->moveTimer = shootLog->moveDelay;
         }
     }
@@ -737,10 +753,7 @@ private:
 
     void SpawnEnemies(Entity ent, const float &dt)
     {
-        if (!has<WaveSpawner>(ent))
-        {
-            return;
-        }
+        if (!has<WaveSpawner>(ent)){return;}
 
         auto spawner = get<WaveSpawner>(ent);
 
@@ -763,14 +776,11 @@ private:
 
             auto type = costEnemyPair->second[rand() % costEnemyPair->second.size()];
 
-            auto stats = EnemyStatsManager::GetStats(type);
-            CreateTDEnemy(spawner->path, &type);
-            spawner->spawnTimer = spawner->spawnInterval;
             spawner->pointBudget -= costEnemyPair->first;
-            if (spawner->pointBudget <= 0)
-            {
-                spawner->canStart = false;
-            }
+            if (spawner->pointBudget <= 0) //if the next enemy spawn would take it under the budget, spawn boss
+                type = EnemyStatsManager::GetBoss();
+            spawner->spawnTimer = spawner->spawnInterval;
+            CreateTDEnemy(spawner->path, &type);
             return;
         }
 
@@ -788,6 +798,7 @@ private:
         } // start new wave when space pressed
         spawner->lvlIndex++;
         spawner->pointBudget = spawner->iniPointBudget + spawner->pointIncrease * spawner->lvlIndex;
+        spawner->canStart = false;
         std::cout << "NEW WAVE\n";
     }
 

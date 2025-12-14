@@ -295,53 +295,173 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
 
             // ----------------- BOSSES (ONE PER LEVEL) -----------------
         case EnemyTypes::eBoss1:
-            stats.hp = 30;
-            stats.speed = 55.f;
-            stats.radius = 24.f;
-            stats.col = sf::Color(255, 100, 100);
-            //stats.damage = 4;
+            stats.hp = 10;
+            stats.speed = 80.f;
+            stats.radius = 20.f;
+            stats.col = sf::Color(80, 80, 80);
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+            
+            stats.shieldAmount = 20;
+
+            //weapon
+            stats.ranges = {200, 200};
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 5; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].bulletLifetime = 5;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 100;
+            stats.weapons.weapons[1].bulletSpread = 45;
+            stats.weapons.weapons[1].bulletsShot = 5;
+            stats.weapons.weapons[1].bulletLifetime = 5;
+            stats.weapons.weapons[1].damage = 3;
+            stats.weapons.weapons[1].bulletRadius = 20;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::eBoss2:
-            stats.hp = 40;
-            stats.speed = 60.f;
-            stats.radius = 26.f;
-            stats.col = sf::Color(255, 160, 80);
-            //stats.damage = 5;
+            stats.hp = 10;
+            stats.speed = 80.f;
+            stats.radius = 20.f;
+            stats.col = sf::Color(80, 80, 80);
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+            
+            stats.shieldAmount = 20;
+
+            //weapon
+            stats.ranges = {200, 200};
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 5; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].bulletLifetime = 5;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 100;
+            stats.weapons.weapons[1].bulletSpread = 45;
+            stats.weapons.weapons[1].bulletsShot = 5;
+            stats.weapons.weapons[1].bulletLifetime = 5;
+            stats.weapons.weapons[1].damage = 3;
+            stats.weapons.weapons[1].bulletRadius = 20;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::eBoss3:
-            stats.hp = 50;
-            stats.speed = 65.f;
-            stats.radius = 28.f;
-            stats.col = sf::Color(255, 220, 80);
-            //stats.damage = 6;
+            stats.hp = 10;
+            stats.speed = 80.f;
+            stats.radius = 20.f;
+            stats.col = sf::Color(80, 80, 80);
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+            
+            stats.shieldAmount = 20;
+
+            //weapon
+            stats.ranges = {200, 200};
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 5; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].bulletLifetime = 5;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 100;
+            stats.weapons.weapons[1].bulletSpread = 45;
+            stats.weapons.weapons[1].bulletsShot = 5;
+            stats.weapons.weapons[1].bulletLifetime = 5;
+            stats.weapons.weapons[1].damage = 3;
+            stats.weapons.weapons[1].bulletRadius = 20;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::eBoss4:
-            stats.hp = 65;
-            stats.speed = 70.f;
-            stats.radius = 30.f;
-            stats.col = sf::Color(200, 120, 255);
-            //stats.damage = 7;
+            stats.hp = 10;
+            stats.speed = 80.f;
+            stats.radius = 20.f;
+            stats.col = sf::Color(80, 80, 80);
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+            
+            stats.shieldAmount = 20;
+
+            //weapon
+            stats.ranges = {200, 200};
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 5; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].bulletLifetime = 5;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 100;
+            stats.weapons.weapons[1].bulletSpread = 45;
+            stats.weapons.weapons[1].bulletsShot = 5;
+            stats.weapons.weapons[1].bulletLifetime = 5;
+            stats.weapons.weapons[1].damage = 3;
+            stats.weapons.weapons[1].bulletRadius = 20;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
 
         case EnemyTypes::eBoss5:
-            stats.hp = 80;
-            stats.speed = 75.f;
-            stats.radius = 32.f;
-            stats.col = sf::Color(255, 255, 255);
-            //stats.damage = 8;
+            stats.hp = 10;
+            stats.speed = 80.f;
+            stats.radius = 20.f;
+            stats.col = sf::Color(80, 80, 80);
             stats.friction = 20;
-            stats.moveShootDelay = 0.5f;
+            stats.moveShootDelay = 1;
+            
+            stats.shieldAmount = 20;
+
+            //weapon
+            stats.ranges = {200, 200};
+            stats.weapons = WeaponArsenal{};
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[0].fireRate = 5; //bullets per second
+            stats.weapons.weapons[0].bulletSpeed = 100;
+            stats.weapons.weapons[0].bulletSpread = 45;
+            stats.weapons.weapons[0].bulletsShot = 5;
+            stats.weapons.weapons[0].bulletLifetime = 5;
+            stats.weapons.weapons[0].damage = 3;
+            stats.weapons.weapons[0].bulletRadius = 20;
+            stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+
+            stats.weapons.weapons.push_back(Weapon{});
+            stats.weapons.weapons[1].fireRate = 1; //bullets per second
+            stats.weapons.weapons[1].bulletSpeed = 100;
+            stats.weapons.weapons[1].bulletSpread = 45;
+            stats.weapons.weapons[1].bulletsShot = 5;
+            stats.weapons.weapons[1].bulletLifetime = 5;
+            stats.weapons.weapons[1].damage = 3;
+            stats.weapons.weapons[1].bulletRadius = 20;
+            stats.weapons.weapons[1].dGroup = damageGroup::friendly;
             break;
     }
     return stats;
@@ -372,4 +492,18 @@ std::map<int, std::vector<EnemyTypes>> EnemyStatsManager::GetLevelCostMap(int le
         }
     }
     return returnable;
+}
+
+EnemyTypes EnemyStatsManager::GetBoss()
+{
+    const EnemyTypes bosses[] = 
+    {
+        EnemyTypes::eBoss1,
+        EnemyTypes::eBoss2,
+        EnemyTypes::eBoss3,
+        EnemyTypes::eBoss4,
+        EnemyTypes::eBoss5,
+    };
+
+    return bosses[rand()%(sizeof(bosses)/sizeof(EnemyTypes))];
 }

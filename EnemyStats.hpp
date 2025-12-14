@@ -16,6 +16,8 @@ struct EnemyStats
     int radius;
     WeaponArsenal weapons; //THE RADIUS AND BULLET RADIUS GETS ADDED TO OFFSET.Y BY DEFAULT DURING CREATION (spawns in front of enemy)
     std::vector<int> ranges;
+    int shieldAmount = 0;
+sf::Vector2i swapCDrange = {2,5};
 };
 
 //class for defining all stats for each enemy type
@@ -34,4 +36,5 @@ class EnemyStatsManager
         static EnemyStats GetStats(EnemyTypes type);
         static int GetCost(EnemyTypes type);
         static std::map<int, std::vector<EnemyTypes>> GetLevelCostMap(int levelInd);
+        static EnemyTypes GetBoss();
 };

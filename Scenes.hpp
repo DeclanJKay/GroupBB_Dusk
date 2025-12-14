@@ -27,7 +27,7 @@ class SafeHouse : public Scene
         bool showDebug = false;
     public:
         SafeHouse(std::shared_ptr<Wallet> wallet = nullptr, std::shared_ptr<UpgradeData> upgrades = nullptr, bool playerRestrict = false);
-        void Update(const float&dt, std::vector<EnemyTypes> toSpawn);
+        void Update(const float&dt, std::vector<std::pair<EnemyTypes, int>> toSpawn);
         bool NoEnemies();
         bool ApplyUpgrade(UpgradeTypes upg);
         bool SetRestrictPlayer(bool b);
@@ -41,11 +41,11 @@ class TowerDefence : public Scene
     Entity upgradeTextEnt;
     Entity debugTextEnt = 0;
     bool showDebug = false;
-    std::vector<EnemyTypes> toTransfer;
+    std::vector<std::pair<EnemyTypes, int>> toTransfer;
     public:
         TowerDefence(std::shared_ptr<Wallet> wallet = nullptr, std::shared_ptr<UpgradeData> upgrades = nullptr, bool playerRestrict = false);
         void Update(const float& dt, bool allEnemiesDead);
-        std::vector<EnemyTypes> GetTransfers();
+        std::vector<std::pair<EnemyTypes, int>> GetTransfers();
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
         bool SetRestrictPlayer(bool b);
         TurretHandler* GetTurretHand();
