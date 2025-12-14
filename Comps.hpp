@@ -301,6 +301,12 @@ struct UpgradeDataPtr
     std::shared_ptr<UpgradeData> upgradeDataPtr;
 };
 
+struct Dragable
+{
+    sf::Vector2f offset = {0,0};
+    bool dragging = false;
+};
+
 //YOU NEED TO ADD YOUR NEW COMPONENTS HERE FOR THEM TO BE AVAILABLE ON THE ENTITIES
 using AllComponents = std::tuple
 <
@@ -308,5 +314,5 @@ using AllComponents = std::tuple
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
     Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr, TurretType,
-    Button, RectShape
+    Button, RectShape, Dragable
 >;

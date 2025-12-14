@@ -234,9 +234,19 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<Upgra
         _entMan.add<UpgradeDataPtr>(upgEnt, UpgradeDataPtr{upgrades});
     }
 
-    //create turret inventory
+    //create turret handler
     turretHand = _entMan.CreateEntity();
     _entMan.add<TurretHandler>(turretHand, {{{Turrets::tBasic, 2}}, 0, 0.3f});
+    _entMan.add<Position>(turretHand, {{30, 30}});
+    sf::RectangleShape shape;
+    shape.setFillColor(sf::Color::Black);
+    _entMan.add<RectShape>(turretHand, {20, shape});
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setFillColor(sf::Color::White);
+    txt.setCharacterSize(20);
+    _entMan.add<Text>(turretHand, {21, txt});
+    _entMan.add<Dragable>(turretHand, {});
 }
 
 std::vector<sf::Vector2f> TowerDefence:: SortPath(std::vector<sf::Vector2f> path)

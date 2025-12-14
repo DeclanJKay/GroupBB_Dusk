@@ -18,6 +18,7 @@ protected:
     std::unordered_set<Entity> toRemove; //to prevent errors with altering container size while looping through it
     std::unordered_map<Entity, std::bitset<maxComp>> toAdd; //^same logic as above 
     std::unordered_set<Entity> disabled;
+    std::set<std::pair<Entity, size_t>> disabledComps;
 
     template<typename C>
     struct ComponentStorage {
@@ -43,13 +44,13 @@ protected:
 
     template <class T, class... Types>
     struct Index<T, std::tuple<T, Types...>> {
-        static const std::size_t value = 0;
+        static constexpr std::size_t value = 0;
     };
 
 
     template <class T, class U, class... Types>
     struct Index<T, std::tuple<U, Types...>> {
-        static const std::size_t value = 1 + Index<T, std::tuple<Types...>>::value;
+        static constexpr std::size_t value = 1 + Index<T, std::tuple<Types...>>::value;
     };
     //end source
 
@@ -157,9 +158,15 @@ public:
     }
 
     template<typename... C>
-    bool has(Entity e) 
+    bool has(Entity e, bool ignoreDisabled = false) 
     {
         if (!entToBit.contains(e)) { return false; }
+
+        //check if comp is disabled
+        if (!ignoreDisabled) 
+        {
+            if ((disabledComps.contains({e, Index<C, AllComponents>::value}) || ...)){return false;}
+        }
         return (entToBit[e].test(Index<C, AllComponents>::value) && ...);
     }
 
@@ -201,15 +208,33 @@ public:
         return true;
     }
 
-    void Disable(Entity e)
+    void Disable(Entity e, size_t compId = -1)
     {
-        disabled.insert(e);
+        if (compId == -1)
+        {
+            disabled.insert(e);
+            return;
+        }
+        disabledComps.insert({e,compId});
     }
 
-    void Enable(Entity e)
+    void Enable(Entity e, size_t compId = -1)
     {
-        auto it = disabled.find(e);
-        if (it == disabled.end()){return;}
-        disabled.erase(it);
+        if (compId == -1)
+        {
+            auto it = disabled.find(e);
+            if (it == disabled.end()){return;}
+            disabled.erase(it);
+            return;
+        }
+        auto it = disabledComps.find({e,compId});
+        if (it == disabledComps.end()){return;}
+        disabledComps.erase(it);
+    }
+
+    template <typename comp>
+    size_t GetCompID()
+    {
+        return Index<comp, AllComponents>::value;
     }
 };

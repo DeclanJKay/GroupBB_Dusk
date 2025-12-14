@@ -176,6 +176,7 @@ public:
                 continue;
             }
 
+            HandleDragable(curEnt);
             HandleVelocity(curEnt, dt);
             HandleFriction(curEnt, dt);
             HandlePlayerMovement(curEnt, dt);
@@ -196,6 +197,8 @@ public:
             HandleButton(curEnt);
             HandleWeaponSwitch(curEnt);
             HandleSelTuretSwitch(curEnt);
+            ToggleRenderTurInv(curEnt);
+            UpdateTurInvText(curEnt);
         }
         HandleCreationAndDestruction();
     }
@@ -218,10 +221,7 @@ public:
                     toRemove.push_back(i);
                     continue;
                 }
-                if (disabled.contains(it->second[i].first))
-                {
-                    continue;
-                } // dont render if disabled
+                if (disabled.contains(it->second[i].first) || disabledComps.contains(it->second[i])){continue;} // dont render if disabled
                 switch (it->second[i].second)
                 {
                 // WHEN ADDING DRAW FUNCTIONS COPY PASTE A CASE ENTRY, REPLACE TYPE IN INDEX<> AND
@@ -412,10 +412,7 @@ private:
 
     void HandlePlayerWeapons(Entity ent)
     {
-        if (CheckIfPlayerRestrict())
-        {
-            return;
-        }
+        if (CheckIfPlayerRestrict()){return;}
         if (has<PlayerWeaponLogic, WeaponArsenal, Position>(ent))
         {
             auto arsenal = get<WeaponArsenal>(ent);
@@ -515,26 +512,25 @@ private:
         }
     }
 
-        void DropMoney(Health* health, Entity ent)
+    void DropMoney(Health* health, Entity ent)
+    {
+        if (health->dGroup == damageGroup::friendly){return;}
+        if (!has<EnemyType>(ent)){return;}
+
+        int bonus = 0;
+        auto upgEnts = getAllEnt<UpgradeDataPtr>();
+        if (upgEnts.size() > 0)
         {
-            if (health->dGroup == damageGroup::friendly){return;}
-            if (!has<EnemyType>(ent)){return;}
-
-            int bonus = 0;
-            auto upgEnts = getAllEnt<UpgradeDataPtr>();
-            if (upgEnts.size() > 0)
-            {
-                auto ptr = get<UpgradeDataPtr>(upgEnts[0])->upgradeDataPtr;
-                if (ptr != nullptr) { bonus = ptr->moneyBonus; }
-            }
-
-            auto wallets = getAllEnt<WalletPtr>();
-            for (auto w : wallets)
-            {
-                get<WalletPtr>(w)->walletPtr->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type) + bonus;
-            }
+            auto ptr = get<UpgradeDataPtr>(upgEnts[0])->upgradeDataPtr;
+            if (ptr != nullptr) { bonus = ptr->moneyBonus; }
         }
 
+        auto wallets = getAllEnt<WalletPtr>();
+        for (auto w : wallets)
+        {
+            get<WalletPtr>(w)->walletPtr->money += EnemyStatsManager::GetCost(get<EnemyType>(ent)->type) + bonus;
+        }
+    }
 
     void HandleHealth(Entity ent)
     {
@@ -853,9 +849,11 @@ private:
         if (!has<TurretHandler>(ent)){return;}
         auto handler = get<TurretHandler>(ent);
         if(handler->inv.size() == 0) {return;}
-        if (!MouseHelper::ButtonPressed(sf::Mouse::Left))
+        if (!MouseHelper::ButtonPressed(sf::Mouse::Left)){return;}
+        //return if anything is getting dragged
+        for (auto drag : getAllEnt<Dragable>())
         {
-            return;
+            if (get<Dragable>(drag)->dragging){return;}
         }
         sf::Vector2i placePos = MouseHelper::GetMousePos() / 50 * 50 + sf::Vector2i(25, 25);
         if (ls::get_tile_at((sf::Vector2f)placePos) != ls::EMPTY)
@@ -980,7 +978,74 @@ private:
         window.draw(text->txt);
     }
 
-        void DrawRects(sf::RenderWindow &window, Entity ent)
+    void ToggleRenderTurInv(Entity ent)
+    {
+        if (!has<TurretHandler, RectShape, Text>(ent, true)){return;}
+        if (!KeyboardHelper::KeyPressed(sf::Keyboard::I)) {return;}
+
+        //backdrop
+        if (has<RectShape>(ent))
+            Disable(ent, GetCompID<RectShape>());
+        else
+            Enable(ent, GetCompID<RectShape>());
+
+        //text
+        if (has<Text>(ent))
+            Disable(ent, GetCompID<Text>());
+        else
+            Enable(ent, GetCompID<Text>());
+    }
+
+    void UpdateTurInvText(Entity ent)
+    {
+        if (!has<TurretHandler, RectShape, Text>(ent, true)){return;}
+        auto handler = get<TurretHandler>(ent);
+        auto rect = get<RectShape>(ent);
+        auto text = get<Text>(ent);
+
+        int padding = 20;
+        std::string newTxt = "";
+
+        for (int i = 0; i < handler->inv.size(); i++)
+        {
+            auto it = GetIterator(handler->inv, i);
+            if (i == handler->selected) {newTxt+=">  ";}
+            newTxt += std::to_string(i) + ": " + TurretStatsManager::GetTurretName(it->first) + " x" + std::to_string(it->second) + "\n";
+        }
+
+        text->txt.setString(newTxt);
+        if (handler->inv.size() == 0) {return;}
+
+        auto bounds = text->txt.getGlobalBounds();
+        rect->shape.setSize({bounds.width + padding, bounds.height + padding});
+        text->txt.setOrigin({-padding/2, -padding/2});
+    }
+
+    void HandleDragable(Entity ent)
+    {
+        if (CheckIfPlayerRestrict()){return;}
+        if (!has<RectShape, Dragable, Position>(ent)){return;}
+        auto shape = get<RectShape>(ent);
+        auto drag = get<Dragable>(ent);
+        auto pos = get<Position>(ent);
+
+        auto mPos = (sf::Vector2f)MouseHelper::GetMousePos();
+        if (!drag->dragging)
+        {
+            if (!CheckMouseInRect(shape->shape.getSize(), pos->pos,{0,0})){return;}
+            else if (MouseHelper::ButtonPressed(sf::Mouse::Left)) 
+            {
+                drag->dragging = true;
+                drag->offset = pos->pos - mPos;
+            }
+            else {return;}
+        }
+        else if (!sf::Mouse::isButtonPressed(sf::Mouse::Left)) {drag->dragging = false; return;}
+
+        pos->pos = mPos + drag->offset;
+    }
+
+    void DrawRects(sf::RenderWindow &window, Entity ent)
     {
         auto rect = get<RectShape>(ent);
         if (has<Position>(ent))
@@ -998,22 +1063,15 @@ private:
 
         // get all needed comps
         auto but = get<Button>(ent);
-        auto mPos = MouseHelper::GetMousePos();
         auto pos = get<Position>(ent);
+        auto origin = but->size/2.f;
+
+        if (!CheckMouseInRect(but->size, pos->pos, origin)){return;}
 
         // reset button variables
         but->hover = false;
         but->pressed = false;
 
-        // return if not inside rectacngle hitbox
-        if (mPos.x > pos->pos.x + but->size.x / 2 || mPos.x < pos->pos.x - but->size.x / 2)
-        {
-            return;
-        }
-        if (mPos.y > pos->pos.y + but->size.y / 2 || mPos.y < pos->pos.y - but->size.y / 2)
-        {
-            return;
-        }
         but->hover = true;
         // return if button not just released
         if (!MouseHelper::ButtonReleased(sf::Mouse::Left))
@@ -1095,22 +1153,22 @@ private:
             }
         }
 
-        //helper for spawner logic
-        int GetWeightedIndex(int size, float focalPoint, float spread)
-         {
-            std::vector<float> weights;
-            for (int i = 0; i < size; i++)
-            {
-                //gaussian function
-                float weight = (float)std::exp(-std::pow(i - focalPoint, 2) / (2 * std::pow(spread, 2)));
+    //helper for spawner logic
+    int GetWeightedIndex(int size, float focalPoint, float spread)
+    {
+        std::vector<float> weights;
+        for (int i = 0; i < size; i++)
+        {
+            //gaussian function
+            float weight = (float)std::exp(-std::pow(i - focalPoint, 2) / (2 * std::pow(spread, 2)));
 
-            float prev = 0;
-            if (i > 0)
-            {
-                prev = weights[i - 1];
-            }
-            weights.push_back((float)weight + prev);
+        float prev = 0;
+        if (i > 0)
+        {
+            prev = weights[i - 1];
         }
+        weights.push_back((float)weight + prev);
+    }
 
         float rolled = (float)(rand()) / ((float)(RAND_MAX / weights.back()));
 
@@ -1199,6 +1257,16 @@ private:
             newIndex = 0;
 
         return newIndex;
+    }
+
+    bool CheckMouseInRect(const sf::Vector2f& size, const sf::Vector2f& pos, sf::Vector2f origin)
+    {
+        auto mPos = MouseHelper::GetMousePos();
+
+        // return if not inside rectacngle hitbox
+        if (mPos.x > pos.x + size.x - origin.x || mPos.x < pos.x - origin.x){return false;}
+        if (mPos.y > pos.y + size.y - origin.y || mPos.y < pos.y - origin.y){return false;}
+        return true;
     }
 
     void RollShopItem(
