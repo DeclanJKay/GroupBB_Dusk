@@ -79,6 +79,27 @@ public:
         add<Shield>(enemy, {stats.shieldAmount});
     }
 
+    Entity CreateButton(sf::Vector2f pos, sf::Vector2f size, std::string text, ChangeButCol butCols, sf::Color txtCol, int layer = 1)
+    {
+        auto but = CreateEntity();
+        add<Position>(but, {pos});
+        sf::RectangleShape shape;
+        shape.setSize({size.x,size.y});
+        shape.setOrigin({size.x/2, size.y/2});
+        add<RectShape>(but, {layer,shape});
+        add<Button>(but, {{size.x, size.y}, false, false});
+        add<ChangeButCol>(but, butCols);
+                
+        //replace this with a sprite later
+        sf::Text txt;
+        txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        txt.setString(text);
+        txt.setColor(txtCol);
+        txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
+        add<Text>(but, {layer+2, txt});
+        return but;
+    }
+
     Entity CreatePlayer() // prefab for player
     {
         int radius = 15;
@@ -756,7 +777,6 @@ private:
         if (!has<WaveSpawner>(ent)){return;}
 
         auto spawner = get<WaveSpawner>(ent);
-
         // count down timer for enemies to spawn
         if (spawner->spawnTimer > 0)
         {
@@ -777,8 +797,8 @@ private:
             auto type = costEnemyPair->second[rand() % costEnemyPair->second.size()];
 
             spawner->pointBudget -= costEnemyPair->first;
-            if (spawner->pointBudget <= 0) //if the next enemy spawn would take it under the budget, spawn boss
-                type = EnemyStatsManager::GetBoss();
+            //if (spawner->pointBudget <= 0) //if the next enemy spawn would take it under the budget, spawn boss
+            //    type = EnemyStatsManager::GetBoss();
             spawner->spawnTimer = spawner->spawnInterval;
             CreateTDEnemy(spawner->path, &type);
             return;
@@ -1061,6 +1081,8 @@ private:
         auto rect = get<RectShape>(ent);
         if (has<Position>(ent))
             rect->shape.setPosition(get<Position>(ent)->pos);
+        if (has<ChangeButCol, Button>(ent))
+            rect->shape.setFillColor(get<ChangeButCol>(ent)->cur);
         window.draw(rect->shape);
     }
 
@@ -1076,14 +1098,31 @@ private:
         auto but = get<Button>(ent);
         auto pos = get<Position>(ent);
         auto origin = but->size/2.f;
-
-        if (!CheckMouseInRect(but->size, pos->pos, origin)){return;}
+        ChangeButCol* colChange = nullptr;
 
         // reset button variables
         but->hover = false;
         but->pressed = false;
 
+        if (has<ChangeButCol>(ent))
+        {
+            colChange = get<ChangeButCol>(ent);
+            colChange->cur = colChange->def;
+        }
+
+        if (!CheckMouseInRect(but->size, pos->pos, origin)){return;}
+
+        if (colChange != nullptr)
+            colChange->cur = colChange->hover;
+
         but->hover = true;
+
+        if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+        {
+            if (colChange != nullptr)
+                colChange->cur = colChange->pressed;
+        }
+
         // return if button not just released
         if (!MouseHelper::ButtonReleased(sf::Mouse::Left))
         {

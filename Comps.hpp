@@ -192,7 +192,6 @@ struct WaveSpawner
     bool canStart = true;
     int lvlIndex = 0;
     int maxLvl;
-    int waveIndex = 0;
     int iniPointBudget = 0;
     int pointIncrease = 0; //point budget increase per level
     int pointBudget = 0;
@@ -297,6 +296,14 @@ struct Button
     bool pressed = false;
 };
 
+struct ChangeButCol
+{
+    sf::Color def;
+    sf::Color hover;
+    sf::Color pressed;
+    sf::Color cur;
+};
+
 struct UpgradeDataPtr
 {
     std::shared_ptr<UpgradeData> upgradeDataPtr;
@@ -320,5 +327,5 @@ using AllComponents = std::tuple
     Health, RenderHitboxes, PlayerMovement, WeaponArsenal, Bullet, PlayerWeaponLogic,
     TDPathMove, EnemyType, WaveSpawner, TurretWeaponLogic, TurretHandler, RestrictPlayerInput,
     Sprite, AttachToEnt, ActiveGun, WeaponKickback, WalletPtr, Shop, Text, UpgradeDataPtr, TurretType,
-    Button, RectShape, Dragable, Shield
+    Button, RectShape, Dragable, Shield, ChangeButCol
 >;

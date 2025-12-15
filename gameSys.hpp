@@ -8,7 +8,10 @@ enum Screen
 {
     safeHouse,
     towerDefence,
-    shop
+    shop,
+    gameOver,
+    mainMenu,
+    Instructions
 };
 
 struct GameSys

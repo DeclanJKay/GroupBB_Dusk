@@ -17,6 +17,7 @@ using ls = LevelSystem;
 SafeHouse shScene;
 TowerDefence tdScene;
 ShopScene shopScene;
+GameOver gameOverScene;
 
 Screen curScreen;
 Screen lastScreen;
@@ -38,13 +39,29 @@ void GameSys::update(const float &dt)
 {
     switch (curScreen)
     {
-        case shop:
+        case Screen::shop:
             shopScene.Update(dt, shScene.GetPlayerArsenal(), tdScene.GetTurretHand());
-        case towerDefence:
-        case safeHouse:
+        case Screen::towerDefence:
+        case Screen::safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());
             tdScene.Update(dt, shScene.NoEnemies());
+
+            //check if gameover, and switch scene if so
+            if (tdScene.HasEnded())
+            {
+                curScreen = gameOver;
+                gameOverScene.SetWin(true, mainWallet->money);
+            }
+            else if (shScene.AllPlayersDead())
+            {
+                curScreen = gameOver;
+                gameOverScene.SetWin(false, mainWallet->money);
+            }
+
             ToggleGameScreen();
+            break;
+        case Screen::gameOver:
+            gameOverScene.Update(dt);
             break;
     }
 }
@@ -62,6 +79,9 @@ void GameSys::render(sf::RenderWindow &window)
             break;
         case shop:
             shopScene.Draw(window);
+            break;
+        case Screen::gameOver:
+            gameOverScene.Draw(window);
             break;
     }
 }

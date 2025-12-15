@@ -186,6 +186,12 @@ WeaponArsenal* SafeHouse::GetPlayerArsenal()
     return _entMan.get<WeaponArsenal>(player);
 }
 
+bool SafeHouse::AllPlayersDead()
+{
+    return _entMan.getAllEnt<PlayerMovement>(true).empty();
+}
+
+
 //TOWER DEFENCE
 TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<UpgradeData> upgrades, bool playerRestrict)
 {
@@ -199,16 +205,16 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<Upgra
     auto sorted = SortPath(ls::load_level("res/levels/td_1.txt", 50));
     sorted[0].x -= 50; 
 
+    //spawner
     auto spawner = _entMan.CreateEntity();
     WaveSpawner spawnDef;
     spawnDef.canStart = true;
-    spawnDef.iniPointBudget = 50;
+    spawnDef.iniPointBudget = 10;
     spawnDef.lvlIndex = -1; //lvl index gets increased after player starts wave, so set to -1 to begin at 0
-    spawnDef.maxLvl = 5;
+    spawnDef.maxLvl = 0;
     spawnDef.path = sorted;
     spawnDef.pointIncrease = 20;
     spawnDef.spawnInterval = 1;
-    spawnDef.waveIndex = 0; //im not really sure what this is even for
     _entMan.add<WaveSpawner>(spawner, spawnDef);
 
     auto turHandle = _entMan.CreateEntity();
@@ -294,24 +300,22 @@ void TowerDefence::Update(const float& dt, bool allEnemiesDead)
     if (spawners.empty()) { return; }
 
     // "TD clear" means no active path enemies
-    bool tdClear = _entMan.getAllEnt<TDPathMove>().empty();
+    bool tdClear = _entMan.getAllEnt<TDPathMove>(true).empty();
 
     // "Wave finished spawning" means spawner budget is spent (or first wave not started yet)
     bool waveSpawnFinished = true;
+    auto noUpgrades = false;
     for (auto s : spawners)
     {
         auto sp = _entMan.get<WaveSpawner>(s);
-        if (sp->lvlIndex >= 0 && sp->pointBudget > 0)
-        {
-            waveSpawnFinished = false;
-            break;
-        }
+        if (sp->pointBudget > 0) {waveSpawnFinished=false;}
+        if (sp->lvlIndex == -1 || sp->lvlIndex == sp->maxLvl) {noUpgrades=true;}
     }
 
     // Only between waves if BOTH scenes are clear AND TD is clear AND wave is finished spawning
     bool betweenWaves = allEnemiesDead && tdClear && waveSpawnFinished;
 
-    if (betweenWaves)
+    if (betweenWaves && !noUpgrades)
     {
         UpgradeManager::TryTriggerOffer(_entMan, spawners);
     }
@@ -322,6 +326,8 @@ void TowerDefence::Update(const float& dt, bool allEnemiesDead)
     if (upg != nullptr) { offerActive = upg->offerActive; }
     if (offerActive) {return;}
 
+    if (!betweenWaves)
+        return;
     for (auto s : spawners)
     {
         _entMan.get<WaveSpawner>(s)->canStart = true;
@@ -346,6 +352,17 @@ std::vector<std::pair<EnemyTypes, int>> TowerDefence::GetTransfers()
 TurretHandler* TowerDefence::GetTurretHand()
 {
     return _entMan.get<TurretHandler>(turretHand);
+}
+
+bool TowerDefence::HasEnded()
+{
+    for (auto spawner : _entMan.getAllEnt<WaveSpawner>())
+    {
+        auto curSpawn = _entMan.get<WaveSpawner>(spawner);
+        if (curSpawn->lvlIndex < curSpawn->maxLvl){return false;}
+        if (!curSpawn->canStart) {return false;}
+    }
+    return true;
 }
 
 //SHOP
@@ -455,7 +472,8 @@ void ShopScene::InitialiseShopInterface(Entity shop)
         shape.setOrigin({size.x/2, size.y/2});
         _entMan.add<RectShape>(buyButtons[i], {1,shape});
         _entMan.add<Button>(buyButtons[i], {{size.x, size.y}, false, false});
-        
+        _entMan.add<ChangeButCol>(buyButtons[i], {sf::Color::White, {180,180,180,255}, {150,150,150,255}});
+
         //replace this with a sprite later
         sf::Text txt2;
         txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
@@ -572,4 +590,70 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
             return;
         }
     }
+}
+
+
+GameOver::GameOver()
+{
+    int x = Params::gameW/2;
+    //status txt
+    statusTxt = _entMan.CreateEntity();
+    _entMan.add<Position>(statusTxt, {{x,100}});
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setFillColor(sf::Color::White);
+    _entMan.add<Text>(statusTxt, {1,txt});
+
+    //brokie txt
+    brokieText = _entMan.CreateEntity();
+    _entMan.add<Position>(brokieText, {{x,200}});
+    sf::Text txt2;
+    txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt2.setFillColor(sf::Color::White);
+    txt2.setCharacterSize(20);
+    _entMan.add<Text>(brokieText, {1,txt2});
+
+    //main menu button
+    menuBut = _entMan.CreateButton(
+        {x,400},
+        {300,100},
+        "Main Menu",
+        {sf::Color::White, {180,180,180,255}, {150,150,150,255}},
+        sf::Color::Black
+    );
+}
+
+bool GameOver::GoToMainMenu()
+{
+    return _entMan.get<Button>(menuBut)->pressed;
+}
+
+void GameOver::SetWin(bool status, int money)
+{
+    auto sTxt = _entMan.get<Text>(statusTxt, true);
+    auto bTxt = _entMan.get<Text>(brokieText, true);
+
+    switch (status)
+    {
+        case true:
+            sTxt->txt.setFillColor(sf::Color::Green);
+            sTxt->txt.setString("You have prevailed me laddie");
+            if (money > 50)
+                bTxt->txt.setString("And with great fortune too!");
+            else
+                bTxt->txt.setString("Could have saved some money though");
+            break;
+        case false:
+            sTxt->txt.setFillColor(sf::Color::Red);
+            sTxt->txt.setString("Embarassing");
+            if (money > 50)
+                bTxt->txt.setString("Nice stash");
+            else
+                bTxt->txt.setString("Didn't even leave behind a worthwile inheritence");
+            break;
+    }
+    
+    sTxt->txt.setOrigin(sTxt->txt.getGlobalBounds().getSize()/2.f);
+    bTxt->txt.setOrigin(bTxt->txt.getGlobalBounds().getSize()/2.f);
+    _entMan.get<Position>(brokieText, true)->pos.y = _entMan.get<Position>(statusTxt, true)->pos.y + sTxt->txt.getOrigin().y+bTxt->txt.getOrigin().y+30;
 }

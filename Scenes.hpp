@@ -32,6 +32,7 @@ class SafeHouse : public Scene
         bool ApplyUpgrade(UpgradeTypes upg);
         bool SetRestrictPlayer(bool b);
         WeaponArsenal* GetPlayerArsenal();
+        bool AllPlayersDead();
 };
 
 class TowerDefence : public Scene
@@ -49,6 +50,7 @@ class TowerDefence : public Scene
         std::vector<sf::Vector2f> SortPath(std::vector<sf::Vector2f> path);
         bool SetRestrictPlayer(bool b);
         TurretHandler* GetTurretHand();
+        bool HasEnded();
 };
 
 class ShopScene : public Scene
@@ -71,4 +73,16 @@ class ShopScene : public Scene
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
         void Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHand);
+};
+
+class GameOver : public Scene
+{
+    private:
+        Entity statusTxt;
+        Entity menuBut;
+        Entity brokieText;
+    public:
+        GameOver();
+        bool GoToMainMenu();
+        void SetWin(bool status, int money);
 };
