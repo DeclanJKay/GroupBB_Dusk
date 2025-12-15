@@ -797,8 +797,8 @@ private:
             auto type = costEnemyPair->second[rand() % costEnemyPair->second.size()];
 
             spawner->pointBudget -= costEnemyPair->first;
-            //if (spawner->pointBudget <= 0) //if the next enemy spawn would take it under the budget, spawn boss
-            //    type = EnemyStatsManager::GetBoss();
+            if (spawner->pointBudget <= 0) //if the next enemy spawn would take it under the budget, spawn boss
+                type = EnemyStatsManager::GetBoss();
             spawner->spawnTimer = spawner->spawnInterval;
             CreateTDEnemy(spawner->path, &type);
             return;

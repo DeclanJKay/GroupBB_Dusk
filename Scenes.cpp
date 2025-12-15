@@ -211,9 +211,9 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<Upgra
     spawnDef.canStart = true;
     spawnDef.iniPointBudget = 10;
     spawnDef.lvlIndex = -1; //lvl index gets increased after player starts wave, so set to -1 to begin at 0
-    spawnDef.maxLvl = 0;
+    spawnDef.maxLvl = 4; //maxLvl + 1 is the amount of waves the player has to beat to win
     spawnDef.path = sorted;
-    spawnDef.pointIncrease = 20;
+    spawnDef.pointIncrease = 50;
     spawnDef.spawnInterval = 1;
     _entMan.add<WaveSpawner>(spawner, spawnDef);
 
