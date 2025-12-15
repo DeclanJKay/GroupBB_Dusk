@@ -11,6 +11,19 @@ const std::unordered_map<Weapons, int> WeaponStatsMgr::WeaponCosts =
     {Splurger6000,20}
 };
 
+const std::unordered_map<Weapons, std::shared_ptr<sf::Texture>>& getMap() 
+{
+    static const std::unordered_map<Weapons, std::shared_ptr<sf::Texture>> map = 
+    {
+        {StartingWeapon, FileMgr::GetTxtr("res/img/tempShopEntry.png")}, 
+        {Sniper,         FileMgr::GetTxtr("res/img/tempShopEntry.png")},
+        {Shotgun,        FileMgr::GetTxtr("res/img/tempShopEntry.png")},
+        {Shiv,           FileMgr::GetTxtr("res/img/tempShopEntry.png")},
+        {SMG,            FileMgr::GetTxtr("res/img/tempShopEntry.png")},
+        {Splurger6000,   FileMgr::GetTxtr("res/img/tempShopEntry.png")}
+    };
+    return map;
+}
 
 Weapon WeaponStatsMgr::GetStats(Weapons weapon)
 {
@@ -133,4 +146,13 @@ std::string WeaponStatsMgr::GetWeaponName(Weapons weapon)
 int WeaponStatsMgr::GetCost(Weapons weapon)
 {
     return WeaponCosts.at(weapon);
+}
+
+std::shared_ptr<sf::Texture> WeaponStatsMgr::GetShopIcon(Weapons weapon)
+{
+    const auto& weaponShopIcon = getMap();
+    
+    auto it = weaponShopIcon.find(weapon);
+    if (it == weaponShopIcon.end()) {return nullptr;}
+    return it->second;
 }

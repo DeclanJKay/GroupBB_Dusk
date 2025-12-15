@@ -7,7 +7,7 @@
 
 struct TurretStats
 {
-    sf::Color col;
+    std::shared_ptr<sf::Texture> txtr;
     WeaponArsenal weapons; //turrets only expect 1 weapon
     int range;
 };

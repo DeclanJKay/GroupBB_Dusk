@@ -1,6 +1,7 @@
 #include "EnemyStats.hpp"
 #include "Comps.hpp"
 #include <iterator>
+#include "FileMgr.hpp"
 
 const std::unordered_map<EnemyTypes, int> EnemyStatsManager::EnemyToCost
 {
@@ -57,7 +58,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 3;
             stats.speed = 60.f;
             stats.radius = 15.f;
-            stats.col = sf::Color::Red;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
@@ -79,7 +80,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 2;
             stats.speed = 110.f;
             stats.radius = 12.f;
-            stats.col = sf::Color(255, 200, 0); // yellow/orange
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
@@ -101,7 +102,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 6;
             stats.speed = 40.f;
             stats.radius = 18.f;
-            stats.col = sf::Color(150, 0, 200); // purple
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
@@ -124,7 +125,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 4;
             stats.speed = 70.f;
             stats.radius = 14.f;
-            stats.col = sf::Color::Black;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
@@ -147,7 +148,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 2;
             stats.speed = 80.f;
             stats.radius = 14.f;
-            stats.col = sf::Color::Blue;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             //stats.explodes = true;
             stats.friction = 20;
             stats.moveShootDelay = 3;
@@ -171,7 +172,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 4;
             stats.speed = 75.f;
             stats.radius = 14.f;
-            stats.col = sf::Color::Green;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.8f;
 
@@ -193,7 +194,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 5;
             stats.speed = 70.f;
             stats.radius = 15.f;
-            stats.col = sf::Color::Magenta;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
 
@@ -225,7 +226,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 2;
             stats.speed = 120.f;
             stats.radius = 13.f;
-            stats.col = sf::Color::Cyan;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             //stats.explodes = true;
             stats.friction = 20;
             stats.moveShootDelay = 3;
@@ -249,7 +250,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 3;
             stats.speed = 65.f;
             stats.radius = 13.f;
-            stats.col = sf::Color(100, 200, 255);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             //stats.damage = 2;
             stats.friction = 20;
             stats.moveShootDelay = 0.5f;
@@ -273,7 +274,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 10;
             stats.speed = 35.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
 
@@ -298,7 +299,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.hp = 10;
             stats.speed = 80.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
             
@@ -316,6 +317,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].damage = 3;
             stats.weapons.weapons[0].bulletRadius = 20;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[0].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
 
             stats.weapons.weapons.push_back(Weapon{});
             stats.weapons.weapons[1].fireRate = 1; //bullets per second
@@ -326,13 +328,14 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].damage = 3;
             stats.weapons.weapons[1].bulletRadius = 20;
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[1].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case EnemyTypes::eBoss2:
             stats.hp = 10;
             stats.speed = 80.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
             
@@ -350,6 +353,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].damage = 3;
             stats.weapons.weapons[0].bulletRadius = 20;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[0].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
 
             stats.weapons.weapons.push_back(Weapon{});
             stats.weapons.weapons[1].fireRate = 1; //bullets per second
@@ -360,13 +364,14 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].damage = 3;
             stats.weapons.weapons[1].bulletRadius = 20;
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[1].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case EnemyTypes::eBoss3:
             stats.hp = 10;
             stats.speed = 80.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
             
@@ -384,6 +389,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].damage = 3;
             stats.weapons.weapons[0].bulletRadius = 20;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[0].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
 
             stats.weapons.weapons.push_back(Weapon{});
             stats.weapons.weapons[1].fireRate = 1; //bullets per second
@@ -394,13 +400,14 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].damage = 3;
             stats.weapons.weapons[1].bulletRadius = 20;
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[1].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case EnemyTypes::eBoss4:
             stats.hp = 10;
             stats.speed = 80.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
             
@@ -418,6 +425,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].damage = 3;
             stats.weapons.weapons[0].bulletRadius = 20;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[0].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
 
             stats.weapons.weapons.push_back(Weapon{});
             stats.weapons.weapons[1].fireRate = 1; //bullets per second
@@ -428,13 +436,14 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].damage = 3;
             stats.weapons.weapons[1].bulletRadius = 20;
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[1].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
 
         case EnemyTypes::eBoss5:
             stats.hp = 10;
             stats.speed = 80.f;
             stats.radius = 20.f;
-            stats.col = sf::Color(80, 80, 80);
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.friction = 20;
             stats.moveShootDelay = 1;
             
@@ -452,6 +461,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[0].damage = 3;
             stats.weapons.weapons[0].bulletRadius = 20;
             stats.weapons.weapons[0].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[0].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
 
             stats.weapons.weapons.push_back(Weapon{});
             stats.weapons.weapons[1].fireRate = 1; //bullets per second
@@ -462,6 +472,7 @@ EnemyStats EnemyStatsManager::GetStats(EnemyTypes type)
             stats.weapons.weapons[1].damage = 3;
             stats.weapons.weapons[1].bulletRadius = 20;
             stats.weapons.weapons[1].dGroup = damageGroup::friendly;
+            stats.weapons.weapons[1].gunTxtr = FileMgr::GetTxtr("res/img/gun.png");
             break;
     }
     return stats;

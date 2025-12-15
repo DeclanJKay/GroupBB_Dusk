@@ -28,7 +28,10 @@ public:
         auto tur = CreateEntity();
         add<Position>(tur, {(sf::Vector2f)pos});
         add<CircleCollider>(tur, {20});
-        add<RenderHitboxes>(tur, {2, stats.col});
+        sf::Sprite sprt;
+        sprt.setTexture(*stats.txtr);
+        sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        add<Sprite>(tur, {2, sprt});
         add<TurretWeaponLogic>(tur, {stats.range});
         add<WeaponArsenal>(tur, stats.weapons);
         add<TurretType>(tur, {it->first});
@@ -45,7 +48,11 @@ public:
         auto stats = EnemyStatsManager::GetStats(*type);
 
         auto enemy = CreateEntity();
-        add<RenderHitboxes>(enemy, RenderHitboxes{3, stats.col});
+        sf::Sprite sprt;
+        sprt.setTexture(*stats.txtr);
+        sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        add<Sprite>(enemy, {2, sprt});
+        //add<RenderHitboxes>(enemy, RenderHitboxes{3, sf::Color::Red});
         add<Position>(enemy, Position{sf::Vector2f(300, 100)}); // door location (todo: add multiple spawnpoint?)
         add<Velocity>(enemy, Velocity{sf::Vector2f(0, 0)});
         add<Friction>(enemy, Friction{20});
@@ -61,6 +68,15 @@ public:
             stats.weapons.weapons[i].offset.y += stats.radius + stats.weapons.weapons[i].bulletRadius;
         }
         add<WeaponArsenal>(enemy, stats.weapons);
+
+        // attach gun
+        auto gun = CreateEntity();
+        add<AttachToEnt>(gun, {enemy, {10, 0}, true});
+        sprt = sf::Sprite();
+        add<Sprite>(gun, Sprite{5, sprt});
+        add<Position>(gun, {{}});
+        add<WeaponKickback>(gun, {20, 0, 5});
+        add<ActiveGun>(enemy, {gun});
     }
 
     void CreateTDEnemy(std::vector<sf::Vector2f> sorted, EnemyTypes *type) // prefab for td enemy
@@ -72,7 +88,11 @@ public:
         add<Health>(enemy, {stats.hp, stats.hp, damageGroup::enemy});
         add<TDPathMove>(enemy, {false, stats.speed, 1, sorted});
         add<CircleCollider>(enemy, {stats.radius});
-        add<RenderHitboxes>(enemy, {5, stats.col});
+        sf::Sprite sprt;
+        sprt.setTexture(*stats.txtr);
+        sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        add<Sprite>(enemy, {4, sprt});
+        //add<RenderHitboxes>(enemy, {5, sf::Color::Red});
         add<EnemyType>(enemy, EnemyType{*type});
 
         if (stats.shieldAmount <= 0){return;}
@@ -106,13 +126,18 @@ public:
         int hp = 3;
 
         auto player = CreateEntity();
-        add<RenderHitboxes>(player, RenderHitboxes{1, sf::Color::White});
+        //add<RenderHitboxes>(player, RenderHitboxes{1, sf::Color::White});
         add<PlayerMovement>(player, PlayerMovement{50});
         add<Position>(player, Position{sf::Vector2f(300, 300)});
         add<Velocity>(player, Velocity{sf::Vector2f(0, 0)});
         add<Friction>(player, Friction{20});
         add<Health>(player, {hp, hp, friendly});
         add<CircleCollider>(player, CircleCollider{radius});
+
+        sf::Sprite sprt;
+        sprt.setTexture(*FileMgr::GetTxtr("res/img/tempBody.png"));
+        sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        add<Sprite>(player, {7, sprt});
 
         WeaponArsenal playerArs;
 
@@ -121,24 +146,15 @@ public:
         add<WeaponArsenal>(player, playerArs);
         add<PlayerWeaponLogic>(player, {4});
 
-        // testing stuff below
-        auto txtr = FileMgr::GetTxtr("res/img/playerAni.png");
-        sf::Sprite sprt;
-        sprt.setTexture(*txtr);
-        sprt.setOrigin(sf::Vector2f{32, 32});
-        sprt.setTextureRect(sf::IntRect{0, 0, 64, 64});
-        add<Sprite>(player, {7, sprt, -90});
-
+        // attach gun
         auto gun = CreateEntity();
-        add<AttachToEnt>(gun, {player, {60, 0}, true});
-        txtr = FileMgr::GetTxtr("res/img/gun.png");
+        add<AttachToEnt>(gun, {player, {10, 0}, true});
         sprt = sf::Sprite();
-        sprt.setTexture(*txtr);
-        add<Sprite>(gun, Sprite{5, sprt, 90});
-        add<Position>(gun, {{0, 0}});
+        add<Sprite>(gun, Sprite{5, sprt});
+        add<Position>(gun, {{}});
         add<WeaponKickback>(gun, {20, 0, 5});
-
         add<ActiveGun>(player, {gun});
+
         return player;
     }
 
@@ -451,15 +467,7 @@ private:
             }
             auto weapon = &arsenal->weapons[arsenal->selected];
             auto pos = get<Position>(ent);
-            if (Shoot(weapon, mousePos, pos->pos))
-            {
-                if (!has<ActiveGun>(ent))
-                {
-                    return;
-                }
-                auto wkb = get<WeaponKickback>(get<ActiveGun>(ent)->gun);
-                wkb->curRecoil += wkb->recoil;
-            }
+            Shoot(weapon, mousePos, pos->pos, ent);
         }
     }
 
@@ -478,7 +486,7 @@ private:
         get<Sprite>(ent)->sprt.setRotation(newRot + get<Sprite>(ent)->rotOffset);
     }
 
-    bool Shoot(Weapon *weapon, sf::Vector2f target, sf::Vector2f spawnPos, int range = -1) //-1 means doesn't care
+    bool Shoot(Weapon *weapon, sf::Vector2f target, sf::Vector2f pos, Entity ent, int range = -1) //-1 means doesn't care
     {
         if (weapon->bulletRadius <= 0)
         {
@@ -489,7 +497,7 @@ private:
             return false;
         }
 
-        auto dir = target - spawnPos;
+        auto dir = target - (pos + weapon->offset);
         auto magnitude = std::sqrt(dir.x * dir.x + dir.y * dir.y);
         if (range >= 0 && magnitude > range)
         {
@@ -497,7 +505,7 @@ private:
         }
         dir /= magnitude;
 
-        sf::Vector2f bulPos = spawnPos;
+        sf::Vector2f bulPos = pos;
         bulPos += dir * weapon->offset.y;
         bulPos += sf::Vector2f(-dir.y, dir.x) * weapon->offset.x; // moves position along perpendicular vector
         for (int i = 0; i < weapon->bulletsShot; i++)
@@ -519,6 +527,14 @@ private:
             add<RenderHitboxes>(curBullet, RenderHitboxes{8, col});
         }
         weapon->fireDelay = 1.f / weapon->fireRate;
+        if (has<ActiveGun>(ent))
+        {
+            if (has<WeaponKickback>(get<ActiveGun>(ent)->gun))
+            {
+                auto wkb = get<WeaponKickback>(get<ActiveGun>(ent)->gun);
+                wkb->curRecoil += wkb->recoil;
+            }
+        }
         return true;
     }
 
@@ -699,7 +715,6 @@ private:
 
     void HandleEnemyShooting(Entity ent, const float &dt)
     {
-        // todo: implement some sort of logic for switching weapons?
         if (!has<Position, EnemyShootingLogic, WeaponArsenal>(ent))
         {
             return;
@@ -717,6 +732,7 @@ private:
         {
             return;
         }
+        RotateSprite(ent, &get<Position>(shootLog->target)->pos);
         auto weaponArse = get<WeaponArsenal>(ent);
         int range = -1;
         if (has<EnemySafeMove>(ent))
@@ -734,7 +750,7 @@ private:
                 shootLog->weaponSwitchTimer -= dt;
             }
         }
-        if (Shoot(&weaponArse->weapons[weaponArse->selected], get<Position>(shootLog->target)->pos, get<Position>(ent)->pos, range))
+        if (Shoot(&weaponArse->weapons[weaponArse->selected], get<Position>(shootLog->target)->pos, get<Position>(ent)->pos, ent, range))
         {
             shootLog->moveTimer = shootLog->moveDelay;
         }
@@ -763,6 +779,11 @@ private:
         auto dir = pathMove->path[pathMove->target] - pos->pos;
         auto dist = std::sqrt(dir.x * dir.x + dir.y * dir.y);
         dir /= dist;
+
+        //rotate sprite towards movementd
+        if (has<Sprite>(ent))
+            get<Sprite>(ent)->sprt.setRotation(std::atan2f(dir.y, dir.x)*180/M_PI);
+
         auto change = dir * (float)pathMove->moveSpd * dt; // pathmove doesnt use friction so no need for the constant
         auto changeDist = std::sqrt(change.x * change.x + change.y * change.y);
         if (dist <= changeDist)
@@ -845,29 +866,39 @@ private:
             {
                 continue;
             } // failsafe
+
+            //if the enemy has a depleted shield, dont shoot at them
+            if (has<Shield>(enemy))
+            {
+                if (get<Shield>(enemy)->amount <= 0)
+                {
+                    continue;
+                }
+            }
             auto pos = get<Position>(enemy)->pos;
 
             auto dist = pos - turPos;
             auto magnitude = std::sqrt(dist.x * dist.x + dist.y * dist.y);
 
-                if (magnitude > get<TurretWeaponLogic>(ent)->range) {continue;}
-                inRange.push_back(enemy);
-            }
-            if (inRange.size() == 0) {return; }
-            
-            Entity target = inRange.front();
-            int maxProgress = get<TDPathMove>(target)->target;
-            for (int i = 1; i < inRange.size(); i++)
-            {
-                auto curProgress = get<TDPathMove>(inRange[i])->target;
-                if (curProgress <= maxProgress) {continue;}
-                maxProgress = curProgress;
-                target = inRange[i];
-            }
-            
-                 Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos);
-
+            if (magnitude > get<TurretWeaponLogic>(ent)->range) {continue;}
+            inRange.push_back(enemy);
         }
+
+        if (inRange.size() == 0) {return; }
+        
+        Entity target = inRange.front();
+        int maxProgress = get<TDPathMove>(target)->target;
+        for (int i = 1; i < inRange.size(); i++)
+        {
+            auto curProgress = get<TDPathMove>(inRange[i])->target;
+            if (curProgress <= maxProgress) {continue;}
+            maxProgress = curProgress;
+            target = inRange[i];
+        }
+        RotateSprite(ent, &get<Position>(target)->pos);
+        Shoot(&get<WeaponArsenal>(ent)->weapons[0], get<Position>(target)->pos, get<Position>(ent)->pos, ent);
+
+    }
 
     void HandleTurretCreation(Entity ent)
     {

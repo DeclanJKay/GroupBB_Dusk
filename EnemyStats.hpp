@@ -8,7 +8,7 @@
 //struct with all the variables necessary to spawn an enemy
 struct EnemyStats
 {
-    sf::Color col; //replace with sprite when implemented
+    std::shared_ptr<sf::Texture> txtr; //replace with sprite when implemented
     int hp;
     int speed;
     float moveShootDelay;
@@ -17,7 +17,7 @@ struct EnemyStats
     WeaponArsenal weapons; //THE RADIUS AND BULLET RADIUS GETS ADDED TO OFFSET.Y BY DEFAULT DURING CREATION (spawns in front of enemy)
     std::vector<int> ranges;
     int shieldAmount = 0;
-sf::Vector2i swapCDrange = {2,5};
+    sf::Vector2i swapCDrange = {2,5};
 };
 
 //class for defining all stats for each enemy type

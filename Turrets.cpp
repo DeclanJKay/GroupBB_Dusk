@@ -1,4 +1,5 @@
 #include "Turrets.hpp"
+#include "FileMgr.hpp"
 
 const std::unordered_map<Turrets, int> TurretStatsManager::TurToCost = 
 {
@@ -20,8 +21,8 @@ TurretStats TurretStatsManager::GetStats(Turrets turret)
     TurretStats stats;
     switch (turret)
     {
-        case Turrets::tBasic:               //random stats for basic, all copied over with the col changed
-            stats.col = sf::Color::Cyan;
+        case Turrets::tBasic:               //random stats for basic, all copied over with the.txtr = FileMgr::GetTxtr("res/img/tempShopEntry.png");
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.range = 300;
             stats.weapons.weapons.push_back({});
             stats.weapons.weapons[0].bulletLifetime = 5;
@@ -34,7 +35,7 @@ TurretStats TurretStatsManager::GetStats(Turrets turret)
             break;
 
         case Turrets::tRapid:
-            stats.col = sf::Color::Magenta;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.range = 300;
             stats.weapons.weapons.push_back({});
             stats.weapons.weapons[0].bulletLifetime = 5;
@@ -47,7 +48,7 @@ TurretStats TurretStatsManager::GetStats(Turrets turret)
             break;
 
         case Turrets::tShotgun:
-            stats.col = sf::Color::Yellow;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.range = 300;
             stats.weapons.weapons.push_back({});
             stats.weapons.weapons[0].bulletLifetime = 5;
@@ -60,7 +61,7 @@ TurretStats TurretStatsManager::GetStats(Turrets turret)
             break;
 
         case Turrets::tSniper:
-            stats.col = sf::Color::Red;
+            stats.txtr = FileMgr::GetTxtr("res/img/tempBody.png");
             stats.range = 300;
             stats.weapons.weapons.push_back({});
             stats.weapons.weapons[0].bulletLifetime = 5;

@@ -13,10 +13,10 @@ class WeaponStatsMgr
 
     private:
         static const std::unordered_map<Weapons, int> WeaponCosts; //for the shop
-
     public:
         static Weapon GetStats(Weapons weapon);
         static std::map<int, std::vector<Weapons>> CostToWeapons();
         static std::string GetWeaponName(Weapons weapon);
         static int GetCost(Weapons weapon);
+        static std::shared_ptr<sf::Texture> GetShopIcon(Weapons weapon);
 };

@@ -474,13 +474,10 @@ void ShopScene::InitialiseShopInterface(Entity shop)
         _entMan.add<Button>(buyButtons[i], {{size.x, size.y}, false, false});
         _entMan.add<ChangeButCol>(buyButtons[i], {sf::Color::White, {180,180,180,255}, {150,150,150,255}});
 
-        //replace this with a sprite later
-        sf::Text txt2;
-        txt2.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-        txt2.setString(TurretStatsManager::GetTurretName(ordered[i].first));
-        txt2.setColor(sf::Color::Black);
-        txt2.setOrigin(txt2.getGlobalBounds().getSize()/2.f);
-        _entMan.add<Text>(buyButtons[i], {2, txt2});
+        sf::Sprite sprt;
+        sprt.setTexture(*TurretStatsManager::GetStats(ordered[i].first).txtr);
+        sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        _entMan.add<Sprite>(buyButtons[i], {2, sprt});
 
         weaponButts[i] = _entMan.CreateEntity();
         _entMan.add<Position>(weaponButts[i], {pos + sf::Vector2f(80,60)});
@@ -491,14 +488,10 @@ void ShopScene::InitialiseShopInterface(Entity shop)
         _entMan.add<RectShape>(weaponButts[i], {2,shape2});
         _entMan.add<Button>(weaponButts[i], {{80,80}, false, false});
 
-        //replace this with a sprite later
-        sf::Text txt;
-        txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-        txt.setString(WeaponStatsMgr::GetWeaponName(ordered[i].second));
-        txt.setColor(sf::Color::Black);
-        txt.setCharacterSize(20);
-        txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
-        _entMan.add<Text>(weaponButts[i], {2, txt});
+        sf::Sprite sprt2;
+        sprt2.setTexture(*WeaponStatsMgr::GetShopIcon(ordered[i].second));
+        sprt2.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        _entMan.add<Sprite>(weaponButts[i], {2, sprt2});
 
         //prices
         sf::Text price;
@@ -513,23 +506,20 @@ void ShopScene::InitialiseShopInterface(Entity shop)
 void ShopScene::UpdateShopEnt(int i)
 {
     auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
-    auto butTxt = _entMan.get<Text>(buyButtons[i]);
-    auto weaponTxt = _entMan.get<Text>(weaponButts[i]);
+    auto butSprt = _entMan.get<Sprite>(buyButtons[i]);
+    auto weaponSprt = _entMan.get<Sprite>(weaponButts[i]);
     auto priceTxt = _entMan.get<Text>(prices[i]);
 
     //update but
-    ChangeStringCentred(butTxt->txt, TurretStatsManager::GetTurretName(shop->order[i].first));
+    butSprt->sprt.setTexture(*TurretStatsManager::GetStats(shop->order[i].first).txtr);
+    butSprt->sprt.setOrigin(butSprt->sprt.getLocalBounds().getSize()/2.f);
 
     //update weapons
-    ChangeStringCentred(weaponTxt->txt, WeaponStatsMgr::GetWeaponName(shop->order[i].second));
-
+    weaponSprt->sprt.setTexture(*WeaponStatsMgr::GetShopIcon(shop->order[i].second));
+    weaponSprt->sprt.setOrigin(weaponSprt->sprt.getLocalBounds().getSize()/2.f);
+    
     //update price
     ChangeStringCentred(priceTxt->txt, std::to_string(shop->prices[i]));
-    
-    
-    
-    //butTxt->txt.setString(std::to_string(shop->prices[i]));
-    //butTxt->txt.setOrigin(butTxt->txt.getGlobalBounds().getSize()/2.f);
 }
 
 void ShopScene::UpdatePrices()
@@ -571,7 +561,7 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
         }
     }
 
-    //turret hover desk
+    //turret hover desc
     for (int i = 0; i < 3; i++)
     {
         auto but = _entMan.get<Button>(buyButtons[i]);
