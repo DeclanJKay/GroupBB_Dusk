@@ -30,7 +30,9 @@ public:
         add<CircleCollider>(tur, {20});
         sf::Sprite sprt;
         sprt.setTexture(*stats.txtr);
+        sprt.setScale({2,2});
         sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        sprt.setScale({2,2});
         add<Sprite>(tur, {2, sprt});
         add<TurretWeaponLogic>(tur, {stats.range});
         add<WeaponArsenal>(tur, stats.weapons);
@@ -50,6 +52,7 @@ public:
         auto enemy = CreateEntity();
         sf::Sprite sprt;
         sprt.setTexture(*stats.txtr);
+        sprt.setScale({2,2});
         sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
         add<Sprite>(enemy, {2, sprt});
         //add<RenderHitboxes>(enemy, RenderHitboxes{3, sf::Color::Red});
@@ -90,6 +93,7 @@ public:
         add<CircleCollider>(enemy, {stats.radius});
         sf::Sprite sprt;
         sprt.setTexture(*stats.txtr);
+        sprt.setScale({2,2});
         sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
         add<Sprite>(enemy, {4, sprt});
         //add<RenderHitboxes>(enemy, {5, sf::Color::Red});
@@ -124,7 +128,7 @@ public:
     Entity CreatePlayer() // prefab for player
     {
         int radius = 15;
-        int hp = 3;
+        int hp = 5;
 
         auto player = CreateEntity();
         //add<RenderHitboxes>(player, RenderHitboxes{1, sf::Color::White});
@@ -136,22 +140,21 @@ public:
         add<CircleCollider>(player, CircleCollider{radius});
 
         sf::Sprite sprt;
-        sprt.setTexture(*FileMgr::GetTxtr("res/img/tempBody.png"));
+        sprt.setTexture(*FileMgr::GetTxtr("res/img/player.png"));
         sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
-        add<Sprite>(player, {7, sprt});
+        add<Sprite>(player, {7, sprt, 90});
 
         WeaponArsenal playerArs;
 
         playerArs.weapons.push_back(WeaponStatsMgr::GetStats(Weapons::StartingWeapon));
-        playerArs.weapons.push_back(WeaponStatsMgr::GetStats(Weapons::Shotgun));
         add<WeaponArsenal>(player, playerArs);
         add<PlayerWeaponLogic>(player, {4});
 
         // attach gun
         auto gun = CreateEntity();
-        add<AttachToEnt>(gun, {player, {10, 0}, true});
+        add<AttachToEnt>(gun, {player, {0, 20}, true});
         sprt = sf::Sprite();
-        add<Sprite>(gun, Sprite{5, sprt});
+        add<Sprite>(gun, Sprite{5, sprt, -90});
         add<Position>(gun, {{}});
         add<WeaponKickback>(gun, {20, 0, 5});
         add<ActiveGun>(player, {gun});

@@ -23,24 +23,19 @@ enum EnemyTypes {
     eFast,
     eTank,
 	eShortRanged,
-	eExploder,
     eMedium,
 	eRangedMelee,
-	eFastExploder,
 	eLongRange,
-	eHeavyTank,
 	eBoss1,
 	eBoss2,
-	eBoss3,
-	eBoss4,
-	eBoss5
+	eBoss3
 };
 
 enum Turrets
 {
     tBasic,
     tShotgun,
-    tRapid,
+    tBigGun,
     tSniper
 };
 

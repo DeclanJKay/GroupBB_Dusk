@@ -145,28 +145,28 @@ bool UpgradeManager::ApplyUpgrade(EntityManager& entMan, Entity player, UpgradeT
             break;
 
         case uFireRate:
-            if (upgData) {upgData->bonusFireRate += 10.0f;}
+            if (upgData) {upgData->bonusFireRate += 0.5f;}
             if (entMan.has<WeaponArsenal>(player))
             {
                 auto ars = entMan.get<WeaponArsenal>(player);
-                for (auto& w : ars->weapons) {w.fireRate += 10.0f;}
+                for (auto& w : ars->weapons) {w.fireRate += 0.5f;}
             }
             break;
 
         case uMoveSpeed:
-            if (upgData) {upgData->bonusMoveSpd += 100;}
+            if (upgData) {upgData->bonusMoveSpd += 25;}
             if (entMan.has<PlayerMovement>(player))
             {
-                entMan.get<PlayerMovement>(player)->moveSpd += 100;
+                entMan.get<PlayerMovement>(player)->moveSpd += 25;
             }
             break;
 
         case uBulletSpeed:
-            if (upgData) {upgData->bonusBulletSpeed += 500;}
+            if (upgData) {upgData->bonusBulletSpeed += 100;}
             if (entMan.has<WeaponArsenal>(player))
             {
                 auto ars = entMan.get<WeaponArsenal>(player);
-                for (auto& w : ars->weapons) {w.bulletSpeed += 500;}
+                for (auto& w : ars->weapons) {w.bulletSpeed += 100;}
             }
             break;
 

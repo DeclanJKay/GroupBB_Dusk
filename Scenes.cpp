@@ -39,6 +39,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
         _entMan.add<Text>(upgradeTextEnt, Text{5,offerTxt});
     }
 
+    /*
     // --- Debug Stats text entity ---
     debugTextEnt = _entMan.CreateEntity();
     {
@@ -50,7 +51,7 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
         dbgTxt.setString("");
         _entMan.add<Text>(debugTextEnt, Text{5, dbgTxt});
     }
-
+    */
     
     if (wallet != nullptr)
     {
@@ -99,11 +100,11 @@ void SafeHouse::Update(const float& dt, std::vector<std::pair<EnemyTypes, int>> 
         _entMan.CreateSHEnemy(&player, &toSpawn[i].first, toSpawn[i].second);
     }
 
-    // Toggle debug overlay
+    /* Toggle debug overlay
     if (KeyboardHelper::KeyPressed(sf::Keyboard::F3))
     {
         showDebug = !showDebug;
-    }
+    }*/
 
     // ----- Upgrade offer text -----
     auto upgData = UpgradeManager::GetUpgradeData(_entMan);
@@ -129,7 +130,7 @@ void SafeHouse::Update(const float& dt, std::vector<std::pair<EnemyTypes, int>> 
         }
     }
 
-    // ----- Debug overlay text -----
+    /* ----- Debug overlay text -----
     if (_entMan.Exists(debugTextEnt))
     {
         auto dbg = _entMan.get<Text>(debugTextEnt);
@@ -182,7 +183,7 @@ void SafeHouse::Update(const float& dt, std::vector<std::pair<EnemyTypes, int>> 
             s += "\nF3: Toggle Debug";
             dbg->txt.setString(s);
         }
-    }
+    }*/
 
     // Still handle key input (1-3) and apply upgrade
     UpgradeManager::HandleOfferInput(_entMan, player);
@@ -243,7 +244,7 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<Upgra
     spawnDef.canStart = true;
     spawnDef.iniPointBudget = 50;
     spawnDef.lvlIndex = -1; //lvl index gets increased after player starts wave, so set to -1 to begin at 0
-    spawnDef.maxLvl = 4; //maxLvl + 1 is the amount of waves the player has to beat to win
+    spawnDef.maxLvl = 2; //maxLvl + 1 is the amount of waves the player has to beat to win
     spawnDef.path = sorted;
     spawnDef.pointIncrease = 50;
     spawnDef.spawnInterval = 1;
@@ -543,6 +544,7 @@ void ShopScene::InitialiseShopInterface(Entity shop)
         sf::Sprite sprt;
         sprt.setTexture(*TurretStatsManager::GetStats(ordered[i].first).txtr);
         sprt.setOrigin(sprt.getLocalBounds().getSize()/2.f);
+        sprt.setScale({4,4});
         _entMan.add<Sprite>(buyButtons[i], {2, sprt});
 
         weaponButts[i] = _entMan.CreateEntity();
@@ -556,6 +558,7 @@ void ShopScene::InitialiseShopInterface(Entity shop)
 
         sf::Sprite sprt2;
         sprt2.setTexture(*WeaponStatsMgr::GetShopIcon(ordered[i].second));
+        sprt2.setScale({2,2});
         sprt2.setOrigin(sprt.getLocalBounds().getSize()/2.f);
         _entMan.add<Sprite>(weaponButts[i], {2, sprt2});
 

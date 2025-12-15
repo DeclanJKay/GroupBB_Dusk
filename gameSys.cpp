@@ -31,7 +31,7 @@ void GameSys::init()
 {
     mainWallet = std::make_shared<Wallet>();
     mainUpgrades = std::make_shared<UpgradeData>();
-    curScreen = safeHouse;
+    curScreen = mainMenu;
     
     shopScene = ShopScene(mainWallet);
     SwitchPlayerRestrict(curScreen);
