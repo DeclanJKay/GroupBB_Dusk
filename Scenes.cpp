@@ -4,6 +4,7 @@
 #include "Upgrades.hpp"
 #include <math.h>
 #include "FileMgr.hpp"
+#include <format>
 
 using ls = LevelSystem;
 
@@ -55,6 +56,15 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
     {
         auto wlt = _entMan.CreateEntity();
         _entMan.add<WalletPtr>(wlt, {wallet});
+        sf::Text txt;
+        txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        txt.setFillColor(sf::Color::White);
+        _entMan.add<Text>(wlt, {10, txt});
+        _entMan.add<Position>(wlt, {{Params::gameW-50, 10}});
+        sf::Sprite sprt;
+        sprt.setTexture(*FileMgr::GetTxtr("res/img/coin.png"));
+        sprt.setOrigin({-5, 0});
+        _entMan.add<Sprite>(wlt, {10, sprt});
     }
 
     if (upgrades != nullptr)
@@ -62,12 +72,27 @@ SafeHouse::SafeHouse(std::shared_ptr<Wallet> wallet,
         auto upgEnt = _entMan.CreateEntity();
         _entMan.add<UpgradeDataPtr>(upgEnt, UpgradeDataPtr{upgrades});
     }
+
+    healthTxt = _entMan.CreateEntity();
+    _entMan.add<Position>(healthTxt, {{10,10}});
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setFillColor(sf::Color::White);
+    _entMan.add<Text>(healthTxt, {10, txt});
 }
 
 
 void SafeHouse::Update(const float& dt, std::vector<std::pair<EnemyTypes, int>> toSpawn)
 {
     Scene::Update(dt);
+
+    //update health display
+    auto hpTxt = _entMan.get<Text>(healthTxt);
+    if (_entMan.has<Health>(player))
+    {
+        auto hp = _entMan.get<Health>(player);
+        hpTxt->txt.setString("HP: "+std::to_string(hp->hp) + "/" + std::to_string(hp->maxHealth));
+    }
 
     for (int i = 0; i < (int)toSpawn.size(); i++)
     {
@@ -191,6 +216,13 @@ bool SafeHouse::AllPlayersDead()
     return _entMan.getAllEnt<PlayerMovement>(true).empty();
 }
 
+void SafeHouse::HealPlayer(int amount)
+{
+    if (!_entMan.has<Health>(player)){return;}
+    auto hp = _entMan.get<Health>(player);
+    hp->hp = std::min(hp->hp+amount, hp->maxHealth);
+}
+
 
 //TOWER DEFENCE
 TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<UpgradeData> upgrades, bool playerRestrict)
@@ -225,9 +257,20 @@ TowerDefence::TowerDefence(std::shared_ptr<Wallet> wallet, std::shared_ptr<Upgra
     _entMan.add<RestrictPlayerInput>(RestrictPlayerEnt, {playerRestrict}); 
 
     //create entity with reference to main wallet
-    if (wallet == nullptr){return;}
-    auto wlt = _entMan.CreateEntity();
-    _entMan.add<WalletPtr>(wlt, {wallet});
+    if (wallet != nullptr)
+    {
+        auto wlt = _entMan.CreateEntity();
+        _entMan.add<WalletPtr>(wlt, {wallet});
+        sf::Text txt;
+        txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+        txt.setFillColor(sf::Color::White);
+        _entMan.add<Text>(wlt, {10, txt});
+        _entMan.add<Position>(wlt, {{Params::gameW-50, 10}});
+        sf::Sprite sprt;
+        sprt.setTexture(*FileMgr::GetTxtr("res/img/coin.png"));
+        sprt.setOrigin({-5, 0});
+        _entMan.add<Sprite>(wlt, {10, sprt});
+    }
 
     if (upgrades != nullptr)
     {
@@ -370,22 +413,44 @@ ShopScene::ShopScene(std::shared_ptr<Wallet> wallet)
 {
     if (wallet == nullptr){return;}
 
-    //create instance with wallet ptr
-    auto wall = _entMan.CreateEntity();
-    _entMan.add<WalletPtr>(wall, {wallet});
+    //create wallet instance
+    auto wlt = _entMan.CreateEntity();
+    _entMan.add<WalletPtr>(wlt, {wallet});
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setFillColor(sf::Color::White);
+    _entMan.add<Text>(wlt, {10, txt});
+    _entMan.add<Position>(wlt, {{Params::gameW-50, 10}});
+    sf::Sprite sprt;
+    sprt.setTexture(*FileMgr::GetTxtr("res/img/coin.png"));
+    sprt.setOrigin({-5, 0});
+    _entMan.add<Sprite>(wlt, {10, sprt});
+
+    //create restock button
+    restockButton = _entMan.CreateButton(
+        {50,30},
+        {80,30},
+        "Restock",
+        {{222, 198, 142}, {184, 165, 121}, {148, 134, 102}},
+        sf::Color::Black,
+        20
+    );
+
+    //create heal button
+    healButton = _entMan.CreateButton(
+        {140,30},
+        {70,30},
+        "Heal",
+        {{212, 112, 137}, {179, 98, 118}, {138, 81, 95}},
+        sf::Color::Black,
+        20
+    );
 
     //create shop
     auto shop = _entMan.CreateEntity();
     _entMan.add<Shop>(shop, Shop{});
 
     _entMan.PopulateShop(shop);
-
-    //create money display
-    totalMoney = _entMan.CreateEntity();
-    sf::Text txt;
-    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
-    txt.setString(std::to_string(wallet->money));
-    _entMan.add<Text>(totalMoney, {1,txt});
 
     InitialiseShopInterface(shop);
     CreateHoverDescription();
@@ -396,10 +461,11 @@ void ShopScene::CreateHoverDescription()
     hoverDesc = _entMan.CreateEntity();
     _entMan.add<Position>(hoverDesc, {});
     sf::RectangleShape shape;
-    shape.setFillColor(sf::Color::Yellow);
+    shape.setFillColor({0,0,0,100});
     _entMan.add<RectShape>(hoverDesc, {3, shape});
     sf::Text txt;
-    txt.setFillColor(sf::Color::Black);
+    txt.setFillColor({255,255,255});
+    txt.setCharacterSize(25);
     txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
     _entMan.add<Text>(hoverDesc, {4, txt});
     _entMan.Disable(hoverDesc);
@@ -432,7 +498,7 @@ void ShopScene::ShowDesc(Turrets turret)
         "Range: " + std::to_string(stats.range)  + "\n" + 
         "Damage: " + std::to_string(stats.weapons.weapons[0].damage)  + "\n" + 
         "BulletsShot: " + std::to_string(stats.weapons.weapons[0].bulletsShot)  + "\n" + 
-        "Firerate: " + std::to_string(stats.weapons.weapons[0].fireRate)  + "\n" + 
+        "Firerate: " + std::format("{:.1f}",stats.weapons.weapons[0].fireRate)  + "\n" + 
         "Spread: " + std::to_string(stats.weapons.weapons[0].bulletSpread)
     ;
     UpdateHoverDesc(text);
@@ -443,10 +509,10 @@ void ShopScene::ShowDesc(Weapons weapon)
     auto stats = WeaponStatsMgr::GetStats(weapon);
     std::string text = 
         WeaponStatsMgr::GetWeaponName(weapon) + "\n" + 
-        "Range: " + std::to_string(stats.bulletLifetime * stats.bulletSpeed)  + "\n" + 
+        "Range: " + std::to_string((int)(stats.bulletLifetime * stats.bulletSpeed))  + "\n" + 
         "Damage: " + std::to_string(stats.damage)  + "\n" + 
         "BulletsShot: " + std::to_string(stats.bulletsShot)  + "\n" + 
-        "Firerate: " + std::to_string(stats.fireRate)  + "\n" + 
+        "Firerate: " + std::format("{:.1f}",stats.fireRate)  + "\n" + 
         "Spread: " + std::to_string(stats.bulletSpread)
         ;
     UpdateHoverDesc(text);
@@ -543,28 +609,35 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
     Scene::Update(dt);
 
     _entMan.Disable(hoverDesc);
-    UpdatePrices();
 
-    auto wallet = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
-    _entMan.get<Text>(totalMoney)->txt.setString(std::to_string(wallet->walletPtr->money));
+    //restock on button pressed
+    RestockButton();
+
+    UpdatePrices();
 
     auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
 
-    //weapon hover desc
-    for (int i = 0; i < 3; i++)
+    //restock hover
+    auto but = _entMan.get<Button>(restockButton);
+    if (but->hover)
     {
-        auto but = _entMan.get<Button>(weaponButts[i]);
-        if (but->hover)
-        {
-            ShowDesc(shop->order[i].second);
-            return;
-        }
+        UpdateHoverDesc("Costs " + std::to_string(restockCost) + "g");
+        return;
     }
 
-    //turret hover desc
+    //heal hover
+    but = _entMan.get<Button>(healButton);
+    if (but->hover)
+    {
+        UpdateHoverDesc("Costs " + std::to_string(healCost) + "g");
+        return;
+    }
+
+    //handle buttons
     for (int i = 0; i < 3; i++)
     {
-        auto but = _entMan.get<Button>(buyButtons[i]);
+        //if pressed
+        but = _entMan.get<Button>(buyButtons[i]);
         if (but->pressed)
         {
             if (_entMan.BuyFromShop(i, _entMan.getAllEnt<Shop>()[0], ars, turHand))
@@ -573,6 +646,16 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
             }
         }
         
+        //if weapon hovered
+        but = _entMan.get<Button>(weaponButts[i]);
+        if (but->hover)
+        {
+            ShowDesc(shop->order[i].second);
+            return;
+        }
+
+        //if turret hovered
+        but = _entMan.get<Button>(buyButtons[i]);
         if (but->hover)
         {
             auto shop = _entMan.get<Shop>(_entMan.getAllEnt<Shop>()[0]);
@@ -580,6 +663,37 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
             return;
         }
     }
+}
+
+void ShopScene::RestockButton()
+{
+    if (!_entMan.has<Button>(restockButton)){return;}
+    if (!_entMan.has<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0])){return;}
+    auto wlt = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
+    if (!_entMan.get<Button>(restockButton)->pressed) {return;}
+    if (restockCost > wlt->walletPtr->money) {return;}
+
+    wlt->walletPtr->money -= restockCost;
+
+    for (auto shopEnt : _entMan.getAllEnt<Shop>())
+    {
+        _entMan.PopulateShop(shopEnt);
+        for (int i = 0; i < 3; i++)
+        {
+            UpdateShopEnt(i);
+        }
+    }
+}
+
+bool ShopScene::Heal()
+{
+    if (!_entMan.has<Button>(healButton)){return false;}
+    if (!_entMan.has<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0])){return false;}
+    auto wlt = _entMan.get<WalletPtr>(_entMan.getAllEnt<WalletPtr>()[0]);
+    if (!_entMan.get<Button>(healButton)->pressed) {return false;}
+    if (healCost > wlt->walletPtr->money) {return false;}
+    wlt->walletPtr->money -= healCost;
+    return true;
 }
 
 

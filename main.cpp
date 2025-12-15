@@ -40,7 +40,7 @@ int main () {
 		//Calculate dt
 		static sf::Clock clock;
 		const float dt = clock.restart().asSeconds();
-		window.clear();
+		window.clear({100,100,100});
 		GameSys::update(dt);
 		GameSys::render(window);
 		window.display();

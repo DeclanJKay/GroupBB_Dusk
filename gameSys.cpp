@@ -43,6 +43,8 @@ void GameSys::update(const float &dt)
     {
         case Screen::shop:
             shopScene.Update(dt, shScene.GetPlayerArsenal(), tdScene.GetTurretHand());
+            if (shopScene.Heal())
+                shScene.HealPlayer(1); //todo: get rid of the hardcoded shite
         case Screen::towerDefence:
         case Screen::safeHouse:
             shScene.Update(dt, tdScene.GetTransfers());

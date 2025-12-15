@@ -99,7 +99,7 @@ public:
         add<Shield>(enemy, {stats.shieldAmount});
     }
 
-    Entity CreateButton(sf::Vector2f pos, sf::Vector2f size, std::string text, ChangeButCol butCols, sf::Color txtCol, int layer = 1)
+    Entity CreateButton(sf::Vector2f pos, sf::Vector2f size, std::string text, ChangeButCol butCols, sf::Color txtCol, int charSize = 30, int layer = 1)
     {
         auto but = CreateEntity();
         add<Position>(but, {pos});
@@ -115,6 +115,7 @@ public:
         txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
         txt.setString(text);
         txt.setColor(txtCol);
+        txt.setCharacterSize(charSize);
         txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
         add<Text>(but, {layer+2, txt});
         return but;
@@ -239,6 +240,7 @@ public:
             HandleSelTuretSwitch(curEnt);
             ToggleRenderTurInv(curEnt);
             UpdateTurInvText(curEnt);
+            HandleDisplayMoney(curEnt);
         }
         HandleCreationAndDestruction();
     }
@@ -324,6 +326,14 @@ public:
 
 private:
     std::map<int, std::vector<std::pair<Entity, size_t>>> layermap; // variable for handling layers when rendering
+
+    void HandleDisplayMoney(Entity ent)
+    {
+        if (!has<WalletPtr, Text>(ent)){return;}
+        auto txt = get<Text>(ent);
+        txt->txt.setString(std::to_string(get<WalletPtr>(ent)->walletPtr->money));
+        txt->txt.setOrigin(txt->txt.getLocalBounds().getSize().x, 0); //topright
+    }
 
     void HandleVelocity(Entity ent, const float &dt)
     {

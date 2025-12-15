@@ -20,6 +20,7 @@ class Scene
 class SafeHouse : public Scene
 {
     private:
+        Entity healthTxt;
         Entity player;
         Entity RestrictPlayerEnt;
         Entity upgradeTextEnt; 
@@ -33,6 +34,7 @@ class SafeHouse : public Scene
         bool SetRestrictPlayer(bool b);
         WeaponArsenal* GetPlayerArsenal();
         bool AllPlayersDead();
+        void HealPlayer(int amount);
 };
 
 class TowerDefence : public Scene
@@ -60,8 +62,10 @@ class ShopScene : public Scene
         Entity weaponButts[3];
         Entity prices[3];
         Entity restockButton;
-        Entity totalMoney;
         Entity hoverDesc;
+        Entity healButton;
+        int healCost = 10;
+        int restockCost = 5;
 
         void InitialiseShopInterface(Entity shop);
         void UpdateShopEnt(int index);
@@ -70,9 +74,11 @@ class ShopScene : public Scene
         void UpdateHoverDesc(std::string text);
         void ShowDesc(Weapons weapon);
         void UpdatePrices();
+        void RestockButton();
     public:
         ShopScene(std::shared_ptr<Wallet> wallet = nullptr);
         void Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHand);
+        bool Heal();
 };
 
 class GameOver : public Scene
