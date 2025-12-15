@@ -707,3 +707,23 @@ bool MainMenu::ExitGame()
     if (!_entMan.has<Button>(exitBut)){return false;}
     return _entMan.get<Button>(exitBut)->pressed;
 }
+
+
+//INSTRUCTIONS
+InstructScene::InstructScene()
+{
+    instSprite = _entMan.CreateEntity();
+    sf::Sprite sprt;
+    sprt.setTexture(*FileMgr::GetTxtr("res/img/Controls.png"));
+    auto size = sprt.getLocalBounds().getSize();
+    auto scale = std::min((float)(Params::gameW-20)/size.x, (float)(Params::gameH-20)/size.y);
+    sprt.setScale({scale,scale});
+    sprt.setOrigin(size/2.f);
+    _entMan.add<Sprite>(instSprite, {1, sprt});
+    _entMan.add<Position>(instSprite, {{Params::gameW/2, Params::gameH/2}});
+}
+
+bool InstructScene::StartGame()
+{
+    return KeyboardHelper::KeyReleased(sf::Keyboard::Space);
+}

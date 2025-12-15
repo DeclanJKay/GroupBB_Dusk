@@ -19,6 +19,7 @@ TowerDefence tdScene;
 ShopScene shopScene;
 GameOver gameOverScene;
 MainMenu menuScene;
+InstructScene instScene;
 
 Screen curScreen;
 Screen lastScreen;
@@ -69,7 +70,17 @@ void GameSys::update(const float &dt)
         case Screen::mainMenu:
             menuScene.Update(dt);
             if (menuScene.StartGame())
-                std::cout<<"instructuon pls \n";
+                curScreen = Screen::Instructions;
+            break;
+        case Screen::Instructions:
+            instScene.Update(dt);
+            if (instScene.StartGame())
+            {
+                curScreen = Screen::safeHouse;
+                shScene = SafeHouse();
+                tdScene = TowerDefence();
+                SwitchPlayerRestrict(curScreen);
+            }
             break;
     }
 }
@@ -95,6 +106,9 @@ void GameSys::render(sf::RenderWindow &window)
             menuScene.Draw(window);
             if (menuScene.ExitGame())
                 window.close();
+            break;
+        case Screen::Instructions:
+            instScene.Draw(window);
             break;
     }
 }
@@ -142,7 +156,9 @@ void GameSys::SwitchPlayerRestrict(Screen scrn)
     switch (scrn)
     {
         case Screen::safeHouse:
-            if (!shScene.SetRestrictPlayer(false)) { shScene = SafeHouse(mainWallet, mainUpgrades, false); }
+            if (!shScene.SetRestrictPlayer(false)) { 
+                shScene = SafeHouse(mainWallet, mainUpgrades, false); 
+            }
             if (!tdScene.SetRestrictPlayer(true))  { tdScene = TowerDefence(mainWallet, mainUpgrades, true);  }
             break;
 

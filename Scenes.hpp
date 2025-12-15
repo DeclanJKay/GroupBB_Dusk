@@ -98,3 +98,12 @@ class MainMenu : public Scene
         bool StartGame();
         bool ExitGame();
 };
+
+class InstructScene : public Scene
+{
+    private:
+        Entity instSprite;
+    public:
+        InstructScene();
+        bool StartGame();
+};
