@@ -18,6 +18,7 @@ SafeHouse shScene;
 TowerDefence tdScene;
 ShopScene shopScene;
 GameOver gameOverScene;
+MainMenu menuScene;
 
 Screen curScreen;
 Screen lastScreen;
@@ -62,6 +63,13 @@ void GameSys::update(const float &dt)
             break;
         case Screen::gameOver:
             gameOverScene.Update(dt);
+            if (gameOverScene.GoToMainMenu())
+                curScreen = mainMenu;
+            break;
+        case Screen::mainMenu:
+            menuScene.Update(dt);
+            if (menuScene.StartGame())
+                std::cout<<"instructuon pls \n";
             break;
     }
 }
@@ -82,6 +90,11 @@ void GameSys::render(sf::RenderWindow &window)
             break;
         case Screen::gameOver:
             gameOverScene.Draw(window);
+            break;
+        case Screen::mainMenu:
+            menuScene.Draw(window);
+            if (menuScene.ExitGame())
+                window.close();
             break;
     }
 }

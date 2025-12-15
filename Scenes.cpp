@@ -593,6 +593,7 @@ void ShopScene::Update(const float& dt, WeaponArsenal* ars, TurretHandler* turHa
 }
 
 
+//GAME OVER
 GameOver::GameOver()
 {
     int x = Params::gameW/2;
@@ -625,6 +626,7 @@ GameOver::GameOver()
 
 bool GameOver::GoToMainMenu()
 {
+    if (!_entMan.has<Button>(menuBut)){return false;}
     return _entMan.get<Button>(menuBut)->pressed;
 }
 
@@ -656,4 +658,52 @@ void GameOver::SetWin(bool status, int money)
     sTxt->txt.setOrigin(sTxt->txt.getGlobalBounds().getSize()/2.f);
     bTxt->txt.setOrigin(bTxt->txt.getGlobalBounds().getSize()/2.f);
     _entMan.get<Position>(brokieText, true)->pos.y = _entMan.get<Position>(statusTxt, true)->pos.y + sTxt->txt.getOrigin().y+bTxt->txt.getOrigin().y+30;
+}
+
+
+//START MENU
+MainMenu::MainMenu()
+{
+    int x = Params::gameW/2;
+
+    //title txt
+    title = _entMan.CreateEntity();
+    _entMan.add<Position>(title, {{x,100}});
+    sf::Text txt;
+    txt.setFont(*FileMgr::GetFont("res/fonts/ARIAL.TTF"));
+    txt.setString("DUSK");
+    txt.setCharacterSize(70);
+    txt.setOrigin(txt.getGlobalBounds().getSize()/2.f);
+    txt.setFillColor(sf::Color::White);
+    _entMan.add<Text>(title, {1,txt});
+
+    //start button
+    startBut = _entMan.CreateButton(
+        {x,300},
+        {200,70},
+        "Start",
+        {sf::Color::White, {180,180,180,255}, {150,150,150,255}},
+        sf::Color::Black
+    );
+
+    //exit button
+    exitBut = _entMan.CreateButton(
+        {x,400},
+        {200,70},
+        "Exit",
+        {sf::Color::White, {180,180,180,255}, {150,150,150,255}},
+        sf::Color::Black
+    );
+}
+
+bool MainMenu::StartGame()
+{
+    if (!_entMan.has<Button>(startBut)){return false;}
+    return _entMan.get<Button>(startBut)->pressed;
+}
+
+bool MainMenu::ExitGame()
+{
+    if (!_entMan.has<Button>(exitBut)){return false;}
+    return _entMan.get<Button>(exitBut)->pressed;
 }

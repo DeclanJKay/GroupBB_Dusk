@@ -86,3 +86,15 @@ class GameOver : public Scene
         bool GoToMainMenu();
         void SetWin(bool status, int money);
 };
+
+class MainMenu : public Scene
+{
+    private:
+        Entity startBut;
+        Entity exitBut;
+        Entity title;
+    public:
+        MainMenu();
+        bool StartGame();
+        bool ExitGame();
+};
