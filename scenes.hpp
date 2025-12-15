@@ -26,6 +26,7 @@ public:
     void load() override;
     void update(const float& dt) override;
     void render(sf::RenderWindow& window) override;
+   
 
 private:
     sf::Text _win_text;   // "Game Over" text
